@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // リレーション
+  profiles      Profile[]
+  healthRecords HealthRecord[]
+  familyMembers FamilyMember[]
+  
+  @@map("users")
+}
+
+model Profile {
+  id               String   @id @default(cuid())
+  userId           String
+  displayName      String?
+  age              Int?
+  gender           String?
+  height           Float?
+  targetWeight     Float?
+  diseases         String[]
+  medications      String?
+  physicalFunction String?
+  emergencyContact String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("profiles")
+}
+
+model HealthRecord {
+  id                    String   @id @default(cuid())
+  userId                String
+  date                  DateTime
+  time                  String
+  bloodPressureSystolic Int
+  bloodPressureDiastolic Int
+  pulse                 Int?
+  weight                Float?
+  exercise              Json? // { type: string, duration: string }
+  meal                  Json? // { staple: string[], mainDish: string[], sideDish: string[], other: string }
+  dailyLife             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("health_records")
+}
+
+model FamilyMember {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  relationship String
+  lineUserId   String?
+  isRegistered Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("family_members")
+}
