@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-// Prisma Client初期化確認
-async function ensurePrismaConnection() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Prisma connected successfully');
-  } catch (error) {
-    console.error('❌ Prisma connection failed:', error);
-    throw new Error('Database connection failed');
-  }
-}
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
 // 型定義を追加
 interface HealthRecordResponse {
