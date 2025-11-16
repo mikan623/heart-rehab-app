@@ -83,7 +83,7 @@ export default function NavigationBar() {
   const exportToPDF = async () => {
     try {
       console.log('💾 PDF出力開始');
-
+  
       // 印刷用のHTMLを作成
       const printContent = document.createElement('div');
       printContent.style.width = '794px'; // A4幅
@@ -99,7 +99,7 @@ export default function NavigationBar() {
       try {
         // LINEユーザーIDを取得
         let userId = 'user-1'; // デフォルト
-
+  
         // ローカル環境ではLIFF機能をスキップ
         if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
           try {
@@ -115,68 +115,78 @@ export default function NavigationBar() {
         } else {
           console.log('🏠 ローカル環境: デフォルトユーザーIDを使用');
         }
-
-        console.log('💾 NavigationBar: データベースからデータ取得を試行中', { userId }); // 🆕 ログ追加
+  
+        console.log('💾 NavigationBar: データベースからデータ取得を試行中', { userId });
         
-        // データベースから健康記録を取得
-        const healthResponse = await fetch(`/api/health-records?userId=${userId}`);
-        if (healthResponse.ok) {
-          const healthData = await healthResponse.json();
-          console.log('✅ 健康記録をデータベースから取得');
-          
-          // データベースの形式をPDF用に変換
-          healthData.records.forEach((record: any) => {
-            const dateKey = record.date.split('T')[0];
-            const timeKey = record.time;
+        // 🆕 データベースから健康記録を取得（エラーハンドリング強化）
+        try {
+          const healthResponse = await fetch(`/api/health-records?userId=${userId}`);
+          if (healthResponse.ok) {
+            const healthData = await healthResponse.json();
+            console.log('✅ 健康記録をデータベースから取得');
             
-            if (!saved[dateKey]) {
-              saved[dateKey] = {};
-            }
-            
-            saved[dateKey][timeKey] = {
-              bloodPressure: {
-                systolic: record.bloodPressure.systolic.toString(),
-                diastolic: record.bloodPressure.diastolic.toString()
-              },
-              pulse: record.pulse?.toString() || '',
-              weight: record.weight?.toString() || '',
-              exercise: record.exercise || { type: '', duration: '' },
-              meal: record.meal || {
-                staple: '',
-                mainDish: '',
-                sideDish: '',
-                other: ''
-              },
-              dailyLife: record.dailyLife || ''
-            };
-          });
-        } else {
-          console.log('❌ データベース取得失敗、localStorageを使用');
+            // データベースの形式をPDF用に変換
+            healthData.records.forEach((record: any) => {
+              const dateKey = record.date.split('T')[0];
+              const timeKey = record.time;
+              
+              if (!saved[dateKey]) {
+                saved[dateKey] = {};
+              }
+              
+              saved[dateKey][timeKey] = {
+                bloodPressure: {
+                  systolic: record.bloodPressure.systolic.toString(),
+                  diastolic: record.bloodPressure.diastolic.toString()
+                },
+                pulse: record.pulse?.toString() || '',
+                weight: record.weight?.toString() || '',
+                exercise: record.exercise || { type: '', duration: '' },
+                meal: record.meal || {
+                  staple: '',
+                  mainDish: '',
+                  sideDish: '',
+                  other: ''
+                },
+                dailyLife: record.dailyLife || ''
+              };
+            });
+          } else {
+            console.log('❌ 健康記録取得失敗（ステータス:', healthResponse.status, '）、localStorageを使用');
+            saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+          }
+        } catch (healthError) {
+          console.log('❌ 健康記録取得エラー:', healthError, '、localStorageを使用');
           saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
         }
         
-        // データベースからプロフィールを取得
-        const profileResponse = await fetch(`/api/profiles?userId=${userId}`);
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          if (profileData.profile) {
-            console.log('✅ プロフィールをデータベースから取得');
-            profile = {
-              displayName: profileData.profile.displayName,
-              age: profileData.profile.age,
-              gender: profileData.profile.gender,
-              targetWeight: profileData.profile.targetWeight,
-              diseases: profileData.profile.diseases,
-              medications: profileData.profile.medications,
-              physicalFunction: profileData.profile.physicalFunction,
-              emergencyContact: profileData.profile.emergencyContact
-            };
+        // 🆕 データベースからプロフィールを取得（エラーハンドリング強化）
+        try {
+          const profileResponse = await fetch(`/api/profiles?userId=${userId}`);
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            if (profileData.profile) {
+              console.log('✅ プロフィールをデータベースから取得');
+              profile = {
+                displayName: profileData.profile.displayName,
+                age: profileData.profile.age,
+                gender: profileData.profile.gender,
+                targetWeight: profileData.profile.targetWeight,
+                diseases: profileData.profile.diseases,
+                medications: profileData.profile.medications,
+                physicalFunction: profileData.profile.physicalFunction,
+                emergencyContact: profileData.profile.emergencyContact
+              };
+            } else {
+              console.log('❌ プロフィールなし、localStorageを使用');
+              profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+            }
           } else {
-            console.log('❌ プロフィールなし、localStorageを使用');
+            console.log('❌ プロフィール取得失敗（ステータス:', profileResponse.status, '）、localStorageを使用');
             profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
           }
-        } else {
-          console.log('❌ プロフィール取得失敗、localStorageを使用');
+        } catch (profileError) {
+          console.log('❌ プロフィール取得エラー:', profileError, '、localStorageを使用');
           profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
         }
       } catch (error) {
@@ -323,40 +333,48 @@ export default function NavigationBar() {
   }, [showSettingsMenu]);
 
   return (
-    <div className="flex gap-1">
-      <button 
-        onClick={() => window.location.href = '/'}
-        className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-        健康記録
-      </button>
-      <button 
-        onClick={() => window.location.href = '/calendar'}
-        className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-        カレンダー
-      </button>
-      <button 
-        onClick={() => window.location.href = '/profile'}
-        className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-        プロフィール
-      </button>
-      <button 
-        onClick={() => window.location.href = '/graph'}
-        className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-        グラフ
-      </button>
-      <button 
-        onClick={() => window.location.href = '/family'}
-        className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-        家族
-      </button>
-      <div className="relative">
+    <div className="flex justify-between items-start gap-1 pb-1">
+      {/* 左側：ナビゲーションボタン（スクロール可能） */}
+      <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
         <button 
-          onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs">
-          設定
+          onClick={() => window.location.href = '/'}
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          健康記録
         </button>
- 
-        {/* ドロップダウンメニュー */}
+        <button 
+          onClick={() => window.location.href = '/calendar'}
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          カレンダー
+        </button>
+        <button 
+          onClick={() => window.location.href = '/profile'}
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          プロフィール
+        </button>
+        <button 
+          onClick={() => window.location.href = '/graph'}
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          グラフ
+        </button>
+        <button 
+          onClick={() => window.location.href = '/family'}
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          家族
+        </button>
+      </div>
+  
+      {/* 右側：設定ボタン（固定） */}
+      <div className="relative flex-shrink-0">
+        <button 
+          onClick={() => {
+            console.log('設定ボタンがクリックされました');
+            console.log('現在のshowSettingsMenu:', showSettingsMenu);
+            setShowSettingsMenu(!showSettingsMenu);
+          }}
+          className="ext-orange-700 hover:text-orange-600 text-xl">
+          ⚙️
+        </button>
+  
         {showSettingsMenu && (
           <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
             <div className="py-1">
@@ -385,6 +403,6 @@ export default function NavigationBar() {
           </div>
         )}
       </div>
-    </div>  
+    </div>
   );
 }
