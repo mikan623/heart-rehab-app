@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 
-// LIFF型定義を追加（ここから）
+// LIFF型定義を追加
 declare global {
   interface Window {
     liff: any;
@@ -128,7 +128,7 @@ export default function ProfilePage() {
                   console.log('✅ プロフィールをデータベースから取得');
                   setProfile({
                     userId: liffProfile.userId,
-                    displayName: data.profile.displayName || liffProfile.displayName,
+                    displayName: data.profile.displayName || liffProfile.displayName,  // ✅ LINE名が優先
                     age: data.profile.age?.toString() || '',
                     gender: data.profile.gender || '',
                     height: data.profile.height?.toString() || '',
@@ -139,34 +139,37 @@ export default function ProfilePage() {
                     emergencyContact: data.profile.emergencyContact || '',
                   });
                 } else {
-                  // データベースにない場合は、localStorageを確認
-                  console.log('📝 データベースにプロフィールなし、localStorageを確認');
-                  const savedProfile = localStorage.getItem(`profile_${liffProfile.userId}`);
-                  if (savedProfile) {
-                    setProfile(JSON.parse(savedProfile));
-                  } else {
-                    // 初回はLINEプロフィールから基本情報を設定
-                    setProfile(prev => ({
-                      ...prev,
-                      userId: liffProfile.userId,
-                      displayName: liffProfile.displayName,
-                    }));
-                  }
+                  // データベースにない場合は、LINE プロフィールから初期化
+                  console.log('📝 データベースにプロフィールなし、LINE プロフィールから初期化');
+                  setProfile({
+                    userId: liffProfile.userId,
+                    displayName: liffProfile.displayName,  // ✅ LINE名を自動入力
+                    age: '',
+                    gender: '',
+                    height: '',
+                    targetWeight: '',
+                    diseases: [],
+                    medications: '',
+                    physicalFunction: '',
+                    emergencyContact: '',
+                  });
                 }
               }
             } catch (error) {
               console.error('プロフィール取得エラー:', error);
-              // エラー時はlocalStorageから読み込み
-              const savedProfile = localStorage.getItem(`profile_${liffProfile.userId}`);
-              if (savedProfile) {
-                setProfile(JSON.parse(savedProfile));
-              } else {
-                setProfile(prev => ({
-                  ...prev,
-                  userId: liffProfile.userId,
-                  displayName: liffProfile.displayName,
-                }));
-              }
+              // エラー時は LINE プロフィールから初期化
+              setProfile({
+                userId: liffProfile.userId,
+                displayName: liffProfile.displayName,  // ✅ LINE名を自動入力
+                age: '',
+                gender: '',
+                height: '',
+                targetWeight: '',
+                diseases: [],
+                medications: '',
+                physicalFunction: '',
+                emergencyContact: '',
+              });
             }
           } else {
             window.liff.login();
@@ -292,6 +295,17 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
           {/* 基本情報 */}
           <h2 className="text-lg font-semibold text-gray-800 mb-3">基本情報</h2>
+
+          {/* 🆕 LINE プロフィール画像を表示 */}
+          {user?.pictureUrl && (
+            <div className="mb-4 flex justify-center">
+              <img
+                src={user.pictureUrl}
+                alt={user.displayName}
+                className="w-24 h-24 rounded-full border-4 border-orange-300 shadow-md object-cover"
+              />
+            </div>
+          )}
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* 名前 */}

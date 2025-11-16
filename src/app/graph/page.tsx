@@ -887,37 +887,42 @@ export default function GraphPage() {
 
         {/* AIアドバイスセクション */}
         <section className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 md:gap-0 mb-3">
+            {/* タイトル部分 */}
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               {/* 心臓ちゃんのイラスト */}
-                <div className="w-12 h-12 flex-shrink-0">
-                  <img 
-                    src={getHeartImage(heartEmotion)} 
-                    alt="心臓ちゃん" 
-                    className="w-full h-full object-contain heartbeat-float"
-                  />
-                </div>
+              <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
+                <img 
+                  src={getHeartImage(heartEmotion)} 
+                  alt="心臓ちゃん" 
+                  className="w-full h-full object-contain heartbeat-float"
+                />
+              </div>
               AIアドバイス
             </h2>
-            <button
-              onClick={getAIAdvice}
-              disabled={isLoadingAdvice}
-              className="bg-orange-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-orange-600 disabled:bg-gray-400"
-            >
-              {isLoadingAdvice ? '分析中...' : 'アドバイスを取得'}
-            </button>
-            {showAdvice && (
+
+            {/* ボタングループ */}
+            <div className="flex gap-2">
               <button
-                onClick={() => {
-                  console.log('閉じるボタンがクリックされました');
-                  setShowAdvice(false);
-                  console.log('showAdvice:', false);
-                }}
-                className="bg-gray-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-gray-600"
+                onClick={getAIAdvice}
+                disabled={isLoadingAdvice}
+                className="bg-orange-500 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg font-medium hover:bg-orange-600 disabled:bg-gray-400 text-xs md:text-sm whitespace-nowrap"
               >
-                閉じる
+                {isLoadingAdvice ? '分析中...' : 'アドバイスを取得'}
               </button>
-            )}
+              {showAdvice && (
+                <button
+                  onClick={() => {
+                    console.log('閉じるボタンがクリックされました');
+                    setShowAdvice(false);
+                    console.log('showAdvice:', false);
+                  }}
+                  className="bg-gray-500 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg font-medium hover:bg-gray-600 text-xs md:text-sm whitespace-nowrap"
+                >
+                  閉じる
+                </button>
+              )}
+            </div>
           </div>
           
           {showAdvice && aiAdvice && (

@@ -21,13 +21,22 @@ interface HealthRecordResponse {
 export async function GET(request: NextRequest) {
   try {
     // Prisma接続確認
-    await ensurePrismaConnection();
+    const connected = await ensurePrismaConnection();
+    
+    // データベースがない場合は空の配列を返す
+    if (!connected || !prisma) {
+      console.log('⚠️ Database not available, returning empty array');
+      return NextResponse.json({ records: [] });
+    }
     
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      );
     }
     
     console.log('🔍 Fetching records for userId:', userId);
@@ -62,32 +71,12 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Health Records API Error:', {
       message: error.message,
-      stack: error.stack,
+      code: error.code,
       timestamp: new Date().toISOString(),
     });
     
-    // Prismaエラーの詳細処理
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'この日時の記録は既に存在します。' },
-        { status: 409 }
-      );
-    }
-    
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: '記録が見つかりません。' },
-        { status: 404 }
-      );
-    }
-    
-    return NextResponse.json(
-      { 
-        error: 'サーバーエラーが発生しました。',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    );
+    // エラー時は空の配列を返す（GETは読み取り専用だから）
+    return NextResponse.json({ records: [] });
   }
 }
 
@@ -126,10 +115,11 @@ export async function POST(request: NextRequest) {
     }
     
     // 🆕 既存のレコードをチェック（同じ日付・時間のレコード）
+    // dateを文字列として比較する
     const existingRecord = await prisma.healthRecord.findFirst({
       where: {
         userId: userId,
-        date: new Date(healthRecord.date),
+        date: healthRecord.date,  // ✅ 文字列のまま使用
         time: healthRecord.time
       }
     });
@@ -157,7 +147,7 @@ export async function POST(request: NextRequest) {
       savedRecord = await prisma.healthRecord.create({
         data: {
           userId,
-          date: new Date(healthRecord.date),
+          date: healthRecord.date,  // ✅ 文字列のまま使用
           time: healthRecord.time,
           bloodPressureSystolic: parseInt(healthRecord.bloodPressure.systolic),
           bloodPressureDiastolic: parseInt(healthRecord.bloodPressure.diastolic),
@@ -191,10 +181,23 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ Health record creation error:', error);
+    console.error('❌ Health record creation error:', {
+      message: error.message,
+      code: error.code,
+      details: error
+    });
+    
+    // DB接続がない場合はローカルストレージを使うよう指示
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ 
+        error: 'Database not available. Using local storage instead.',
+        success: false
+      }, { status: 503 });
+    }
+    
     return NextResponse.json({ 
       error: 'Failed to save health record',
-      details: error.message 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     }, { status: 500 });
   }
 }

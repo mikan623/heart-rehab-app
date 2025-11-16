@@ -526,7 +526,7 @@ export default function FamilyPage() {
                 ➕ 追加
               </button>
             </div>
-            
+  
             <div className="space-y-4">
               {familyMembers.map((member) => (
                 <div key={member.id} className="border border-gray-200 rounded-lg p-4">
@@ -539,51 +539,52 @@ export default function FamilyPage() {
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* 🆕 名前と LINE User ID を横並び（スマホでは縦） */}
+                  <div className="flex flex-col md:flex-row gap-2 md:gap-3 mb-3">
                     {/* 名前 */}
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">名前</label>
+                    <div className="flex-1">
+                      <label className="block text-xs md:text-sm text-gray-600 mb-1">名前</label>
                       <input
                         type="text"
                         value={member.name}
                         onChange={(e) => updateFamilyMember(member.id, 'name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         placeholder="山田太郎"
                       />
                     </div>
 
                     {/* LINE User ID */}
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">LINE User ID（自動送信用）</label>
+                    <div className="flex-1">
+                      <label className="block text-xs md:text-sm text-gray-600 mb-1">LINE User ID（自動送信用）</label>
                       <input
                         type="text"
                         value={member.lineUserId || ''}
                         onChange={(e) => updateFamilyMember(member.id, 'lineUserId', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         placeholder="U1234567890abcdef..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        LINE User IDを入力すると自動通知が可能になります
-                      </p>
-                    </div>
-
-                    {/* 登録ボタン */}
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => registerFamilyMember(member.id)}
-                        disabled={!member.name || Boolean(member.isRegistered)}
-                        className={`w-full py-2 px-4 rounded-lg font-medium ${
-                          Boolean(member.isRegistered)
-                            ? 'bg-green-500 text-white cursor-not-allowed'
-                            : member.name
-                            ? 'bg-orange-500 text-white hover:bg-orange-600'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        {Boolean(member.isRegistered) ? '登録済み' : 'LINEで招待'}
-                      </button>
                     </div>
                   </div>
+
+                  {/* 説明文 */}
+                  <p className="text-xs text-gray-500 mb-3">
+                    LINE User IDを入力すると自動通知が可能になります
+                  </p>
+
+                  {/* 登録ボタン */}
+                  <button
+                    onClick={() => registerFamilyMember(member.id)}
+                    disabled={!member.name || Boolean(member.isRegistered)}
+                    className={`w-full py-2 px-4 rounded-lg font-medium text-sm ${
+                      Boolean(member.isRegistered)
+                        ? 'bg-green-500 text-white cursor-not-allowed'
+                        : member.name
+                        ? 'bg-orange-500 text-white hover:bg-orange-600'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {Boolean(member.isRegistered) ? '登録済み' : 'LINEで招待'}
+                  </button>
                 </div>
               ))}
               

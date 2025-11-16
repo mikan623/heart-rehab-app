@@ -17,6 +17,7 @@ interface HealthRecord {
     other: string;
   };
   dailyLife: string;
+  medicationTaken?: boolean;
 }
 
 // LIFFの型定義を追加
@@ -51,7 +52,8 @@ export default function Home() {
       sideDish: [],      // 配列に変更
       other: ''
     },
-    dailyLife: '' 
+    dailyLife: '',
+    medicationTaken: false
   });
   
   // 入力フィールドの再レンダリングを防ぐためのキー
@@ -64,12 +66,13 @@ export default function Home() {
     exercise: { type: string; duration: string };
     weight: string;
     meal: {
-      staple: string;
-      mainDish: string;
-      sideDish: string;
+      staple: string | string[];
+      mainDish: string | string[];
+      sideDish: string | string[];
       other: string;
     };
     dailyLife: string;
+    medicationTaken?: boolean;
   }
 
   // 時間を日本語表記に変換する関数
@@ -545,7 +548,8 @@ export default function Home() {
             sideDish: [],
             other: ''
           },
-          dailyLife: ''
+          dailyLife: '',
+          medicationTaken: false
         });
       } else {
         const error = await response.json();
@@ -759,10 +763,15 @@ export default function Home() {
         </div>
       </header>
 
-      {/* LINEユーザー情報を表示 */}
-      {user && (
-        <div className="text-sm text-gray-600">
-          {user.displayName}さん
+      {/* ウェルカムメッセージ */}
+      {user?.displayName && (
+        <div className="bg-gradient-to-r from-orange-100 to-orange-50 border-l-4 border-orange-400 p-4 m-4 rounded-lg">
+          <p className="text-orange-800 font-semibold text-lg">
+            ようこそ、{user.displayName}さん！
+          </p>
+          <p className="text-orange-700 text-sm mt-1">
+            今日も健康記録を入力しましょう。
+          </p>
         </div>
       )}
 
@@ -777,13 +786,13 @@ export default function Home() {
       >
         {/* 健康記録（横幅full） */}
         <section className="bg-white rounded-lg shadow-sm p-3 mb-2 w-full">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-2 gap-2">
             <h2 className="text-lg font-semibold text-gray-800">
               健康記録
             </h2>
             
             {/* 日付と時間を統合 */}
-            <div className="mb-3">
+            <div className="w-full md:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 記録日時 <span className="text-xs text-gray-500">（現在の日時が自動入力されています）</span>
               </label>
@@ -1116,6 +1125,25 @@ export default function Home() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* 🆕 服薬確認 */}
+          <div className="mb-2">
+            <label className="block text-sm text-gray-600 mb-2">
+              服薬確認
+            </label>
+            <label className="flex items-center space-x-2 p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-orange-50">
+              <input
+                type="checkbox"
+                checked={healthRecord?.medicationTaken || false}
+                onChange={(e) => setHealthRecord({
+                  ...healthRecord,
+                  medicationTaken: e.target.checked
+                })}
+                className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 w-4 h-4"
+              />
+              <span className="text-sm text-gray-700">今、薬飲みました</span>
+            </label>
           </div>
 
           {/* 日常生活のこと */}

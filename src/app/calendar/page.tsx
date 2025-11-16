@@ -583,8 +583,8 @@ export default function CalendarPage() {
               <div className="flex justify-center items-center h-64">
                 <div className="text-gray-500">データを読み込み中...</div>
               </div>
-            ) : (
-              <div className="grid grid-cols-7">
+              ) : (
+                <div className="grid grid-cols-7">
                   {generateCalendarDays(currentMonth).map((day, index) => {
                     const dateKey = `${day.fullDate.getFullYear()}-${String(day.fullDate.getMonth() + 1).padStart(2, '0')}-${String(day.fullDate.getDate()).padStart(2, '0')}`;
                     const dayRecords = savedRecords[dateKey];  
@@ -593,7 +593,7 @@ export default function CalendarPage() {
                       <div
                         key={index}
                         className={`
-                          h-18 md:h-21 flex items-start justify-start text-xs md:text-sm pt-1 px-1
+                          h-20 md:h-24 flex flex-col items-start justify-start text-xs md:text-sm pt-1 px-0.5 md:px-1 overflow-hidden
                           ${index % 7 !== 6 ? 'border-r border-gray-300' : ''}
                           ${index < 35 ? 'border-b border-gray-300' : ''}
                           ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
@@ -603,47 +603,55 @@ export default function CalendarPage() {
                         `}
                         onClick={() => handleDateClick(day.fullDate)}
                       >
-                        <div className="flex h-full">
-                          <div className="font-medium text-xs flex-shrink-0 mr-1">{day.date}</div>
-                          <div className="flex-1 flex flex-col justify-start items-start space-y-0.5">
-                            {dayRecords && (
-                              <div className="space-y-0.5">
-                                {Object.entries(dayRecords)
-                                  .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
-                                  .map(([time, record]) => {
-                                  if (!record) return null;
-                                  
-                                  // 時間表記を統一（morning/afternoon/evening を時間に変換）
-                                  const getDisplayTime = (time: string) => {
-                                    if (time === 'morning') return '08:00';
-                                    if (time === 'afternoon') return '14:00';
-                                    if (time === 'evening') return '20:00';
-                                    return time; // 既に時間形式の場合はそのまま
-                                  };
-                                  
-                                  const displayTime = getDisplayTime(time);
-                                  
-                                  return (
-                                    <div key={time} className={`text-xs ${getTimeColor(displayTime)} px-1 py-0.5 rounded`}>
-                                      {/* スマホでは簡略化、PCでは詳細表示 */}
-                                      <div className="block md:hidden">
-                                        {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}
-                                      </div>
-                                      <div className="hidden md:block text-xs">
-                                        {displayTime}: {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''} {(record as HealthRecord).pulse || ''}回 {(record as HealthRecord).weight || ''}kg
-                                      </div>
+                        {/* 日付 */}
+                        <div className="font-medium text-xs md:text-sm flex-shrink-0 mb-0.5">{day.date}</div>
+                        
+                        {/* 記録一覧 */}
+                        <div className="flex-1 w-full overflow-y-auto">
+                          {dayRecords && (
+                            <div className="space-y-0.5">
+                              {Object.entries(dayRecords)
+                                .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
+                                .slice(0, 3)  // 🆕 スマホでは最大3件まで表示
+                                .map(([time, record]) => {
+                                if (!record) return null;
+                                
+                                // 時間表記を統一（morning/afternoon/evening を時間に変換）
+                                const getDisplayTime = (time: string) => {
+                                  if (time === 'morning') return '08:00';
+                                  if (time === 'afternoon') return '14:00';
+                                  if (time === 'evening') return '20:00';
+                                  return time; // 既に時間形式の場合はそのまま
+                                };
+                                
+                                const displayTime = getDisplayTime(time);
+                                
+                                return (
+                                  <div key={time} className={`text-xs md:text-sm ${getTimeColor(displayTime)} px-1 py-0.5 rounded truncate`}>
+                                    {/* スマホでは簡略化、PCでは詳細表示 */}
+                                    <div className="block md:hidden truncate">
+                                      {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
+                                    <div className="hidden md:block text-xs truncate">
+                                      {displayTime}: {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''} {(record as HealthRecord).pulse || ''}回 {(record as HealthRecord).weight || ''}kg
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {/* 🆕 3件以上ある場合は「+n件」と表示 */}
+                              {dayRecords && Object.keys(dayRecords).length > 3 && (
+                                <div className="text-xs text-gray-500 px-1 py-0.5 md:hidden">
+                                  +{Object.keys(dayRecords).length - 3}件
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
                   })}
-              </div>
-            )}
+                </div>
+              )}
           </div>
 
           {/* 詳細モーダル */}
