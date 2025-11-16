@@ -1019,93 +1019,94 @@ export default function Home() {
             <label className="block text-sm text-gray-600 mb-1">
               食事内容
             </label>
-            <div className="flex flex-row gap-1 md:gap-2">
-              {/* 主食 */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-gray-500 mb-1">主食</label>
-                <div className="space-y-1">
-                  {['ごはん', 'パン', 'めん', 'いも類'].map(item => (
-                    <label key={item} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.staple).includes(item)}
-                        onChange={(e) => handleMealChange('staple', item, e.target.checked)}
-                        className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-sm text-gray-700">{item}</span>
-                    </label>
-                  ))}
-                </div>
-                {/* 選択された項目を表示 */}
-                {convertStringToArray(healthRecord?.meal?.staple).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {convertStringToArray(healthRecord?.meal?.staple).map(item => (
-                      <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                        {item}
-                      </span>
+            
+            {/* スマホ版：縦配置（その他は下の段） */}
+            <div className="md:hidden">
+              <div className="flex flex-row gap-1">
+                {/* 主食 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">主食</label>
+                  <div className="space-y-1">
+                    {['ごはん', 'パン', 'めん', 'いも類'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.staple).includes(item)}
+                          onChange={(e) => handleMealChange('staple', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
                     ))}
                   </div>
-                )}
-              </div>
-
-              {/* 主菜 */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-gray-500 mb-1">主菜</label>
-                <div className="space-y-1">
-                  {['魚', '肉', '卵'].map(item => (
-                    <label key={item} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(item)}
-                        onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
-                        className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-sm text-gray-700">{item}</span>
-                    </label>
-                  ))}
+                  {convertStringToArray(healthRecord?.meal?.staple).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.staple).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {/* 選択された項目を表示 */}
-                {convertStringToArray(healthRecord?.meal?.mainDish).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {convertStringToArray(healthRecord?.meal?.mainDish).map(item => (
-                      <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                        {item}
-                      </span>
+
+                {/* 主菜 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">主菜</label>
+                  <div className="space-y-1">
+                    {['魚', '肉', '卵'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(item)}
+                          onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
                     ))}
                   </div>
-                )}
-              </div>
-
-              {/* 副菜 */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-gray-500 mb-1">副菜</label>
-                <div className="space-y-1">
-                  {['野菜', '海藻', 'きのこ'].map(item => (
-                    <label key={item} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(item)}
-                        onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
-                        className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-sm text-gray-700">{item}</span>
-                    </label>
-                  ))}
+                  {convertStringToArray(healthRecord?.meal?.mainDish).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.mainDish).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {/* 選択された項目を表示 */}
-                {convertStringToArray(healthRecord?.meal?.sideDish).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {convertStringToArray(healthRecord?.meal?.sideDish).map(item => (
-                      <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                        {item}
-                      </span>
+
+                {/* 副菜 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">副菜</label>
+                  <div className="space-y-1">
+                    {['野菜', '海藻', 'きのこ'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(item)}
+                          onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
                     ))}
                   </div>
-                )}
+                  {convertStringToArray(healthRecord?.meal?.sideDish).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.sideDish).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* その他（自由記載） */}
-              <div className="flex-[2]">
+              {/* スマホ版：その他（下の段） */}
+              <div className="mt-2">
                 <label className="block text-xs text-gray-500 mb-1">その他</label>
                 <input
                   type="text"
@@ -1123,6 +1124,113 @@ export default function Home() {
                   }`}
                   style={isLineApp ? { fontSize: '16px', minHeight: '44px' } : {}}
                 />
+              </div>
+            </div>
+
+            {/* デスクトップ版：元の横配置 */}
+            <div className="hidden md:block">
+              <div className="flex flex-row gap-2">
+                {/* 主食 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">主食</label>
+                  <div className="space-y-1">
+                    {['ごはん', 'パン', 'めん', 'いも類'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.staple).includes(item)}
+                          onChange={(e) => handleMealChange('staple', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {convertStringToArray(healthRecord?.meal?.staple).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.staple).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 主菜 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">主菜</label>
+                  <div className="space-y-1">
+                    {['魚', '肉', '卵'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(item)}
+                          onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {convertStringToArray(healthRecord?.meal?.mainDish).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.mainDish).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 副菜 */}
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-gray-500 mb-1">副菜</label>
+                  <div className="space-y-1">
+                    {['野菜', '海藻', 'きのこ'].map(item => (
+                      <label key={item} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(item)}
+                          onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {convertStringToArray(healthRecord?.meal?.sideDish).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {convertStringToArray(healthRecord?.meal?.sideDish).map(item => (
+                        <span key={item} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* その他（自由記載） */}
+                <div className="flex-[2]">
+                  <label className="block text-xs text-gray-500 mb-1">その他</label>
+                  <input
+                    type="text"
+                    value={healthRecord?.meal?.other || ''}
+                    onChange={(e) => setHealthRecord({
+                      ...healthRecord,
+                      meal: {
+                        ...healthRecord.meal,
+                        other: e.target.value
+                      }
+                    })}
+                    placeholder="果物、乳製品など"
+                    className={`w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 ${
+                      isLineApp ? 'line-input' : ''
+                    }`}
+                    style={isLineApp ? { fontSize: '16px', minHeight: '44px' } : {}}
+                  />
+                </div>
               </div>
             </div>
           </div>
