@@ -364,15 +364,15 @@ export default function NavigationBar() {
       </div>
   
       {/* 右側：設定ボタン（固定） */}
-      <div className="relative flex-shrink-0">
+      <div className="relative">
         <button 
           onClick={() => {
             console.log('設定ボタンがクリックされました');
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
-          className="ext-orange-700 hover:text-orange-600 text-xl">
-          ⚙️
+          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
+          設定
         </button>
   
         {showSettingsMenu && (
