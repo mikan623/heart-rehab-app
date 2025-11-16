@@ -852,33 +852,42 @@ export default function GraphPage() {
         )}
   
         {/* グラフ表示エリア */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="bg-white rounded-lg shadow-sm p-3 md:p-4">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4">
             健康記録の推移
           </h2>
           
           {/* グラフ表示 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             {/* 血圧グラフ */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">血圧</h3>
-              <div className="h-[500px]">
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-red-400">
+              <h3 className="text-base md:text-lg font-bold text-red-800 mb-2 md:mb-4 text-center">
+                血圧
+              </h3>
+              <p className="text-xs text-gray-600 text-center mb-2">正常範囲: 120/80 mmHg</p>
+              <div className="h-[300px] md:h-[500px]">
                 <Line data={bloodPressureChartData} options={chartOptions} />
               </div>
             </div>
 
             {/* 脈拍グラフ */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">脈拍</h3>
-              <div className="h-[500px]">
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-blue-400">
+              <h3 className="text-base md:text-lg font-bold text-blue-800 mb-2 md:mb-4 text-center">
+                脈拍
+              </h3>
+              <p className="text-xs text-gray-600 text-center mb-2">正常範囲: 60-100 回/分</p>
+              <div className="h-[300px] md:h-[500px]">
                 <Line data={pulseChartData} options={chartOptions} />
               </div>
             </div>
 
             {/* 体重グラフ */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">体重</h3>
-              <div className="h-[500px]">
+            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-purple-400">
+              <h3 className="text-base md:text-lg font-bold text-purple-800 mb-2 md:mb-4 text-center">
+                体重
+              </h3>
+              <p className="text-xs text-gray-600 text-center mb-2">目標体重との比較</p>
+              <div className="h-[300px] md:h-[500px]">
                 <Line data={weightChartData} options={chartOptions} />
               </div>
             </div>

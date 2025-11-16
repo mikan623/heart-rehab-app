@@ -20,39 +20,120 @@ export default function NavigationBar() {
     }
   };
 
-  // 医療機関用データエクスポート
-  const exportHealthData = () => {
-    const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
-    const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-    
-    // 患者情報を含む完全なデータ
-    const exportData = {
-      patientInfo: {
-        name: profile.displayName || '未設定',
-        age: profile.age || '未設定',
-        gender: profile.gender || '未設定',
-        targetWeight: profile.targetWeight || '未設定',
-        diseases: profile.diseases || [],
-        medications: profile.medications || '',
-        physicalFunction: profile.physicalFunction || ''
-      },
-      healthRecords: saved,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
+ // 医療機関用データエクスポート
+  const exportHealthData = async () => {
+    try {
+      let userId = 'user-1';
 
-    // JSONファイルとしてダウンロード
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `心臓リハビリ記録_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    alert('医療機関用データをエクスポートしました。\nこのファイルを医療機関に共有してください。');
+      // ローカル環境以外ではLIFFからuserIdを取得
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        try {
+          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+            const liffProfile = await window.liff.getProfile();
+            userId = liffProfile.userId;
+          }
+        } catch (error) {
+          console.log('⚠️ LIFFユーザーID取得エラー:', error);
+        }
+      }
+
+      // 🆕 データベースから最新のデータを取得
+      let exportData: any = {
+        patientInfo: {
+          name: '未設定',
+          age: '未設定',
+          gender: '未設定',
+          targetWeight: '未設定',
+          diseases: [],
+          medications: '',
+          physicalFunction: ''
+        },
+        healthRecords: {},
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      // プロフィール取得
+      try {
+        const profileResponse = await fetch(`/api/profiles?userId=${userId}`);
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          if (profileData.profile) {
+            exportData.patientInfo = {
+              name: profileData.profile.displayName || '未設定',
+              age: profileData.profile.age || '未設定',
+              gender: profileData.profile.gender || '未設定',
+              targetWeight: profileData.profile.targetWeight || '未設定',
+              diseases: profileData.profile.diseases || [],
+              medications: profileData.profile.medications || '',
+              physicalFunction: profileData.profile.physicalFunction || ''
+            };
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ プロフィール取得エラー:', error);
+        const localProfile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+        exportData.patientInfo = {
+          name: localProfile.displayName || '未設定',
+          age: localProfile.age || '未設定',
+          gender: localProfile.gender || '未設定',
+          targetWeight: localProfile.targetWeight || '未設定',
+          diseases: localProfile.diseases || [],
+          medications: localProfile.medications || '',
+          physicalFunction: localProfile.physicalFunction || ''
+        };
+      }
+
+      // 健康記録取得
+      try {
+        const healthResponse = await fetch(`/api/health-records?userId=${userId}`);
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          
+          // データベースの形式をエクスポート用に変換
+          healthData.records.forEach((record: any) => {
+            const dateKey = record.date.split('T')[0];
+            const timeKey = record.time;
+            
+            if (!exportData.healthRecords[dateKey]) {
+              exportData.healthRecords[dateKey] = {};
+            }
+            
+            exportData.healthRecords[dateKey][timeKey] = {
+              bloodPressure: {
+                systolic: record.bloodPressure.systolic,
+                diastolic: record.bloodPressure.diastolic
+              },
+              pulse: record.pulse,
+              weight: record.weight,
+              exercise: record.exercise || {},
+              meal: record.meal || {},
+              dailyLife: record.dailyLife || ''
+            };
+          });
+        }
+      } catch (error) {
+        console.log('⚠️ 健康記録取得エラー:', error);
+        const localRecords = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+        exportData.healthRecords = localRecords;
+      }
+
+      // JSONファイルとしてダウンロード
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `心臓リハビリ記録_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      alert('医療機関用データをエクスポートしました。\nこのファイルを医療機関に共有してください。');
+    } catch (error) {
+      console.error('エクスポートエラー:', error);
+      alert('エクスポートに失敗しました。');
+    }
   };
 
   const formatTime24h = (t: string) => {

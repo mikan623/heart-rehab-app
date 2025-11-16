@@ -4,6 +4,14 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 // プロフィール取得
 export async function GET(request: NextRequest) {
   try {
+    // Prismaが無効の場合は早期終了
+    if (!prisma) {
+      return NextResponse.json({ 
+        profile: null, 
+        message: 'Database not available' 
+      });
+    }
+    
     await ensurePrismaConnection();
     
     const { searchParams } = new URL(request.url);
@@ -31,9 +39,12 @@ export async function GET(request: NextRequest) {
     
   } catch (error: any) {
     console.error('Profile fetch error:', error);
+    
+    const errorMessage = typeof error === 'object' ? (error?.message || 'Unknown error') : String(error);
+    
     return NextResponse.json({ 
       error: 'Failed to fetch profile',
-      details: error.message 
+      details: errorMessage
     }, { status: 500 });
   }
 }
@@ -41,6 +52,14 @@ export async function GET(request: NextRequest) {
 // プロフィール保存・更新
 export async function POST(request: NextRequest) {
   try {
+    // Prismaが無効の場合は早期終了
+    if (!prisma) {
+      return NextResponse.json({ 
+        error: 'Database not available',
+        message: 'Using local storage mode'
+      }, { status: 503 });
+    }
+    
     await ensurePrismaConnection();
     
     const { userId, profile } = await request.json();
@@ -121,9 +140,12 @@ export async function POST(request: NextRequest) {
     
   } catch (error: any) {
     console.error('❌ Profile save error:', error);
+    
+    const errorMessage = typeof error === 'object' ? (error?.message || 'Unknown error') : String(error);
+    
     return NextResponse.json({ 
       error: 'Failed to save profile',
-      details: error.message 
+      details: errorMessage
     }, { status: 500 });
   }
 }
