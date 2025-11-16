@@ -20,10 +20,11 @@ export default function NavigationBar() {
     }
   };
 
- // 医療機関用データエクスポート
+  // 医療機関用データエクスポート
   const exportHealthData = async () => {
     try {
       let userId = 'user-1';
+      let liffDisplayName = '';
 
       // ローカル環境以外ではLIFFからuserIdを取得
       if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -31,6 +32,7 @@ export default function NavigationBar() {
           if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
             const liffProfile = await window.liff.getProfile();
             userId = liffProfile.userId;
+            liffDisplayName = liffProfile.displayName; // ✅ LINE名を保存
           }
         } catch (error) {
           console.log('⚠️ LIFFユーザーID取得エラー:', error);
@@ -40,7 +42,7 @@ export default function NavigationBar() {
       // 🆕 データベースから最新のデータを取得
       let exportData: any = {
         patientInfo: {
-          name: '未設定',
+          name: liffDisplayName || '未設定', // ✅ LINE名をデフォルトに
           age: '未設定',
           gender: '未設定',
           targetWeight: '未設定',
@@ -60,7 +62,7 @@ export default function NavigationBar() {
           const profileData = await profileResponse.json();
           if (profileData.profile) {
             exportData.patientInfo = {
-              name: profileData.profile.displayName || '未設定',
+              name: liffDisplayName || profileData.profile.displayName || '未設定', // ✅ LINE名優先
               age: profileData.profile.age || '未設定',
               gender: profileData.profile.gender || '未設定',
               targetWeight: profileData.profile.targetWeight || '未設定',
@@ -68,13 +70,16 @@ export default function NavigationBar() {
               medications: profileData.profile.medications || '',
               physicalFunction: profileData.profile.physicalFunction || ''
             };
+          } else if (liffDisplayName) {
+            // プロフィールなし、LINE名のみで初期化
+            exportData.patientInfo.name = liffDisplayName;
           }
         }
       } catch (error) {
         console.log('⚠️ プロフィール取得エラー:', error);
         const localProfile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
         exportData.patientInfo = {
-          name: localProfile.displayName || '未設定',
+          name: liffDisplayName || localProfile.displayName || '未設定',
           age: localProfile.age || '未設定',
           gender: localProfile.gender || '未設定',
           targetWeight: localProfile.targetWeight || '未設定',
@@ -176,6 +181,7 @@ export default function NavigationBar() {
       // 🆕 データベースから健康記録を取得
       let saved: any = {};
       let profile: any = {};
+      let liffDisplayName = '';
       
       try {
         // LINEユーザーIDを取得
@@ -187,6 +193,7 @@ export default function NavigationBar() {
             if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
               const liffProfile = await window.liff.getProfile();
               userId = liffProfile.userId;
+              liffDisplayName = liffProfile.displayName;
               console.log('✅ LIFFユーザーIDを取得:', userId);
             }
           } catch (error) {
@@ -249,7 +256,7 @@ export default function NavigationBar() {
             if (profileData.profile) {
               console.log('✅ プロフィールをデータベースから取得');
               profile = {
-                displayName: profileData.profile.displayName,
+                displayName: liffDisplayName || profileData.profile.displayName,
                 age: profileData.profile.age,
                 gender: profileData.profile.gender,
                 targetWeight: profileData.profile.targetWeight,
@@ -261,14 +268,23 @@ export default function NavigationBar() {
             } else {
               console.log('❌ プロフィールなし、localStorageを使用');
               profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+              if (liffDisplayName && !profile.displayName) {
+                profile.displayName = liffDisplayName; // ✅ LINE名をセット
+              }
             }
           } else {
             console.log('❌ プロフィール取得失敗（ステータス:', profileResponse.status, '）、localStorageを使用');
             profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+            if (liffDisplayName && !profile.displayName) {
+              profile.displayName = liffDisplayName; // ✅ LINE名をセット
+            }
           }
         } catch (profileError) {
           console.log('❌ プロフィール取得エラー:', profileError, '、localStorageを使用');
           profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+          if (liffDisplayName && !profile.displayName) {
+            profile.displayName = liffDisplayName; // ✅ LINE名をセット
+          }
         }
       } catch (error) {
         console.error('データベースからの取得エラー、localStorageを使用:', error);
