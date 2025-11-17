@@ -551,6 +551,44 @@ export default function Home() {
           dailyLife: '',
           medicationTaken: false
         });
+      } else if (response.status === 503) {
+        // ⚠️ データベースが利用不可の場合、ローカルストレージに保存
+        console.log('⚠️ Database unavailable (503), saving to localStorage');
+        const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+        if (!saved[dateKey]) {
+          saved[dateKey] = {};
+        }
+        saved[dateKey][timeKey] = {
+          bloodPressure: healthRecord.bloodPressure,
+          pulse: healthRecord.pulse,
+          weight: healthRecord.weight,
+          exercise: healthRecord.exercise,
+          meal: {
+            staple: convertStringToArray(healthRecord.meal?.staple).join(', '),
+            mainDish: convertStringToArray(healthRecord.meal?.mainDish).join(', '),
+            sideDish: convertStringToArray(healthRecord.meal?.sideDish).join(', '),
+            other: healthRecord.meal?.other || ''
+          },
+          dailyLife: healthRecord.dailyLife
+        };
+        localStorage.setItem(getStorageKey('healthRecords'), JSON.stringify(saved));
+        alert(`${timeKey}の健康記録をローカルストレージに保存しました！`);
+        
+        // フォームをリセット
+        setHealthRecord({
+          bloodPressure: { systolic: '', diastolic: '' },
+          pulse: '',
+          exercise: { type: '', duration: '' },
+          weight: '',
+          meal: {
+            staple: [],
+            mainDish: [],
+            sideDish: [],
+            other: ''
+          },
+          dailyLife: '',
+          medicationTaken: false
+        });
       } else {
         const error = await response.json();
         alert(`保存に失敗しました: ${error.error}`);
