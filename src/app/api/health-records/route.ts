@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await ensurePrismaConnection();
+    const connected = await ensurePrismaConnection();
     
     const { userId, healthRecord } = await request.json();
     
@@ -96,6 +96,15 @@ export async function POST(request: NextRequest) {
     
     if (!healthRecord.bloodPressure?.systolic || !healthRecord.bloodPressure?.diastolic) {
       return NextResponse.json({ error: 'Blood pressure is required' }, { status: 400 });
+    }
+    
+    // ⚠️ データベースが接続できない場合はローカルストレージを使用
+    if (!connected || !prisma) {
+      console.log('⚠️ Database not available, returning 503 to use localStorage');
+      return NextResponse.json({ 
+        error: 'Database not available',
+        success: false
+      }, { status: 503 });
     }
     
     // ユーザーが存在するかチェック、存在しない場合は作成
@@ -205,7 +214,16 @@ export async function POST(request: NextRequest) {
 // 健康記録削除
 export async function DELETE(request: NextRequest) {
   try {
-    await ensurePrismaConnection();
+    const connected = await ensurePrismaConnection();
+    
+    // ⚠️ データベースが接続できない場合は503を返す
+    if (!connected || !prisma) {
+      console.log('⚠️ Database not available for delete');
+      return NextResponse.json({ 
+        error: 'Database not available',
+        success: false
+      }, { status: 503 });
+    }
     
     const { searchParams } = new URL(request.url);
     const recordId = searchParams.get('recordId');
