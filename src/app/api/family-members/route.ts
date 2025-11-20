@@ -4,6 +4,13 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 // 家族メンバー一覧取得
 export async function GET(request: NextRequest) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ 
+        familyMembers: [],
+        message: 'Database not available' 
+      });
+    }
+    
     await ensurePrismaConnection();
     
     const { searchParams } = new URL(request.url);
@@ -37,6 +44,13 @@ export async function GET(request: NextRequest) {
 // 家族メンバー追加・更新
 export async function POST(request: NextRequest) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ 
+        error: 'Database not available',
+        success: false
+      }, { status: 503 });
+    }
+    
     await ensurePrismaConnection();
     
     const { userId, familyMember } = await request.json();
@@ -99,6 +113,13 @@ export async function POST(request: NextRequest) {
 // 家族メンバー削除
 export async function DELETE(request: NextRequest) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ 
+        error: 'Database not available',
+        success: false
+      }, { status: 503 });
+    }
+    
     await ensurePrismaConnection();
     
     const { searchParams } = new URL(request.url);
