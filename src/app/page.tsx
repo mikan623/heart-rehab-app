@@ -513,7 +513,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: 'user-1', // 仮のユーザーID（後で認証システムに変更）
+          userId: user?.userId || 'user-1', // LINE ユーザーID から取得
           healthRecord: {
             date: dateKey,
             time: timeKey,
@@ -527,7 +527,8 @@ export default function Home() {
               sideDish: convertStringToArray(healthRecord.meal?.sideDish).join(', '),
               other: healthRecord.meal?.other || ''
             },
-            dailyLife: healthRecord.dailyLife
+            dailyLife: healthRecord.dailyLife,
+            medicationTaken: healthRecord.medicationTaken || false
           }
         }),
       });

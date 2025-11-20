@@ -15,6 +15,7 @@ interface HealthRecordResponse {
   exercise: any;
   meal: any;
   dailyLife: string | null;
+  medicationTaken: boolean | null;
   createdAt: Date;
 }
 
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
       exercise: record.exercise,
       meal: record.meal,
       dailyLife: record.dailyLife,
+      medicationTaken: record.medicationTaken,
       createdAt: record.createdAt
     }));
     
@@ -148,6 +150,7 @@ export async function POST(request: NextRequest) {
           exercise: healthRecord.exercise || null,
           meal: healthRecord.meal || null,
           dailyLife: healthRecord.dailyLife || null,
+          medicationTaken: healthRecord.medicationTaken || false,
         }
       });
     } else {
@@ -165,6 +168,7 @@ export async function POST(request: NextRequest) {
           exercise: healthRecord.exercise || null,
           meal: healthRecord.meal || null,
           dailyLife: healthRecord.dailyLife || null,
+          medicationTaken: healthRecord.medicationTaken || false,
         }
       });
     }
@@ -185,7 +189,8 @@ export async function POST(request: NextRequest) {
         weight: savedRecord.weight,
         exercise: savedRecord.exercise,
         meal: savedRecord.meal,
-        dailyLife: savedRecord.dailyLife
+        dailyLife: savedRecord.dailyLife,
+        medicationTaken: savedRecord.medicationTaken
       }
     });
     

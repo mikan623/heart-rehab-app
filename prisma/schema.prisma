@@ -60,6 +60,7 @@ model HealthRecord {
   exercise              Json? // { type: string, duration: string }
   meal                  Json? // { staple: string[], mainDish: string[], sideDish: string[], other: string }
   dailyLife             String?
+  medicationTaken       Boolean?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   
