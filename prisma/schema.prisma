@@ -51,7 +51,7 @@ model Profile {
 model HealthRecord {
   id                    String   @id @default(cuid())
   userId                String
-  date                  DateTime
+  date                  String   @db.Text
   time                  String
   bloodPressureSystolic Int
   bloodPressureDiastolic Int
@@ -65,7 +65,7 @@ model HealthRecord {
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@map("health_records")
+  @@map("healthRecords")
 }
 
 model FamilyMember {
