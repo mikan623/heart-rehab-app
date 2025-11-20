@@ -15,6 +15,7 @@ interface HealthRecord {
     other: string;
   };
   dailyLife?: string;
+  medicationTaken?: boolean;
 }
 
 // LIFFの型定義
@@ -367,7 +368,8 @@ export default function CalendarPage() {
               sideDish: convertStringToArray(editingRecord.record.meal?.sideDish).join(', '),
               other: editingRecord.record.meal?.other || ''
             },
-            dailyLife: editingRecord.record.dailyLife || ''
+            dailyLife: editingRecord.record.dailyLife || '',
+            medicationTaken: editingRecord.record.medicationTaken || false
           }
         }),
       });
@@ -715,6 +717,9 @@ export default function CalendarPage() {
                           {(record as HealthRecord).dailyLife && (
                             <p>日常生活: {(record as HealthRecord).dailyLife}</p>
                           )}
+                          {(record as HealthRecord).medicationTaken && (
+                            <p>✅ 服薬確認：薬を飲みました</p>
+                          )}
                         </div>
                       </div>
                     );
@@ -1012,6 +1017,25 @@ export default function CalendarPage() {
                         rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
+                    </div>
+
+                    {/* 服薬確認 */}
+                    <div className="mb-4">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editingRecord.record.medicationTaken || false}
+                          onChange={(e) => setEditingRecord({
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              medicationTaken: e.target.checked
+                            }
+                          })}
+                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">今日、薬飲みました</span>
+                      </label>
                     </div>
 
                     {/* ボタン */}

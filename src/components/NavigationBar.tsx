@@ -327,6 +327,7 @@ export default function NavigationBar() {
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">運動</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">食事</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日常生活</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">服薬確認</th>
               </tr>
             </thead>
             <tbody id="records-table">
@@ -358,6 +359,7 @@ export default function NavigationBar() {
             <td style="border: 1px solid #ddd; padding: 8px;">${record.exercise?.type || ''} ${record.exercise?.duration || ''}分</td>
             <td style="border: 1px solid #ddd; padding: 8px;">主食:${record.meal?.staple || ''} 主菜:${record.meal?.mainDish || ''} 副菜:${record.meal?.sideDish || ''} 他:${record.meal?.other || ''}</td>
             <td style="border: 1px solid #ddd; padding: 8px;">${record.dailyLife || '-'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${record.medicationTaken ? '✅ 薬飲みました' : '-'}</td>
           `;
           tbody?.appendChild(row);
         });
