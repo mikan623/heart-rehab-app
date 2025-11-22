@@ -299,7 +299,7 @@ export default function GraphPage() {
         const formattedRecords: {[key: string]: {[key: string]: any}} = {};
         
         data.records.forEach((record: any) => {
-          const dateKey = record.date.split('T')[0]; // YYYY-MM-DD形式
+          const dateKey = typeof record.date === 'string' ? record.date : record.date.split('T')[0]; // YYYY-MM-DD形式
           const timeKey = record.time;
           
           if (!formattedRecords[dateKey]) {
