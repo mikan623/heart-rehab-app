@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon } from './NavIcons';
 
 export default function NavigationBar() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -326,8 +327,8 @@ export default function NavigationBar() {
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">体重</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">運動</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">食事</th>
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日常生活</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">服薬確認</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日常生活</th>
               </tr>
             </thead>
             <tbody id="records-table">
@@ -358,8 +359,8 @@ export default function NavigationBar() {
             <td style="border: 1px solid #ddd; padding: 8px;">${record.weight || ''}</td>
             <td style="border: 1px solid #ddd; padding: 8px;">${record.exercise?.type || ''} ${record.exercise?.duration || ''}分</td>
             <td style="border: 1px solid #ddd; padding: 8px;">主食:${record.meal?.staple || ''} 主菜:${record.meal?.mainDish || ''} 副菜:${record.meal?.sideDish || ''} 他:${record.meal?.other || ''}</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">${record.dailyLife || '-'}</td>
             <td style="border: 1px solid #ddd; padding: 8px;">${record.medicationTaken ? '✅ 薬飲みました' : '-'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${record.dailyLife || '-'}</td>
           `;
           tbody?.appendChild(row);
         });
@@ -434,31 +435,36 @@ export default function NavigationBar() {
   return (
     <div className="flex justify-between items-start gap-1 pb-1">
       {/* 左側：ナビゲーションボタン（スクロール可能） */}
-      <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
         <button 
           onClick={() => window.location.href = '/'}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          健康記録
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <HealthRecordIcon className="w-5 h-5" />
+          <span>健康記録</span>
         </button>
         <button 
           onClick={() => window.location.href = '/calendar'}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          カレンダー
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <CalendarIcon className="w-5 h-5" />
+          <span>カレンダー</span>
         </button>
         <button 
           onClick={() => window.location.href = '/profile'}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          プロフィール
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <ProfileIcon className="w-5 h-5" />
+          <span>プロフィール</span>
         </button>
         <button 
           onClick={() => window.location.href = '/graph'}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          グラフ
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <GraphIcon className="w-5 h-5" />
+          <span>グラフ</span>
         </button>
         <button 
           onClick={() => window.location.href = '/family'}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          家族
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <FamilyIcon className="w-5 h-5" />
+          <span>家族</span>
         </button>
       </div>
   
@@ -470,8 +476,9 @@ export default function NavigationBar() {
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
-          className="bg-white border border-orange-300 text-orange-700 py-1 px-1.5 rounded-lg font-medium hover:bg-orange-50 text-xs md:text-xs md:px-2 whitespace-nowrap flex-shrink-0">
-          設定
+          className="flex flex-col items-center gap-1 bg-white border border-orange-300 text-orange-700 py-2 px-3 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[60px]">
+          <SettingsIcon className="w-5 h-5" />
+          <span>設定</span>
         </button>
   
         {showSettingsMenu && (
