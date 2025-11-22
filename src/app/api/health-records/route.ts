@@ -256,7 +256,7 @@ export async function DELETE(request: NextRequest) {
       const existingRecord = await prisma.healthRecord.findFirst({
         where: {
           userId: userId,
-          date: new Date(date),
+          date: date,  // ✅ 文字列のまま使用
           time: time
         }
       });
