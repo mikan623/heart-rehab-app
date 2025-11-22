@@ -343,7 +343,7 @@ export default function GraphPage() {
         setProfile(JSON.parse(savedProfile));
       }
     }
-  }, []); // 依存配列を空にして、初回のみ実行
+  }, [user]); // user が変更されたら再実行
 
   // 心臓ちゃんの表情状態を追加
   const [heartEmotion, setHeartEmotion] = useState('normal');
