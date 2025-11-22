@@ -439,31 +439,31 @@ export default function NavigationBar() {
         <button 
           onClick={() => window.location.href = '/'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <HealthRecordIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <HealthRecordIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">健康記録</span>
         </button>
         <button 
           onClick={() => window.location.href = '/calendar'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <CalendarIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <CalendarIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">カレンダー</span>
         </button>
         <button 
           onClick={() => window.location.href = '/profile'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <ProfileIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <ProfileIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">プロフィール</span>
         </button>
         <button 
           onClick={() => window.location.href = '/graph'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <GraphIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <GraphIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">グラフ</span>
         </button>
         <button 
           onClick={() => window.location.href = '/family'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <FamilyIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
       </div>
@@ -477,7 +477,7 @@ export default function NavigationBar() {
             setShowSettingsMenu(!showSettingsMenu);
           }}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
-          <SettingsIcon className="w-3 h-4 md:w-5 md:h-5" />
+          <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">設定</span>
         </button>
   
