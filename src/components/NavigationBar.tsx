@@ -435,34 +435,34 @@ export default function NavigationBar() {
   return (
     <div className="flex justify-between items-start gap-1 pb-1">
       {/* 左側：ナビゲーションボタン（スクロール可能） */}
-      <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
+      <div className="flex gap-0.5 overflow-x-auto pb-1 flex-1">
         <button 
           onClick={() => window.location.href = '/'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <HealthRecordIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">健康記録</span>
         </button>
         <button 
           onClick={() => window.location.href = '/calendar'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <CalendarIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">カレンダー</span>
         </button>
         <button 
           onClick={() => window.location.href = '/profile'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <ProfileIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">プロフィール</span>
         </button>
         <button 
           onClick={() => window.location.href = '/graph'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <GraphIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">グラフ</span>
         </button>
         <button 
           onClick={() => window.location.href = '/family'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <FamilyIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
@@ -476,7 +476,7 @@ export default function NavigationBar() {
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] md:min-w-[60px]">
+          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <SettingsIcon className="w-3 h-4 md:w-5 md:h-5" />
           <span className="text-[10px] md:text-xs">設定</span>
         </button>
