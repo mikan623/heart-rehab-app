@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, message, accessToken } = await request.json();
+    const { userId, message } = await request.json();
+
+    // サーバーサイド環境変数からアクセストークンを取得
+    const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    
+    if (!accessToken) {
+      return NextResponse.json({ error: 'LINE_CHANNEL_ACCESS_TOKEN is not set' }, { status: 500 });
+    }
+
+    console.log('📱 LINE Bot メッセージ送信:', { userId, message });
 
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
@@ -22,12 +31,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (response.ok) {
+      console.log('✅ LINE Bot メッセージ送信成功');
       return NextResponse.json({ success: true });
     } else {
-      throw new Error('LINE API request failed');
+      const errorData = await response.text();
+      console.error('❌ LINE API エラー:', errorData);
+      throw new Error(`LINE API request failed: ${response.status}`);
     }
-  } catch (error) {
-    console.error('LINE API Error:', error);
-    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ LINE API Error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to send message',
+      details: error?.message 
+    }, { status: 500 });
   }
 }
