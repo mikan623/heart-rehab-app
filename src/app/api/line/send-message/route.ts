@@ -35,8 +35,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     } else {
       const errorData = await response.text();
-      console.error('❌ LINE API エラー:', errorData);
-      throw new Error(`LINE API request failed: ${response.status}`);
+      console.error('❌ LINE API エラー:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorData
+      });
+      throw new Error(`LINE API request failed: ${response.status} ${errorData}`);
     }
   } catch (error: any) {
     console.error('❌ LINE API Error:', error);
