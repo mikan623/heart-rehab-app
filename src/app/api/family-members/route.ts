@@ -63,9 +63,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
     
-    if (!familyMember.name || !familyMember.relationship) {
-      return NextResponse.json({ error: 'Name and relationship are required' }, { status: 400 });
-    }
+    // ✅ 修正：初期追加時は name・relationship が空でもOK
+    // （ユーザーが後から入力する）
     
     // ユーザーが存在するかチェック、存在しない場合は作成
     let user = await prisma.user.findUnique({
@@ -87,8 +86,8 @@ export async function POST(request: NextRequest) {
     const savedFamilyMember = await prisma.familyMember.create({
       data: {
         userId,
-        name: familyMember.name,
-        relationship: familyMember.relationship,
+        name: familyMember.name || '',
+        relationship: familyMember.relationship || '家族',
         lineUserId: familyMember.lineUserId || null,
         isRegistered: familyMember.isRegistered || false,
       }
@@ -105,6 +104,47 @@ export async function POST(request: NextRequest) {
     console.error('❌ Family member save error:', error);
     return NextResponse.json({ 
       error: 'Failed to save family member',
+      details: error.message 
+    }, { status: 500 });
+  }
+}
+
+// 家族メンバー更新
+export async function PATCH(request: NextRequest) {
+  try {
+    if (!prisma) {
+      return NextResponse.json({ 
+        error: 'Database not available',
+        success: false
+      }, { status: 503 });
+    }
+    
+    await ensurePrismaConnection();
+    
+    const { memberId, ...updates } = await request.json();
+    
+    console.log('🔄 Updating family member:', memberId);
+    
+    if (!memberId) {
+      return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
+    }
+    
+    const updatedMember = await prisma.familyMember.update({
+      where: { id: memberId },
+      data: updates
+    });
+    
+    console.log('✅ Family member updated successfully');
+    
+    return NextResponse.json({ 
+      success: true,
+      familyMember: updatedMember
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Family member update error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to update family member',
       details: error.message 
     }, { status: 500 });
   }
