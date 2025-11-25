@@ -194,19 +194,60 @@ export default function FamilyPage() {
   // 家族メンバーを更新する関数（データベース連携）
   const updateFamilyMember = async (id: string, field: keyof FamilyMember, value: string | boolean) => {
     // ローカルステートを更新
-    const updatedMember = familyMembers.find(m => m.id === id);
-    if (!updatedMember) return;
+    const member = familyMembers.find(m => m.id === id);
+    if (!member) return;
+
+    const updatedMember = { ...member, [field]: value };
 
     // ローカルステートを更新（即座に反映）
     setFamilyMembers(prev => {
-      const updated = prev.map(member => 
-        member.id === id ? { ...member, [field]: value } : member
+      const updated = prev.map(m => 
+        m.id === id ? updatedMember : m
       );
       return updated;
     });
     
-    // 🆕 データベースに保存（DB ID を持つメンバーのみ）
-    if (id.length > 15) {
+    // 🆕 新規メンバーの場合、名前と関係性が揃ったら DB に保存
+    if (id.length <= 15) {
+      // 一時的な ID（数字）= 新規メンバー
+      if (updatedMember.name && updatedMember.relationship) {
+        // 名前と関係性が揃った → DB に保存
+        try {
+          let userId = 'user-1';
+          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+            try {
+              const profile = await window.liff.getProfile();
+              userId = profile.userId;
+            } catch (error) {
+              console.log('⚠️ LIFF プロフィール取得エラー:', error);
+            }
+          }
+
+          const response = await fetch('/api/family-members', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              familyMember: updatedMember
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ 家族メンバーをデータベースに保存');
+            
+            // 一時的な ID を DB の ID に置き換え
+            setFamilyMembers(prev => 
+              prev.map(m => m.id === id ? { ...updatedMember, id: result.familyMember.id } : m)
+            );
+          } else {
+            console.error('❌ 保存失敗:', response.status);
+          }
+        } catch (error) {
+          console.error('❌ エラー:', error);
+        }
+      }
+    } else {
       // データベースの ID を持つメンバー → 更新
       try {
         const response = await fetch('/api/family-members', {
@@ -227,7 +268,6 @@ export default function FamilyPage() {
         console.error('❌ 更新エラー:', error);
       }
     }
-    // 一時的な ID（数字）の場合は保存しない（後で addFamilyMember で保存される）
   };
 
   // 家族メンバーの登録
@@ -266,48 +306,20 @@ export default function FamilyPage() {
   // 家族メンバーを追加する関数（データベース連携）
   const addFamilyMember = async () => {
     try {
-      // LINE ユーザーID を取得
-      let userId = 'user-1';
-      if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-        try {
-          const profile = await window.liff.getProfile();
-          userId = profile.userId;
-        } catch (error) {
-          console.log('⚠️ LIFF プロフィール取得エラー:', error);
-        }
-      }
-
-      const newMember = {
+      // 一旦ローカルに追加（UX向上のため）
+      const newMember: FamilyMember = {
+        id: Date.now().toString(), // 一時的なID
         name: '',
         relationship: '配偶者',
-        lineUserId: '',
         isRegistered: false
       };
       
-      // データベースに保存
-      const response = await fetch('/api/family-members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          familyMember: newMember
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ 家族メンバーをデータベースに追加');
-        
-        // ローカルステートにも追加
-        const memberWithId = {
-          ...newMember,
-          id: result.familyMember.id // DB から ID を取得
-        };
-        setFamilyMembers(prev => [...prev, memberWithId]);
-      } else {
-        console.error('❌ 追加失敗', response.status);
-        alert('家族メンバーの追加に失敗しました');
-      }
+      // ローカルステートにも追加
+      setFamilyMembers(prev => [...prev, newMember]);
+      
+      // 🆕 データベースには保存しない
+      // （名前と LINE User ID が入力されたら updateFamilyMember で保存）
+      console.log('✅ 新しい家族メンバーをローカルに追加');
     } catch (error) {
       console.error('❌ エラー:', error);
       alert('エラーが発生しました');
