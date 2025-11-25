@@ -193,54 +193,41 @@ export default function FamilyPage() {
 
   // 家族メンバーを更新する関数（データベース連携）
   const updateFamilyMember = async (id: string, field: keyof FamilyMember, value: string | boolean) => {
-    // まずローカルステートを更新（UX向上のため）
+    // ローカルステートを更新
+    const updatedMember = familyMembers.find(m => m.id === id);
+    if (!updatedMember) return;
+
+    // ローカルステートを更新（即座に反映）
     setFamilyMembers(prev => {
       const updated = prev.map(member => 
         member.id === id ? { ...member, [field]: value } : member
       );
-      localStorage.setItem('familyMembers', JSON.stringify(updated));
       return updated;
     });
     
-    // 🆕 データベースにも保存（名前または関係性が入力された場合のみ）
-    const member = familyMembers.find(m => m.id === id);
-    if (member && member.name && member.relationship && typeof window !== 'undefined' && window.liff) {
+    // 🆕 データベースに保存（DB ID を持つメンバーのみ）
+    if (id.length > 15) {
+      // データベースの ID を持つメンバー → 更新
       try {
-        const profile = await window.liff.getProfile();
-        const userId = profile.userId;
-        
-        // データベースのIDかチェック（cuidの形式 = 長い）
-        if (id.length > 15) {
-          // 既存メンバーの更新は今のところスキップ（後で実装可能）
-          console.log('既存メンバーの更新（未実装）');
+        const response = await fetch('/api/family-members', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memberId: id,
+            [field]: value
+          })
+        });
+
+        if (response.ok) {
+          console.log('✅ データベース更新成功');
         } else {
-          // 新規メンバーの場合、名前と関係性が揃ったら保存
-          const updatedMember = { ...member, [field]: value };
-          if (updatedMember.name && updatedMember.relationship) {
-            const response = await fetch('/api/family-members', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: userId,
-                familyMember: updatedMember
-              })
-            });
-            
-            if (response.ok) {
-              const result = await response.json();
-              console.log('✅ データベース保存成功:', result);
-              
-              // データベースのIDで置き換え
-              setFamilyMembers(prev => 
-                prev.map(m => m.id === id ? { ...updatedMember, id: result.familyMember.id } : m)
-              );
-            }
-          }
+          console.error('❌ データベース更新失敗:', response.status);
         }
       } catch (error) {
-        console.error('データベース保存エラー:', error);
+        console.error('❌ 更新エラー:', error);
       }
     }
+    // 一時的な ID（数字）の場合は保存しない（後で addFamilyMember で保存される）
   };
 
   // 家族メンバーの登録
@@ -278,18 +265,53 @@ export default function FamilyPage() {
 
   // 家族メンバーを追加する関数（データベース連携）
   const addFamilyMember = async () => {
-    const newMember: FamilyMember = {
-      id: Date.now().toString(), // 一時的なID
-      name: '',
-      relationship: '配偶者',
-      isRegistered: false
-    };
-    
-    // 一旦ローカルに追加（UX向上のため）
-    setFamilyMembers(prev => [...prev, newMember]);
-    
-    // localStorageにも保存（バックアップ）
-    localStorage.setItem('familyMembers', JSON.stringify([...familyMembers, newMember]));
+    try {
+      // LINE ユーザーID を取得
+      let userId = 'user-1';
+      if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+        try {
+          const profile = await window.liff.getProfile();
+          userId = profile.userId;
+        } catch (error) {
+          console.log('⚠️ LIFF プロフィール取得エラー:', error);
+        }
+      }
+
+      const newMember = {
+        name: '',
+        relationship: '配偶者',
+        lineUserId: '',
+        isRegistered: false
+      };
+      
+      // データベースに保存
+      const response = await fetch('/api/family-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          familyMember: newMember
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ 家族メンバーをデータベースに追加');
+        
+        // ローカルステートにも追加
+        const memberWithId = {
+          ...newMember,
+          id: result.familyMember.id // DB から ID を取得
+        };
+        setFamilyMembers(prev => [...prev, memberWithId]);
+      } else {
+        console.error('❌ 追加失敗', response.status);
+        alert('家族メンバーの追加に失敗しました');
+      }
+    } catch (error) {
+      console.error('❌ エラー:', error);
+      alert('エラーが発生しました');
+    }
   };
 
   // 家族メンバーを削除する関数（データベース連携）
