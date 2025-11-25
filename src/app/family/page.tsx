@@ -247,27 +247,9 @@ export default function FamilyPage() {
           console.error('❌ エラー:', error);
         }
       }
-    } else {
-      // データベースの ID を持つメンバー → 更新
-      try {
-        const response = await fetch('/api/family-members', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            memberId: id,
-            [field]: value
-          })
-        });
-
-        if (response.ok) {
-          console.log('✅ データベース更新成功');
-        } else {
-          console.error('❌ データベース更新失敗:', response.status);
-        }
-      } catch (error) {
-        console.error('❌ 更新エラー:', error);
-      }
     }
+    // ✅ 修正：DB ID のメンバーは updateFamilyMember では保存しない
+    // （手動の「保存」ボタンで保存する）
   };
 
   // 家族メンバーの登録
