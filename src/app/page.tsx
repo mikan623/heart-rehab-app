@@ -537,23 +537,24 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // ✨ LINE 通知を送信（オプション）
-        if (user?.userId) {
-          try {
-            const notificationMessage = `✅ 健康記録を保存しました\n\n📅 ${dateKey} ${timeKey}\n💓 血圧: ${healthRecord.bloodPressure.systolic}/${healthRecord.bloodPressure.diastolic} mmHg\n💗 脈拍: ${healthRecord.pulse || '-'} 回/分\n⚖️  体重: ${healthRecord.weight || '-'} kg`;
-            
-            await fetch('/api/line/send-message', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: user.userId,
-                message: notificationMessage,
-              }),
-            }).catch(err => console.log('📱 LINE 通知送信スキップ:', err));
-          } catch (error) {
-            console.log('📱 LINE 通知送信エラー（無視）:', error);
-          }
-        }
+        // ✨ LINE 通知を送信（一時的に無効化）
+        // TODO: LINE 通知機能は後で実装
+        // if (user?.userId) {
+        //   try {
+        //     const notificationMessage = `✅ 健康記録を保存しました\n\n📅 ${dateKey} ${timeKey}\n💓 血圧: ${healthRecord.bloodPressure.systolic}/${healthRecord.bloodPressure.diastolic} mmHg\n💗 脈拍: ${healthRecord.pulse || '-'} 回/分\n⚖️  体重: ${healthRecord.weight || '-'} kg`;
+        //     
+        //     await fetch('/api/line/send-message', {
+        //       method: 'POST',
+        //       headers: { 'Content-Type': 'application/json' },
+        //       body: JSON.stringify({
+        //         userId: user.userId,
+        //         message: notificationMessage,
+        //       }),
+        //     }).catch(err => console.log('📱 LINE 通知送信スキップ:', err));
+        //   } catch (error) {
+        //     console.log('📱 LINE 通知送信エラー（無視）:', error);
+        //   }
+        // }
         
         // フォームをリセット
         setHealthRecord({
