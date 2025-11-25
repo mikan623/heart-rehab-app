@@ -11,7 +11,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'LINE_CHANNEL_ACCESS_TOKEN is not set' }, { status: 500 });
     }
 
+    // バリデーション
+    if (!userId || !message) {
+      return NextResponse.json({ error: 'userId and message are required' }, { status: 400 });
+    }
+
     console.log('📱 LINE Bot メッセージ送信:', { userId, message });
+
+    const requestBody = {
+      to: userId,
+      messages: [
+        {
+          type: 'text',
+          text: message,
+        },
+      ],
+    };
+
+    console.log('📤 LINE API リクエスト:', {
+      endpoint: 'https://api.line.me/v2/bot/message/push',
+      method: 'POST',
+      body: requestBody,
+      token_length: accessToken?.length || 0,
+    });
 
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
@@ -19,15 +41,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({
-        to: userId,
-        messages: [
-          {
-            type: 'text',
-            text: message,
-          },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (response.ok) {
