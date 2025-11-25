@@ -945,36 +945,34 @@ export default function GraphPage() {
                     <div className="text-sm text-orange-600 font-medium flex-1">
                       💖 心臓ちゃんより 💖
                     </div>
-                    {/* LINE 送信ボタン */}
-                    {user?.userId && (
-                      {false && (
-                        <button
-                          onClick={async () => {
-                            try {
-                              const response = await fetch('/api/line/send-message', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  userId: user.userId,
-                                  message: `💖 AIアドバイス 💖\n\n${aiAdvice}`,
-                                }),
-                              });
-                              
-                              if (response.ok) {
-                                alert('✅ LINE でアドバイスを送信しました！');
-                              } else {
-                                alert('❌ LINE 送信に失敗しました');
-                              }
-                            } catch (error) {
-                              console.error('LINE 送信エラー:', error);
-                              alert('❌ LINE 送信中にエラーが発生しました');
+                    {/* LINE 送信ボタン（一旦無効化中） */}
+                    {false && user?.userId && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/line/send-message', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                userId: user.userId,
+                                message: `💖 AIアドバイス 💖\n\n${aiAdvice}`,
+                              }),
+                            });
+                            
+                            if (response.ok) {
+                              alert('✅ LINE でアドバイスを送信しました！');
+                            } else {
+                              alert('❌ LINE 送信に失敗しました');
                             }
-                          }}
-                          className="bg-green-500 text-white py-1 px-3 rounded-lg font-medium hover:bg-green-600 text-xs md:text-sm whitespace-nowrap"
-                        >
-                          📱 LINE で送信
-                        </button>
-                      )}
+                          } catch (error) {
+                            console.error('LINE 送信エラー:', error);
+                            alert('❌ LINE 送信中にエラーが発生しました');
+                          }
+                        }}
+                        className="bg-green-500 text-white py-1 px-3 rounded-lg font-medium hover:bg-green-600 text-xs md:text-sm whitespace-nowrap"
+                      >
+                        📱 LINE で送信
+                      </button>
                     )}
                   </div>
                 </div>
