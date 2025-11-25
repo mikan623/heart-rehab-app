@@ -191,9 +191,9 @@ export default function FamilyPage() {
     }
   };
 
-  // 家族メンバーを更新する関数（データベース連携）
-  const updateFamilyMember = async (id: string, field: keyof FamilyMember, value: string | boolean) => {
-    // ローカルステートを更新
+  // 家族メンバーを更新する関数（ローカルのみ）
+  const updateFamilyMember = (id: string, field: keyof FamilyMember, value: string | boolean) => {
+    // ローカルステートを更新するだけ（入力フォーム用）
     const member = familyMembers.find(m => m.id === id);
     if (!member) return;
 
@@ -206,50 +206,81 @@ export default function FamilyPage() {
       );
       return updated;
     });
-    
-    // 🆕 新規メンバーの場合、名前と関係性が揃ったら DB に保存
-    if (id.length <= 15) {
-      // 一時的な ID（数字）= 新規メンバー
-      if (updatedMember.name && updatedMember.relationship) {
-        // 名前と関係性が揃った → DB に保存
+  };
+
+  // 家族メンバーを DB に保存する関数（手動保存）
+  const saveFamilyMemberToDatabase = async (id: string) => {
+    try {
+      const member = familyMembers.find(m => m.id === id);
+      if (!member) return;
+
+      // バリデーション
+      if (!member.name || !member.relationship) {
+        alert('名前と関係性を入力してください');
+        return;
+      }
+
+      let userId = 'user-1';
+      if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
         try {
-          let userId = 'user-1';
-          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-            try {
-              const profile = await window.liff.getProfile();
-              userId = profile.userId;
-            } catch (error) {
-              console.log('⚠️ LIFF プロフィール取得エラー:', error);
-            }
-          }
-
-          const response = await fetch('/api/family-members', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              familyMember: updatedMember
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            console.log('✅ 家族メンバーをデータベースに保存');
-            
-            // 一時的な ID を DB の ID に置き換え
-            setFamilyMembers(prev => 
-              prev.map(m => m.id === id ? { ...updatedMember, id: result.familyMember.id } : m)
-            );
-          } else {
-            console.error('❌ 保存失敗:', response.status);
-          }
+          const profile = await window.liff.getProfile();
+          userId = profile.userId;
         } catch (error) {
-          console.error('❌ エラー:', error);
+          console.log('⚠️ LIFF プロフィール取得エラー:', error);
         }
       }
+
+      // 新規メンバーかどうかで POST/PATCH を分ける
+      if (id.length <= 15) {
+        // 新規メンバー → POST
+        const response = await fetch('/api/family-members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            familyMember: member
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ 家族メンバーをデータベースに保存');
+          
+          // 一時的な ID を DB の ID に置き換え
+          setFamilyMembers(prev => 
+            prev.map(m => m.id === id ? { ...member, id: result.familyMember.id } : m)
+          );
+          alert('家族メンバーを追加しました！');
+        } else {
+          console.error('❌ 保存失敗:', response.status);
+          alert('保存に失敗しました');
+        }
+      } else {
+        // 既存メンバー → PATCH
+        const response = await fetch('/api/family-members', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memberId: id,
+            name: member.name,
+            relationship: member.relationship,
+            lineUserId: member.lineUserId,
+            isRegistered: member.isRegistered
+          })
+        });
+
+        if (response.ok) {
+          console.log('✅ 家族メンバーを更新しました');
+          alert('更新しました！');
+        } else {
+          console.error('❌ 更新失敗:', response.status);
+          alert('更新に失敗しました');
+        }
+      }
+    } catch (error) {
+      console.error('❌ エラー:', error);
+      alert('エラーが発生しました');
     }
-    // ✅ 修正：DB ID のメンバーは updateFamilyMember では保存しない
-    // （手動の「保存」ボタンで保存する）
   };
 
   // 家族メンバーの登録
@@ -587,20 +618,38 @@ export default function FamilyPage() {
                     LINE User IDを入力すると自動通知が可能になります
                   </p>
 
-                  {/* 登録ボタン */}
-                  <button
-                    onClick={() => registerFamilyMember(member.id)}
-                    disabled={!member.name || Boolean(member.isRegistered)}
-                    className={`w-full py-2 px-4 rounded-lg font-medium text-sm ${
-                      Boolean(member.isRegistered)
-                        ? 'bg-green-500 text-white cursor-not-allowed'
-                        : member.name
-                        ? 'bg-orange-500 text-white hover:bg-orange-600'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {Boolean(member.isRegistered) ? '登録済み' : 'LINEで招待'}
-                  </button>
+                  {/* ボタングループ */}
+                  <div className="flex gap-2 flex-col md:flex-row">
+                    {/* 保存ボタン（新規メンバーのみ） */}
+                    {member.id.length <= 15 && (
+                      <button
+                        onClick={() => saveFamilyMemberToDatabase(member.id)}
+                        disabled={!member.name || !member.relationship}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm ${
+                          member.name && member.relationship
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        💾 保存
+                      </button>
+                    )}
+
+                    {/* 登録ボタン */}
+                    <button
+                      onClick={() => registerFamilyMember(member.id)}
+                      disabled={!member.name || Boolean(member.isRegistered)}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm ${
+                        Boolean(member.isRegistered)
+                          ? 'bg-green-500 text-white cursor-not-allowed'
+                          : member.name
+                          ? 'bg-orange-500 text-white hover:bg-orange-600'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {Boolean(member.isRegistered) ? '登録済み' : 'LINEで招待'}
+                    </button>
+                  </div>
                 </div>
               ))}
               
