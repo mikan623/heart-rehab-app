@@ -947,7 +947,8 @@ export default function GraphPage() {
                     </div>
                     {/* LINE 送信ボタン */}
                     {user?.userId && (
-                      <button
+                      {/* 🔴 LINE 送信は一旦無効化（データベース接続の問題を調査中） */}
+                      {/* <button
                         onClick={async () => {
                           try {
                             const response = await fetch('/api/line/send-message', {
@@ -972,7 +973,7 @@ export default function GraphPage() {
                         className="bg-green-500 text-white py-1 px-3 rounded-lg font-medium hover:bg-green-600 text-xs md:text-sm whitespace-nowrap"
                       >
                         📱 LINE で送信
-                      </button>
+                      </button> */}
                     )}
                   </div>
                 </div>
