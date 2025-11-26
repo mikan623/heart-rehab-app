@@ -945,8 +945,8 @@ export default function GraphPage() {
                     <div className="text-sm text-orange-600 font-medium flex-1">
                       💖 心臓ちゃんより 💖
                     </div>
-                    {/* LINE 送信ボタン（一旦無効化中） */}
-                    {false && user?.userId && (
+                    {/* LINE 送信ボタン */}
+                    {user?.userId && (
                       <button
                         onClick={async () => {
                           try {
