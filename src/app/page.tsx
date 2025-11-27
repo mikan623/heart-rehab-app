@@ -537,24 +537,26 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // ✨ LIFF で Bot に「健康記録」というメッセージを送信して、自動で返信を受け取る
-        if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-          try {
-            console.log('📱 Bot に「健康記録」メッセージを送信中...');
-            
-            // LIFF で Bot に「健康記録」というメッセージを送信
-            await window.liff.sendMessages([
-              {
-                type: 'text',
-                text: '健康記録'
-              }
-            ]);
-            
-            console.log('✅ Bot に「健康記録」メッセージ送信成功');
-          } catch (error) {
-            console.log('📱 Bot メッセージ送信エラー（無視）:', error);
+        // ✨ LIFF で Bot に「健康記録」というメッセージを送信（0.5秒後に実行）
+        setTimeout(async () => {
+          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+            try {
+              console.log('📱 Bot に「健康記録」メッセージを送信中...');
+              
+              // LIFF で Bot に「健康記録」というメッセージを送信
+              await window.liff.sendMessages([
+                {
+                  type: 'text',
+                  text: '健康記録'
+                }
+              ]);
+              
+              console.log('✅ Bot に「健康記録」メッセージ送信成功');
+            } catch (error) {
+              console.log('📱 Bot メッセージ送信エラー（無視）:', error);
+            }
           }
-        }
+        }, 500);
         
         // フォームをリセット
         setHealthRecord({
