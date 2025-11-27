@@ -34,11 +34,57 @@ export async function POST(request: NextRequest) {
       if (event.type === 'message' && event.message.type === 'text') {
         console.log('💬 Message:', event.message.text);
         console.log('👤 From user:', event.source.userId);
+        
+        // 「健康記録」というキーワードを受け取ったら返信
+        if (event.message.text.includes('健康記録')) {
+          const replyMessage = `✅ 健康記録を受け取りました！\n\n今日も記録をありがとうございます。\n心臓ちゃんが応援しています💖`;
+          
+          try {
+            const replyResponse = await fetch('/api/line/reply-message', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                message: replyMessage,
+              }),
+            });
+            
+            if (replyResponse.ok) {
+              console.log('✅ Webhook 返信送信成功');
+            } else {
+              console.error('❌ Webhook 返信送信失敗');
+            }
+          } catch (error) {
+            console.error('❌ Webhook 返信エラー:', error);
+          }
+        }
       }
       
       // Friend追加イベント
       if (event.type === 'follow') {
         console.log('👋 User followed:', event.source.userId);
+        
+        // Friend追加時に挨拶メッセージを返信
+        const welcomeMessage = `👋 心臓リハビリ手帳へようこそ！\n\n健康記録の入力をサポートします。\n毎日の血圧、脈拍、体重を記録して、一緒に健康管理を頑張りましょう💖`;
+        
+        try {
+          const replyResponse = await fetch('/api/line/reply-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              replyToken: event.replyToken,
+              message: welcomeMessage,
+            }),
+          });
+          
+          if (replyResponse.ok) {
+            console.log('✅ Welcome メッセージ送信成功');
+          } else {
+            console.error('❌ Welcome メッセージ送信失敗');
+          }
+        } catch (error) {
+          console.error('❌ Welcome メッセージエラー:', error);
+        }
       }
     }
 
