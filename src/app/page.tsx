@@ -537,9 +537,44 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // 📝 注: LINE ログインチャネルでは sendMessages は使用不可
-        // 代わりに、ユーザーが Bot に「健康記録」と送信することで、
-        // Webhook で受け取った Bot が Reply API で自動返信します
+        // ✨ Messaging API チャネル用 LIFF で Bot にメッセージを送信（自動送信）
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            const messagingLiffId = process.env.NEXT_PUBLIC_LIFF_ID_MESSAGING;
+            
+            if (messagingLiffId) {
+              console.log('📱 Messaging API LIFF で Bot にメッセージを送信中...');
+              
+              // Messaging API 用 LIFF を動的に初期化
+              if (window.liff && !window.liffMessaging) {
+                window.liff.init({ liffId: messagingLiffId })
+                  .then(() => {
+                    console.log('✅ Messaging API LIFF 初期化成功');
+                    
+                    if (window.liff.isLoggedIn?.()) {
+                      window.liff.sendMessages([
+                        {
+                          type: 'text',
+                          text: '健康記録'
+                        }
+                      ])
+                      .then(() => {
+                        console.log('✅ Bot に健康記録メッセージ送信成功');
+                      })
+                      .catch((error: any) => {
+                        console.log('⚠️ メッセージ送信失敗（無視）:', error?.message);
+                      });
+                    }
+                  })
+                  .catch((error: any) => {
+                    console.log('⚠️ Messaging API LIFF 初期化失敗（無視）:', error?.message);
+                  });
+              }
+            } else {
+              console.log('⚠️ NEXT_PUBLIC_LIFF_ID_MESSAGING が設定されていません');
+            }
+          }, 500);
+        }
         
         // フォームをリセット
         setHealthRecord({
