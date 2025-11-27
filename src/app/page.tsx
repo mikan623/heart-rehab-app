@@ -546,12 +546,12 @@ export default function Home() {
               console.log('📱 Messaging API LIFF で Bot にメッセージを送信中...');
               
               // Messaging API 用 LIFF を動的に初期化
-              if (window.liff && !window.liffMessaging) {
+              if (window.liff) {
                 window.liff.init({ liffId: messagingLiffId })
                   .then(() => {
                     console.log('✅ Messaging API LIFF 初期化成功');
                     
-                    if (window.liff.isLoggedIn?.()) {
+                    if (window.liff?.isLoggedIn?.()) {
                       window.liff.sendMessages([
                         {
                           type: 'text',
