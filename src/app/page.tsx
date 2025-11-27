@@ -537,38 +537,9 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // ✨ LIFF で Bot に「健康記録」というメッセージを送信（1秒後に実行）
-        if (typeof window !== 'undefined') {
-          setTimeout(() => {
-            console.log('🔍 setTimeout 実行');
-            console.log('🔍 LIFF 存在確認:', !!window.liff);
-            
-            if (window.liff) {
-              const isLoggedIn = window.liff.isLoggedIn?.() || false;
-              console.log('🔍 LIFF ログイン状態:', isLoggedIn);
-              
-              if (isLoggedIn && window.liff.sendMessages) {
-                console.log('📱 Bot にメッセージを送信中...');
-                window.liff.sendMessages([
-                  {
-                    type: 'text',
-                    text: '健康記録'
-                  }
-                ])
-                .then(() => {
-                  console.log('✅ Bot メッセージ送信成功');
-                })
-                .catch((error: any) => {
-                  console.error('❌ Bot メッセージ送信エラー:', error);
-                });
-              } else {
-                console.log('⚠️ LIFF が完全に初期化されていません');
-              }
-            } else {
-              console.log('⚠️ window.liff が存在しません');
-            }
-          }, 1000);
-        }
+        // 📝 注: LINE ログインチャネルでは sendMessages は使用不可
+        // 代わりに、ユーザーが Bot に「健康記録」と送信することで、
+        // Webhook で受け取った Bot が Reply API で自動返信します
         
         // フォームをリセット
         setHealthRecord({
