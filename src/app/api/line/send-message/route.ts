@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       body: requestBody,
       token_length: accessToken?.length || 0,
+      token_first_20: accessToken?.substring(0, 20) || 'N/A',
+      token_last_20: accessToken?.substring(accessToken.length - 20) || 'N/A',
     });
 
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
