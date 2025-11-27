@@ -537,39 +537,38 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // ✨ LIFF で Bot に「健康記録」というメッセージを送信（0.5秒後に実行）
-        setTimeout(async () => {
-          console.log('🔍 LIFF チェック:', {
-            window_exists: typeof window !== 'undefined',
-            liff_exists: typeof window !== 'undefined' && !!window.liff,
-            is_logged_in: typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn(),
-          });
-          
-          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-            try {
-              console.log('📱 Bot に「健康記録」メッセージを送信中...');
-              console.log('🔍 sendMessages 関数の存在:', !!window.liff.sendMessages);
+        // ✨ LIFF で Bot に「健康記録」というメッセージを送信（1秒後に実行）
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            console.log('🔍 setTimeout 実行');
+            console.log('🔍 LIFF 存在確認:', !!window.liff);
+            
+            if (window.liff) {
+              const isLoggedIn = window.liff.isLoggedIn?.() || false;
+              console.log('🔍 LIFF ログイン状態:', isLoggedIn);
               
-              // LIFF で Bot に「健康記録」というメッセージを送信
-              const result = await window.liff.sendMessages([
-                {
-                  type: 'text',
-                  text: '健康記録'
-                }
-              ]);
-              
-              console.log('✅ Bot に「健康記録」メッセージ送信成功:', result);
-            } catch (error: any) {
-              console.log('📱 Bot メッセージ送信エラー:', {
-                message: error?.message,
-                code: error?.code,
-                error: error
-              });
+              if (isLoggedIn && window.liff.sendMessages) {
+                console.log('📱 Bot にメッセージを送信中...');
+                window.liff.sendMessages([
+                  {
+                    type: 'text',
+                    text: '健康記録'
+                  }
+                ])
+                .then(() => {
+                  console.log('✅ Bot メッセージ送信成功');
+                })
+                .catch((error: any) => {
+                  console.error('❌ Bot メッセージ送信エラー:', error);
+                });
+              } else {
+                console.log('⚠️ LIFF が完全に初期化されていません');
+              }
+            } else {
+              console.log('⚠️ window.liff が存在しません');
             }
-          } else {
-            console.log('⚠️ LIFF が利用できません（LINE Mini App 外での実行？）');
-          }
-        }, 500);
+          }, 1000);
+        }
         
         // フォームをリセット
         setHealthRecord({
