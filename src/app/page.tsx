@@ -537,30 +537,22 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
-        // ✨ LINE 通知を送信
-        if (user?.userId) {
+        // ✨ LIFF で Bot に「健康記録」というメッセージを送信して、自動で返信を受け取る
+        if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
           try {
-            const notificationMessage = `✅ 健康記録を保存しました\n\n📅 ${dateKey} ${timeKey}\n💓 血圧: ${healthRecord.bloodPressure.systolic}/${healthRecord.bloodPressure.diastolic} mmHg\n💗 脈拍: ${healthRecord.pulse || '-'} 回/分\n⚖️  体重: ${healthRecord.weight || '-'} kg`;
+            console.log('📱 Bot に「健康記録」メッセージを送信中...');
             
-            console.log('📱 LINE 通知を送信中:', { userId: user.userId, message: notificationMessage });
+            // LIFF で Bot に「健康記録」というメッセージを送信
+            await window.liff.sendMessages([
+              {
+                type: 'text',
+                text: '健康記録'
+              }
+            ]);
             
-            const lineResponse = await fetch('/api/line/send-message', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: user.userId,
-                message: notificationMessage,
-              }),
-            });
-            
-            if (lineResponse.ok) {
-              console.log('✅ LINE 通知送信成功');
-            } else {
-              const errorText = await lineResponse.text();
-              console.log('⚠️ LINE 通知送信失敗:', { status: lineResponse.status, error: errorText });
-            }
+            console.log('✅ Bot に「健康記録」メッセージ送信成功');
           } catch (error) {
-            console.log('📱 LINE 通知送信エラー:', error);
+            console.log('📱 Bot メッセージ送信エラー（無視）:', error);
           }
         }
         
