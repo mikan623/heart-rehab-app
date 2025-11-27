@@ -539,22 +539,35 @@ export default function Home() {
         
         // ✨ LIFF で Bot に「健康記録」というメッセージを送信（0.5秒後に実行）
         setTimeout(async () => {
+          console.log('🔍 LIFF チェック:', {
+            window_exists: typeof window !== 'undefined',
+            liff_exists: typeof window !== 'undefined' && !!window.liff,
+            is_logged_in: typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn(),
+          });
+          
           if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
             try {
               console.log('📱 Bot に「健康記録」メッセージを送信中...');
+              console.log('🔍 sendMessages 関数の存在:', !!window.liff.sendMessages);
               
               // LIFF で Bot に「健康記録」というメッセージを送信
-              await window.liff.sendMessages([
+              const result = await window.liff.sendMessages([
                 {
                   type: 'text',
                   text: '健康記録'
                 }
               ]);
               
-              console.log('✅ Bot に「健康記録」メッセージ送信成功');
-            } catch (error) {
-              console.log('📱 Bot メッセージ送信エラー（無視）:', error);
+              console.log('✅ Bot に「健康記録」メッセージ送信成功:', result);
+            } catch (error: any) {
+              console.log('📱 Bot メッセージ送信エラー:', {
+                message: error?.message,
+                code: error?.code,
+                error: error
+              });
             }
+          } else {
+            console.log('⚠️ LIFF が利用できません（LINE Mini App 外での実行？）');
           }
         }, 500);
         
