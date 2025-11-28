@@ -20,6 +20,7 @@ interface LiffProfile {
 interface UserProfile {
   userId: string;
   displayName: string;
+  email?: string;
   age: string;
   gender: string;
   height: string;
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>({
     userId: '',
     displayName: '',
+    email: '',
     age: '',
     gender: '',
     height: '',
@@ -96,6 +98,31 @@ export default function ProfilePage() {
           if (window.liff.isLoggedIn()) {
             const liffProfile = await window.liff.getProfile();
             setUser(liffProfile);
+            
+            // 📧 LINE プロフィールからメールアドレスを取得
+            try {
+              const liffIdToken = await window.liff.getIDToken();
+              const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
+              const email = decodedToken.email || '';
+              
+              console.log('📧 LINE メールアドレス取得:', email);
+              
+              // プロフィールにメールを自動入力
+              setProfile(prev => ({
+                ...prev,
+                userId: liffProfile.userId,
+                displayName: liffProfile.displayName || prev.displayName,
+                email: email || prev.email,
+              }));
+            } catch (error) {
+              console.log('⚠️ メールアドレス取得エラー（無視）:', error);
+              // メール取得失敗時は displayName だけセット
+              setProfile(prev => ({
+                ...prev,
+                userId: liffProfile.userId,
+                displayName: liffProfile.displayName || prev.displayName,
+              }));
+            }
             
             // LINEアプリ内判定
             if (window.liff.isInClient()) {
