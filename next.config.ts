@@ -7,9 +7,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
-  },
+  serverExternalPackages: ['@prisma/client', 'prisma'],
   // ビルド時のデータベース接続を完全に無効化
   webpack: (config, { isServer }) => {
     if (isServer) {

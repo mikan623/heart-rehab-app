@@ -3,13 +3,13 @@ import NavigationBar from "@/components/NavigationBar";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* ヘッダー */}
       <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               利用規約
             </h1>
           </div>

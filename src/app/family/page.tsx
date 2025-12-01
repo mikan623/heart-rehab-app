@@ -475,14 +475,14 @@ export default function FamilyPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* 🆕 LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
         <style dangerouslySetInnerHTML={{
@@ -527,7 +527,7 @@ export default function FamilyPage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               家族共有設定
             </h1>
           </div>
@@ -552,164 +552,167 @@ export default function FamilyPage() {
 
       {/* メインコンテンツ */}
       <main 
-        className={`p-4 ${isLineApp ? 'line-app-container' : ''}`}
+        className={`p-4 md:p-6 space-y-6 ${isLineApp ? 'line-app-container' : ''}`}
         style={{
           paddingTop: isLineApp ? `${lineSafeArea.top}px` : '16px',
           paddingBottom: isLineApp ? `${lineSafeArea.bottom}px` : '16px',
           minHeight: isLineApp ? 'calc(var(--vh, 1vh) * 100)' : 'auto'
         }}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* 左側：家族メンバー */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">
-                家族メンバー
-              </h2>
-              <button
-                onClick={addFamilyMember}
-                className="bg-green-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-600"
-              >
-                ➕ 追加
-              </button>
-            </div>
-  
-            <div className="space-y-4">
-              {familyMembers.map((member) => (
-                <div key={member.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-end mb-3">
-                    <button
-                      onClick={() => removeFamilyMember(member.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      🗑️ 削除
-                    </button>
-                  </div>
-                  
-                  {/* 🆕 名前と LINE User ID を横並び（スマホでは縦） */}
-                  <div className="flex flex-col md:flex-row gap-2 md:gap-3 mb-3">
-                    {/* 名前 */}
-                    <div className="flex-1">
-                      <label className="block text-xs md:text-sm text-gray-600 mb-1">名前</label>
-                      <input
-                        type="text"
-                        value={member.name}
-                        onChange={(e) => updateFamilyMember(member.id, 'name', e.target.value)}
-                        className="w-full px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="山田太郎"
-                      />
-                    </div>
+        {/* 家族メンバー管理セクション */}
+        <div className="bg-orange-50 rounded-lg border-2 border-orange-300 p-4 md:p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+              👨‍👩‍👧‍👦 家族メンバー
+            </h2>
+            <button
+              onClick={addFamilyMember}
+              className="bg-green-500 text-white py-3 px-4 md:px-6 rounded-lg font-bold text-lg hover:bg-green-600"
+            >
+              ➕ 追加
+            </button>
+          </div>
 
-                    {/* LINE User ID */}
-                    <div className="flex-1">
-                      <label className="block text-xs md:text-sm text-gray-600 mb-1">LINE User ID（自動送信用）</label>
-                      <input
-                        type="text"
-                        value={member.lineUserId || ''}
-                        onChange={(e) => updateFamilyMember(member.id, 'lineUserId', e.target.value)}
-                        className="w-full px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="U1234567890abcdef..."
-                      />
-                    </div>
-                  </div>
+          <div className="space-y-4">
+            {familyMembers.map((member) => (
+              <div key={member.id} className="bg-white rounded-lg border-2 border-orange-200 p-4 md:p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-800">
+                    {member.name || '（名前未設定）'}
+                  </h3>
+                  <button
+                    onClick={() => removeFamilyMember(member.id)}
+                    className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 font-medium"
+                  >
+                    🗑️ 削除
+                  </button>
+                </div>
 
-                  {/* 説明文 */}
-                  <p className="text-xs text-gray-500 mb-3">
-                    LINE User IDを入力すると自動通知が可能になります
+                {/* 関係性 */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">関係性</label>
+                  <select
+                    value={member.relationship}
+                    onChange={(e) => updateFamilyMember(member.id, 'relationship', e.target.value)}
+                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 font-semibold"
+                  >
+                    <option value="配偶者">配偶者</option>
+                    <option value="子供">子供</option>
+                    <option value="親">親</option>
+                    <option value="兄弟">兄弟</option>
+                    <option value="姉妹">姉妹</option>
+                    <option value="その他">その他</option>
+                  </select>
+                </div>
+
+                {/* 名前 */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">名前</label>
+                  <input
+                    type="text"
+                    value={member.name}
+                    onChange={(e) => updateFamilyMember(member.id, 'name', e.target.value)}
+                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    placeholder="山田太郎"
+                  />
+                </div>
+
+                {/* LINE User ID */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">LINE User ID</label>
+                  <input
+                    type="text"
+                    value={member.lineUserId || ''}
+                    onChange={(e) => updateFamilyMember(member.id, 'lineUserId', e.target.value)}
+                    className="w-full px-4 py-3 text-base border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    placeholder="U1234567890abcdef..."
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    💡 LINE User IDを入力すると自動通知が可能になります
                   </p>
+                </div>
 
-                  {/* ボタングループ */}
-                  <div className="flex gap-2 flex-col md:flex-row">
-                    {/* 保存ボタン（新規メンバーのみ） */}
-                    {member.id.length <= 15 && (
-                      <button
-                        onClick={() => saveFamilyMemberToDatabase(member.id)}
-                        disabled={!member.name || !member.relationship}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm ${
-                          member.name && member.relationship
-                            ? 'bg-blue-500 text-white hover:bg-blue-600'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        💾 保存
-                      </button>
-                    )}
-
-                    {/* 登録ボタン */}
+                {/* ボタングループ */}
+                <div className="flex gap-3 flex-col md:flex-row">
+                  {/* 保存ボタン（新規メンバーのみ） */}
+                  {member.id.length <= 15 && (
                     <button
-                      onClick={() => registerFamilyMember(member.id)}
-                      disabled={!member.name || Boolean(member.isRegistered)}
-                      className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm ${
-                        Boolean(member.isRegistered)
-                          ? 'bg-green-500 text-white cursor-not-allowed'
-                          : member.name
-                          ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      onClick={() => saveFamilyMemberToDatabase(member.id)}
+                      disabled={!member.name || !member.relationship}
+                      className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
+                        member.name && member.relationship
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {Boolean(member.isRegistered) ? '登録済み' : 'LINEで招待'}
+                      💾 保存
                     </button>
-                  </div>
-                </div>
-              ))}
-              
-              {familyMembers.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p>家族メンバーが登録されていません</p>
-                  <p className="text-sm">「追加」ボタンから家族メンバーを追加してください</p>
-                </div>
-              )}
-            </div>
-          </div>
+                  )}
 
-          {/* 右側：共有設定 */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              共有設定
-            </h2>
-            
-            <div className="space-y-3 mb-4">
-              <label className="flex items-center gap-3">
-                <input type="checkbox" className="w-5 h-5 text-orange-500" defaultChecked />
-                <span className="text-gray-700">健康記録を自動共有</span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" className="w-5 h-5 text-orange-500" defaultChecked />
-                <span className="text-gray-700">記録忘れの通知を送信</span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" className="w-5 h-5 text-orange-500" />
-                <span className="text-gray-700">異常値の通知を送信</span>
-              </label>
-            </div>
-            
-            {/* 共有機能ボタン */}
-            <div className="flex gap-2">
-              <button
-                onClick={shareHealthRecord}
-                className="bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 text-sm flex-1"
-              >
-                📊 共有
-              </button>
-              
-              <button
-                onClick={sendReminderNotification}
-                className="bg-yellow-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-yellow-600 text-sm flex-1"
-              >
-                ⏰ 通知
-              </button>
-            </div>
+                  {/* 登録ボタン */}
+                  <button
+                    onClick={() => registerFamilyMember(member.id)}
+                    disabled={!member.name || Boolean(member.isRegistered)}
+                    className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
+                      Boolean(member.isRegistered)
+                        ? 'bg-green-500 text-white cursor-not-allowed'
+                        : member.name
+                        ? 'bg-orange-500 text-white hover:bg-orange-600'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {Boolean(member.isRegistered) ? '✅ 登録済み' : '🤝 LINEで招待'}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {familyMembers.length === 0 && (
+              <div className="text-center py-12 bg-orange-100 rounded-lg">
+                <p className="text-2xl font-bold text-gray-700 mb-2">家族メンバーが登録されていません</p>
+                <p className="text-lg text-gray-600">「➕ 追加」ボタンから家族メンバーを追加してください</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 保存ボタン */}
-        <div className="mt-4">
-          <button
-            onClick={() => router.push('/')}
-            className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-600"
-          >
-            設定を保存
-          </button>
+        {/* 共有設定セクション */}
+        <div className="bg-blue-50 rounded-lg border-2 border-blue-300 p-4 md:p-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+            📤 共有設定
+          </h2>
+
+          <div className="space-y-4 mb-6">
+            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
+              <input type="checkbox" className="w-7 h-7 text-blue-500" defaultChecked />
+              <span className="text-lg font-semibold text-gray-800">健康記録を自動共有</span>
+            </label>
+            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
+              <input type="checkbox" className="w-7 h-7 text-blue-500" defaultChecked />
+              <span className="text-lg font-semibold text-gray-800">記録忘れの通知を送信</span>
+            </label>
+            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
+              <input type="checkbox" className="w-7 h-7 text-blue-500" />
+              <span className="text-lg font-semibold text-gray-800">異常値の通知を送信</span>
+            </label>
+          </div>
+
+          {/* 共有機能ボタン */}
+          <div className="flex gap-3 flex-col md:flex-row">
+            <button
+              onClick={shareHealthRecord}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-4 rounded-lg font-bold text-lg hover:from-blue-600 hover:to-blue-700"
+            >
+              📊 健康記録を共有
+            </button>
+
+            <button
+              onClick={sendReminderNotification}
+              className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-4 px-4 rounded-lg font-bold text-lg hover:from-yellow-600 hover:to-yellow-700"
+            >
+              ⏰ 記録忘れ通知
+            </button>
+          </div>
         </div>
       </main>
     </div>

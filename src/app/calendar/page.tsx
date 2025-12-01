@@ -231,7 +231,8 @@ export default function CalendarPage() {
             weight: record.weight,
             exercise: record.exercise,
             meal: record.meal,
-            dailyLife: record.dailyLife
+            dailyLife: record.dailyLife,
+            medicationTaken: record.medicationTaken || false
           };
         });
         
@@ -469,7 +470,7 @@ export default function CalendarPage() {
   };
 
   return (
-      <div className="min-h-screen bg-orange-50">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
         {/* LINEアプリ用スタイル */}
         {typeof window !== 'undefined' && isLineApp && (
           <style dangerouslySetInnerHTML={{
@@ -514,7 +515,7 @@ export default function CalendarPage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               カレンダー
             </h1>
           </div>
@@ -539,44 +540,46 @@ export default function CalendarPage() {
 
       {/* メインコンテンツ */}
       <main 
-        className={`p-4 ${isLineApp ? 'line-app-container' : ''}`}
+        className={`px-0 md:p-4 ${isLineApp ? 'line-app-container' : ''}`}
         style={{
-          paddingTop: isLineApp ? `${lineSafeArea.top}px` : '16px',
-          paddingBottom: isLineApp ? `${lineSafeArea.bottom}px` : '16px',
+          paddingTop: isLineApp ? `${lineSafeArea.top}px` : '0px',
+          paddingBottom: isLineApp ? `${lineSafeArea.bottom}px` : '0px',
+          paddingLeft: 0,
+          paddingRight: 0,
           minHeight: isLineApp ? 'calc(var(--vh, 1vh) * 100)' : 'auto'
         }}
       >
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+        <div className="bg-orange-50 rounded-none md:rounded-lg shadow-none md:shadow-sm px-0 py-4 md:p-6 mb-0 md:mb-4 w-full border-b-4 md:border-2 border-orange-300">
           {/* 月移動ボタン */}
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-6 px-4 md:px-0">
             <button
               onClick={goToPreviousMonth}
-              className="bg-white border border-orange-300 text-orange-700 py-2 px-4 rounded-lg font-medium hover:bg-orange-50"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-3 md:px-6 rounded-lg font-bold text-base md:text-lg hover:from-orange-600 hover:to-orange-700"
             >
-              ← 前月
+              ←前月
             </button>
-            <h2 className="text-lg font-semibold text-gray-800">
-              {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
+            <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+              📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
             </h2>
             <button
               onClick={goToNextMonth}
-              className="bg-white border border-orange-300 text-orange-700 py-2 px-4 rounded-lg font-medium hover:bg-orange-50"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-3 md:px-6 rounded-lg font-bold text-base md:text-lg hover:from-orange-600 hover:to-orange-700"
             >
-              次月 →
+              次月→
             </button>
           </div>
 
           {/* カレンダー全体を外枠で囲む */}
-          <div className="border border-gray-300 rounded-lg overflow-hidden">
+          <div className="border-2 border-orange-400 rounded-none md:rounded-lg overflow-hidden bg-white w-full">
               {/* 曜日ヘッダー */}
-              <div className="grid grid-cols-7">
-                <div className="text-center text-xs text-red-500 font-medium py-1 border-r border-gray-300 border-b border-gray-300">日</div>
-                <div className="text-center text-xs text-gray-700 font-medium py-1 border-r border-gray-300 border-b border-gray-300">月</div>
-                <div className="text-center text-xs text-gray-700 font-medium py-1 border-r border-gray-300 border-b border-gray-300">火</div>
-                <div className="text-center text-xs text-gray-700 font-medium py-1 border-r border-gray-300 border-b border-gray-300">水</div>
-                <div className="text-center text-xs text-gray-700 font-medium py-1 border-r border-gray-300 border-b border-gray-300">木</div>
-                <div className="text-center text-xs text-gray-700 font-medium py-1 border-r border-gray-300 border-b border-gray-300">金</div>
-                <div className="text-center text-xs text-blue-500 font-medium py-1 border-b border-gray-300">土</div>
+              <div className="grid grid-cols-7 bg-gradient-to-r from-orange-400 to-pink-400">
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">日</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">月</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">火</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">水</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">木</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4 border-r border-orange-300">金</div>
+                <div className="text-center text-sm md:text-lg text-white font-bold py-3 md:py-4">土</div>
               </div>
 
             {/* 日付グリッド */}
@@ -595,23 +598,28 @@ export default function CalendarPage() {
                       <div
                         key={index}
                         className={`
-                          h-20 md:h-24 flex flex-col items-start justify-start text-xs md:text-sm pt-1 px-0.5 md:px-1 overflow-hidden
-                          ${index % 7 !== 6 ? 'border-r border-gray-300' : ''}
-                          ${index < 35 ? 'border-b border-gray-300' : ''}
-                          ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                          ${day.isSunday ? 'text-red-500' : ''}
-                          ${day.isSaturday ? 'text-blue-500' : ''}
-                          hover:bg-gray-100 cursor-pointer
+                          h-24 md:h-32 flex flex-col items-start justify-start text-xs md:text-sm pt-2 px-2 md:px-3 overflow-hidden
+                          ${index % 7 !== 6 ? 'border-r border-orange-300' : ''}
+                          ${index < 35 ? 'border-b border-orange-300' : ''}
+                          ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-300'}
+                          ${day.isSunday ? 'bg-red-50' : ''}
+                          ${day.isSaturday ? 'bg-blue-50' : ''}
+                          ${day.isCurrentMonth ? 'hover:bg-yellow-50' : 'hover:bg-gray-50'}
+                          cursor-pointer transition
                         `}
                         onClick={() => handleDateClick(day.fullDate)}
                       >
                         {/* 日付 */}
-                        <div className="font-medium text-xs md:text-sm flex-shrink-0 mb-0.5">{day.date}</div>
+                        <div className={`font-bold text-sm md:text-xl flex-shrink-0 mb-1 ${
+                          day.isSunday ? 'text-red-600' : day.isSaturday ? 'text-blue-600' : 'text-gray-800'
+                        }`}>
+                          {day.date}
+                        </div>
                         
                         {/* 記録一覧 */}
                         <div className="flex-1 w-full overflow-y-auto">
                           {dayRecords && (
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                               {Object.entries(dayRecords)
                                 .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
                                 .slice(0, 3)  // 🆕 スマホでは最大3件まで表示
@@ -629,12 +637,12 @@ export default function CalendarPage() {
                                 const displayTime = getDisplayTime(time);
                                 
                                 return (
-                                  <div key={time} className={`text-xs md:text-sm ${getTimeColor(displayTime)} px-1 py-0.5 rounded truncate`}>
+                                  <div key={time} className={`text-xs md:text-sm ${getTimeColor(displayTime)} px-1 py-0.5 rounded font-medium truncate`}>
                                     {/* スマホでは簡略化、PCでは詳細表示 */}
-                                    <div className="block md:hidden truncate">
+                                    <div className="block md:hidden truncate font-bold">
                                       {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}
                                     </div>
-                                    <div className="hidden md:block text-xs truncate">
+                                    <div className="hidden md:block text-xs truncate font-semibold">
                                       {displayTime}: {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''} {(record as HealthRecord).pulse || ''}回 {(record as HealthRecord).weight || ''}kg
                                     </div>
                                   </div>
@@ -642,7 +650,7 @@ export default function CalendarPage() {
                               })}
                               {/* 🆕 3件以上ある場合は「+n件」と表示 */}
                               {dayRecords && Object.keys(dayRecords).length > 3 && (
-                                <div className="text-xs text-gray-500 px-1 py-0.5 md:hidden">
+                                <div className="text-xs text-gray-600 px-1 py-0.5 md:hidden font-bold">
                                   +{Object.keys(dayRecords).length - 3}件
                                 </div>
                               )}
@@ -662,20 +670,23 @@ export default function CalendarPage() {
               className="fixed inset-0 flex items-center justify-center z-50"
               onClick={() => setShowDetail(false)}
             >
-              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <div className="flex justify-between items-center mb-4">
+              <div 
+                className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-gray-800">
                     {selectedDate}の記録
                   </h3>
                   <button
                     onClick={() => setShowDetail(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 text-xl"
                   >
                     ✕
                   </button>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto flex-1">
                   {Object.entries(savedRecords[selectedDate])
                     .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
                     .map(([time, record]) => {
@@ -708,17 +719,46 @@ export default function CalendarPage() {
                         </div>
                         
                         {/* 記録の詳細 */}
-                        <div className="space-y-1 text-sm">
-                          <p>血圧: {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}mmHg</p>
-                          <p>脈拍: {(record as HealthRecord).pulse || ''}回/分</p>
-                          <p>体重: {(record as HealthRecord).weight || ''}kg</p>
-                          <p>運動: {(record as HealthRecord).exercise?.type || ''} {(record as HealthRecord).exercise?.duration || ''}分</p>
-                          <p>食事: 主食:{(record as HealthRecord).meal?.staple || ''} 主菜:{(record as HealthRecord).meal?.mainDish || ''} 副菜:{(record as HealthRecord).meal?.sideDish || ''} その他:{(record as HealthRecord).meal?.other || ''}</p>
-                          {(record as HealthRecord).dailyLife && (
-                            <p>日常生活: {(record as HealthRecord).dailyLife}</p>
+                        <div className="space-y-2 text-sm">
+                          {((record as HealthRecord).bloodPressure?.systolic || (record as HealthRecord).bloodPressure?.diastolic) && (
+                            <p className="text-gray-700"><span className="font-semibold">血圧:</span> {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}mmHg</p>
                           )}
-                          {(record as HealthRecord).medicationTaken && (
-                            <p>✅ 服薬確認：薬を飲みました</p>
+                          {(record as HealthRecord).pulse && (
+                            <p className="text-gray-700"><span className="font-semibold">脈拍:</span> {(record as HealthRecord).pulse}回/分</p>
+                          )}
+                          {(record as HealthRecord).weight && (
+                            <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
+                          )}
+                          {((record as HealthRecord).exercise?.type || (record as HealthRecord).exercise?.duration) && (
+                            <p className="text-gray-700"><span className="font-semibold">運動:</span> {(record as HealthRecord).exercise?.type || ''} {(record as HealthRecord).exercise?.duration || ''}分</p>
+                          )}
+                          
+                          {((record as HealthRecord).meal?.staple || (record as HealthRecord).meal?.mainDish || (record as HealthRecord).meal?.sideDish || (record as HealthRecord).meal?.other) && (
+                            <div className="border-t pt-2 mt-2">
+                              <p className="font-semibold text-gray-800 mb-2">食事内容：</p>
+                              <div className="pl-2">
+                                <div className="grid grid-cols-3 gap-1 text-gray-700 text-xs mb-1">
+                                  {(record as HealthRecord).meal?.staple && <p>主食: {(record as HealthRecord).meal?.staple}</p>}
+                                  {(record as HealthRecord).meal?.mainDish && <p>主菜: {(record as HealthRecord).meal?.mainDish}</p>}
+                                  {(record as HealthRecord).meal?.sideDish && <p>副菜: {(record as HealthRecord).meal?.sideDish}</p>}
+                                </div>
+                                {(record as HealthRecord).meal?.other && <p className="text-gray-700 text-xs">その他: {(record as HealthRecord).meal?.other}</p>}
+                              </div>
+                            </div>
+                          )}
+
+                          {((record as HealthRecord).medicationTaken || (record as HealthRecord).dailyLife) && (
+                            <div className="border-t pt-2 mt-2">
+                              {(record as HealthRecord).medicationTaken && (
+                                <p className="text-gray-800 font-semibold"> 服薬確認：薬を飲みました</p>
+                              )}
+                              {(record as HealthRecord).dailyLife && (
+                                <div className="mt-1">
+                                  <p className="font-semibold text-gray-800 mb-1">日常生活のこと：</p>
+                                  <p className="pl-2 text-gray-700">{(record as HealthRecord).dailyLife}</p>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -732,53 +772,41 @@ export default function CalendarPage() {
               {/* 編集モーダル */}
               {editingRecord && (
                 <div 
-                  className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4"
+                  className="fixed inset-0 flex items-center justify-center z-50 p-4"
                   onClick={cancelEditing}
                 >
                   <div 
-                    className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                    className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-orange-600">
-                        記録を編集
+                    {/* ヘッダー */}
+                    <div className="sticky top-0 bg-gradient-to-r from-orange-400 to-pink-400 px-6 py-4 flex justify-between items-center">
+                      <h3 className="text-2xl font-bold text-white">
+                        ✏️ 記録を編集
                       </h3>
                       <button 
                         onClick={cancelEditing}
-                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                        className="text-white hover:text-gray-100 text-3xl"
                       >
                         ×
                       </button>
                     </div>
 
-                    {/* 日付変更機能 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        記録日付
-                      </label>
-                      <input
-                        type="date"
-                        value={editingRecord.date}
-                        onChange={(e) => setEditingRecord({
-                          ...editingRecord,
-                          date: e.target.value
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">
-                        {editingRecord.date} {formatTime24h(editingRecord.time)}
-                      </p>
-                    </div>
+                    <div className="p-6 space-y-6">
+                      {/* 日付・時間表示 */}
+                      <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-300">
+                        <p className="text-sm text-gray-600 mb-1">編集日時</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {editingRecord.date} {formatTime24h(editingRecord.time)}
+                        </p>
+                      </div>
 
                     {/* 血圧 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        血圧
+                    <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-300 overflow-hidden">
+                      <label className="block text-xl font-bold text-gray-800 mb-3">
+                        🩸 血圧
                       </label>
-                      <div className="flex gap-2 items-center">
+                      <div className="flex gap-1 md:gap-2 items-center min-w-0">
                         <input
                           type="number"
                           value={editingRecord.record.bloodPressure?.systolic || ''}
@@ -793,9 +821,9 @@ export default function CalendarPage() {
                             }
                           })}
                           placeholder="120"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="flex-1 min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
                         />
-                        <span>/</span>
+                        <span className="text-lg md:text-2xl font-bold flex-shrink-0">/</span>
                         <input
                           type="number"
                           value={editingRecord.record.bloodPressure?.diastolic || ''}
@@ -810,16 +838,15 @@ export default function CalendarPage() {
                             }
                           })}
                           placeholder="80"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="flex-1 min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
                         />
-                        <span className="text-sm text-gray-600">mmHg</span>
                       </div>
                     </div>
 
                     {/* 脈拍 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        脈拍
+                    <div className="bg-pink-50 rounded-lg p-4 border-2 border-pink-300">
+                      <label className="block text-xl font-bold text-gray-800 mb-3">
+                        💓 脈拍
                       </label>
                       <div className="flex gap-2 items-center">
                         <input
@@ -833,16 +860,16 @@ export default function CalendarPage() {
                             }
                           })}
                           placeholder="70"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="flex-1 px-3 py-2 md:px-4 md:py-3 text-base md:text-lg border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500"
                         />
-                        <span className="text-sm text-gray-600">回/分</span>
+                        <span className="text-base md:text-lg font-semibold text-gray-700 whitespace-nowrap">回/分</span>
                       </div>
                     </div>
 
                     {/* 体重 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        体重
+                    <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
+                      <label className="block text-xl font-bold text-gray-800 mb-3">
+                        ⚖️ 体重
                       </label>
                       <div className="flex gap-2 items-center">
                         <input
@@ -856,18 +883,18 @@ export default function CalendarPage() {
                             }
                           })}
                           placeholder="65.5"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="flex-1 px-4 py-3 text-lg border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500"
                         />
-                        <span className="text-sm text-gray-600">kg</span>
+                        <span className="text-lg font-semibold text-gray-700 min-w-fit">kg</span>
                       </div>
                     </div>
 
                     {/* 運動 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        運動
+                    <div className="bg-green-50 rounded-lg p-4 border-2 border-green-300">
+                      <label className="block text-xl font-bold text-gray-800 mb-3">
+                        🏃 運動
                       </label>
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <select
                           value={editingRecord.record.exercise?.type || ''}
                           onChange={(e) => setEditingRecord({
@@ -880,7 +907,7 @@ export default function CalendarPage() {
                               }
                             }
                           })}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
                         >
                           <option value="">選択してください</option>
                           <option value="歩行">歩行</option>
@@ -889,37 +916,39 @@ export default function CalendarPage() {
                           <option value="筋トレ">筋トレ</option>
                           <option value="その他">その他</option>
                         </select>
-                        <input
-                          type="number"
-                          value={editingRecord.record.exercise?.duration || ''}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              exercise: {
-                                ...editingRecord.record.exercise,
-                                duration: e.target.value
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="number"
+                            value={editingRecord.record.exercise?.duration || ''}
+                            onChange={(e) => setEditingRecord({
+                              ...editingRecord,
+                              record: {
+                                ...editingRecord.record,
+                                exercise: {
+                                  ...editingRecord.record.exercise,
+                                  duration: e.target.value
+                                }
                               }
-                            }
-                          })}
-                          placeholder="30"
-                          className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        />
-                        <span className="flex items-center text-sm text-gray-600">分</span>
+                            })}
+                            placeholder="30"
+                            className="flex-1 px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
+                          />
+                          <span className="text-lg font-semibold text-gray-700">分</span>
+                        </div>
                       </div>
                     </div>
                     {/* 食事内容 */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        食事内容
+                    <div className="bg-red-50 rounded-lg p-4 border-2 border-red-300">
+                      <label className="block text-xl font-bold text-gray-800 mb-4">
+                        🍽️ 食事内容
                       </label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-4">
                         {/* 主食 */}
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">主食</label>
-                          <div className="space-y-1">
+                        <div className="bg-white rounded p-3 border border-red-200">
+                          <p className="text-lg font-semibold text-gray-700 mb-2">主食</p>
+                          <div className="space-y-2">
                             {['ごはん', 'パン', 'めん', 'いも類'].map(item => (
-                              <label key={item} className="flex items-center space-x-2">
+                              <label key={item} className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={convertStringToArray(editingRecord.record.meal?.staple).includes(item)}
@@ -927,20 +956,20 @@ export default function CalendarPage() {
                                     ...editingRecord,
                                     record: handleMealChange('staple', item, e.target.checked, editingRecord.record)
                                   })}
-                                  className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                  className="w-5 h-5 rounded border-gray-300 text-red-500 focus:ring-red-500"
                                 />
-                                <span className="text-sm text-gray-700">{item}</span>
+                                <span className="text-lg text-gray-700">{item}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
                         {/* 主菜 */}
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">主菜</label>
-                          <div className="space-y-1">
+                        <div className="bg-white rounded p-3 border border-red-200">
+                          <p className="text-lg font-semibold text-gray-700 mb-2">主菜</p>
+                          <div className="space-y-2">
                             {['魚', '肉', '卵'].map(item => (
-                              <label key={item} className="flex items-center space-x-2">
+                              <label key={item} className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={convertStringToArray(editingRecord.record.meal?.mainDish).includes(item)}
@@ -948,20 +977,20 @@ export default function CalendarPage() {
                                     ...editingRecord,
                                     record: handleMealChange('mainDish', item, e.target.checked, editingRecord.record)
                                   })}
-                                  className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                  className="w-5 h-5 rounded border-gray-300 text-red-500 focus:ring-red-500"
                                 />
-                                <span className="text-sm text-gray-700">{item}</span>
+                                <span className="text-lg text-gray-700">{item}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
                         {/* 副菜 */}
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">副菜</label>
-                          <div className="space-y-1">
-                            {['野菜', '海藻', 'きのこ'].map(item => (
-                              <label key={item} className="flex items-center space-x-2">
+                        <div className="bg-white rounded p-3 border border-red-200">
+                          <p className="text-lg font-semibold text-gray-700 mb-2">副菜</p>
+                          <div className="space-y-2">
+                            {['野菜', '海藻', 'きのこ', '汁物', '漬物'].map(item => (
+                              <label key={item} className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={convertStringToArray(editingRecord.record.meal?.sideDish).includes(item)}
@@ -969,17 +998,17 @@ export default function CalendarPage() {
                                     ...editingRecord,
                                     record: handleMealChange('sideDish', item, e.target.checked, editingRecord.record)
                                   })}
-                                  className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                  className="w-5 h-5 rounded border-gray-300 text-red-500 focus:ring-red-500"
                                 />
-                                <span className="text-sm text-gray-700">{item}</span>
+                                <span className="text-lg text-gray-700">{item}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
                         {/* その他 */}
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">その他</label>
+                        <div className="bg-white rounded p-3 border border-red-200">
+                          <label className="block text-lg font-semibold text-gray-700 mb-2">その他</label>
                           <input
                             type="text"
                             value={editingRecord.record.meal?.other || ''}
@@ -994,15 +1023,34 @@ export default function CalendarPage() {
                               }
                             })}
                             placeholder="果物、乳製品など"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500"
                           />
                         </div>
                       </div>
                     </div>
+
+                    {/* 服薬確認 */}
+                    <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-300">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingRecord.record.medicationTaken || false}
+                          onChange={(e) => setEditingRecord({
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              medicationTaken: e.target.checked
+                            }
+                          })}
+                          className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                        />
+                        <span className="text-xl font-bold text-gray-800">💊 今日、薬飲みました</span>
+                      </label>
+                    </div>
                     {/* 日常生活のこと */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        日常生活のこと
+                    <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-300">
+                      <label className="block text-xl font-bold text-gray-800 mb-3">
+                        📝 日常生活のこと
                       </label>
                       <textarea
                         value={editingRecord.record.dailyLife || ''}
@@ -1014,44 +1062,26 @@ export default function CalendarPage() {
                           }
                         })}
                         placeholder="気分、体調の変化、気になったことなど自由にお書きください"
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        rows={4}
+                        className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500"
                       />
                     </div>
 
-                    {/* 服薬確認 */}
-                    <div className="mb-4">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={editingRecord.record.medicationTaken || false}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              medicationTaken: e.target.checked
-                            }
-                          })}
-                          className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                        />
-                        <span className="text-sm font-medium text-gray-700">今日、薬飲みました</span>
-                      </label>
-                    </div>
-
                     {/* ボタン */}
-                    <div className="flex gap-3 mt-6">
+                    <div className="flex gap-3 mt-6 pb-4">
                       <button
                         onClick={saveEdit}
-                        className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 font-medium"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 px-4 rounded-lg hover:from-orange-600 hover:to-pink-600 font-bold text-xl"
                       >
-                        保存
+                        💾 保存
                       </button>
                       <button
                         onClick={cancelEditing}
-                        className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 font-medium"
+                        className="flex-1 bg-gray-400 text-white py-4 px-4 rounded-lg hover:bg-gray-500 font-bold text-xl"
                       >
                         キャンセル
                       </button>
+                    </div>
                     </div>
                   </div>
                 </div>

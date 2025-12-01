@@ -37,6 +37,7 @@ model Profile {
   height           Float?
   targetWeight     Float?
   diseases         String[]
+  riskFactors      String[]
   medications      String?
   physicalFunction String?
   emergencyContact String?

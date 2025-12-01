@@ -105,14 +105,8 @@ const getHeartEmotion = (record: HealthRecord) => {
 
 // 心臓ちゃんの画像パスを取得
 const getHeartImage = (emotion: string) => {
-  switch (emotion) {
-    case 'happy':
-      return '/心臓ちゃん_笑顔.png';
-    case 'sad':
-      return '/心臓ちゃん_悲しい.png';
-    default:
-      return '/心臓ちゃん.png';
-  }
+  // 全ページで heart.png に統一
+  return '/heart.png';
 };
 
 // AIアドバイスに基づいて心臓ちゃんの表情を決定
@@ -738,7 +732,7 @@ export default function GraphPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
           <p className="mt-4 text-orange-700">データを読み込み中...</p>
@@ -748,7 +742,7 @@ export default function GraphPage() {
   }
 
   return (
-    <div className="min-h-screen bg-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
         <style dangerouslySetInnerHTML={{
@@ -788,9 +782,9 @@ export default function GraphPage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-          <h1 className="text-xl font-bold text-orange-800">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
             健康記録グラフ
-      </h1>
+          </h1>
           </div>
           <NavigationBar />
         </div>
@@ -813,38 +807,38 @@ export default function GraphPage() {
 
       {/* メインコンテンツ */}
       <main 
-        className={`p-4 ${isLineApp ? 'line-app-container' : ''}`}
+        className={`px-0 md:p-4 ${isLineApp ? 'line-app-container' : ''}`}
         style={{
           paddingTop: isLineApp ? `${lineSafeArea.top}px` : '16px',
           paddingBottom: isLineApp ? `${lineSafeArea.bottom}px` : '16px',
           minHeight: isLineApp ? 'calc(var(--vh, 1vh) * 100)' : 'auto'
         }}
       >
-        {/* プロフィール情報表示 - ここから追加 */}
+        {/* プロフィール情報表示 */}
         {profile && (
-          <section className="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">プロフィール情報</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-3 md:mb-6 w-full border-2 border-orange-300 mx-0 md:mx-0">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">👤 プロフィール情報</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               <div>
-                <p className="text-gray-600">お名前</p>
-                <p className="font-medium text-gray-800">{profile.displayName || '未設定'}</p>
+                <p className="text-sm md:text-lg font-semibold text-gray-600">お名前</p>
+                <p className="font-bold text-lg md:text-2xl text-gray-800">{profile.displayName || '未設定'}</p>
               </div>
               <div>
-                <p className="text-gray-600">年齢</p>
-                <p className="font-medium text-gray-800">{profile.age ? `${profile.age}歳` : '未設定'}</p>
+                <p className="text-sm md:text-lg font-semibold text-gray-600">年齢</p>
+                <p className="font-bold text-lg md:text-2xl text-gray-800">{profile.age ? `${profile.age}歳` : '未設定'}</p>
               </div>
               <div>
-                <p className="text-gray-600">性別</p>
-                <p className="font-medium text-gray-800">{profile.gender || '未設定'}</p>
+                <p className="text-sm md:text-lg font-semibold text-gray-600">性別</p>
+                <p className="font-bold text-lg md:text-2xl text-gray-800">{profile.gender || '未設定'}</p>
               </div>
               <div>
-                <p className="text-gray-600">目標体重</p>
-                <p className="font-medium text-orange-600">{profile.targetWeight ? `${profile.targetWeight}kg` : '未設定'}</p>
+                <p className="text-sm md:text-lg font-semibold text-gray-600">目標体重</p>
+                <p className="font-bold text-lg md:text-2xl text-orange-600">{profile.targetWeight ? `${profile.targetWeight}kg` : '未設定'}</p>
               </div>
               {profile.diseases.length > 0 && (
                 <div className="col-span-2 md:col-span-4">
-                  <p className="text-gray-600">基礎疾患</p>
-                  <p className="font-medium text-gray-800">{profile.diseases.join('、')}</p>
+                  <p className="text-sm md:text-lg font-semibold text-gray-600">基礎疾患</p>
+                  <p className="font-bold text-base md:text-xl text-gray-800">{profile.diseases.join('、')}</p>
                 </div>
               )}
             </div>
@@ -852,41 +846,41 @@ export default function GraphPage() {
         )}
   
         {/* グラフ表示エリア */}
-        <div className="bg-white rounded-lg shadow-sm p-3 md:p-4">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4">
-            健康記録の推移
+        <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-3 md:mb-6 w-full border-2 border-pink-300 mx-0 md:mx-0">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8">
+            📊 健康記録の推移
           </h2>
           
           {/* グラフ表示 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             {/* 血圧グラフ */}
-            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-red-400">
-              <h3 className="text-base md:text-lg font-bold text-red-800 mb-2 md:mb-4 text-center">
-                血圧
+            <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-red-300">
+              <h3 className="text-xl md:text-2xl font-bold text-red-800 mb-2 md:mb-3 text-center">
+                🩸 血圧
               </h3>
-              <p className="text-xs text-gray-600 text-center mb-2">正常範囲: 120/80 mmHg</p>
+              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">正常範囲: 120/80 mmHg</p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={bloodPressureChartData} options={chartOptions} />
               </div>
             </div>
 
             {/* 脈拍グラフ */}
-            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-blue-400">
-              <h3 className="text-base md:text-lg font-bold text-blue-800 mb-2 md:mb-4 text-center">
-                脈拍
+            <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-blue-300">
+              <h3 className="text-xl md:text-2xl font-bold text-blue-800 mb-2 md:mb-3 text-center">
+                💓 脈拍
               </h3>
-              <p className="text-xs text-gray-600 text-center mb-2">正常範囲: 60-100 回/分</p>
+              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">正常範囲: 60-100 回/分</p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={pulseChartData} options={chartOptions} />
               </div>
             </div>
 
             {/* 体重グラフ */}
-            <div className="bg-gray-50 p-3 md:p-4 rounded-lg border-l-4 border-purple-400">
-              <h3 className="text-base md:text-lg font-bold text-purple-800 mb-2 md:mb-4 text-center">
-                体重
+            <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-purple-300">
+              <h3 className="text-xl md:text-2xl font-bold text-purple-800 mb-2 md:mb-3 text-center">
+                ⚖️ 体重
               </h3>
-              <p className="text-xs text-gray-600 text-center mb-2">目標体重との比較</p>
+              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">目標体重との比較</p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={weightChartData} options={chartOptions} />
               </div>
@@ -895,38 +889,36 @@ export default function GraphPage() {
         </div>
 
         {/* AIアドバイスセクション */}
-        <section className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 md:gap-0 mb-3">
+        <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-4 md:mb-6 w-full border-2 border-green-300 mx-0 md:mx-0">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-0 mb-4 md:mb-6">
             {/* タイトル部分 */}
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
               {/* 心臓ちゃんのイラスト */}
-              <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
+              <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0">
                 <img 
                   src={getHeartImage(heartEmotion)} 
                   alt="心臓ちゃん" 
                   className="w-full h-full object-contain heartbeat-float"
                 />
               </div>
-              AIアドバイス
+              💡 AIアドバイス
             </h2>
 
             {/* ボタングループ */}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={getAIAdvice}
                 disabled={isLoadingAdvice}
-                className="bg-orange-500 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg font-medium hover:bg-orange-600 disabled:bg-gray-400 text-xs md:text-sm whitespace-nowrap"
+                className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white py-3 md:py-4 px-6 md:px-8 rounded-xl font-bold text-lg md:text-xl whitespace-nowrap transition-all"
               >
                 {isLoadingAdvice ? '分析中...' : 'アドバイスを取得'}
               </button>
               {showAdvice && (
                 <button
                   onClick={() => {
-                    console.log('閉じるボタンがクリックされました');
                     setShowAdvice(false);
-                    console.log('showAdvice:', false);
                   }}
-                  className="bg-gray-500 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg font-medium hover:bg-gray-600 text-xs md:text-sm whitespace-nowrap"
+                  className="bg-gray-500 hover:bg-gray-600 text-white py-3 md:py-4 px-6 md:px-8 rounded-xl font-bold text-lg md:text-xl whitespace-nowrap transition-all"
                 >
                   閉じる
                 </button>
@@ -935,14 +927,14 @@ export default function GraphPage() {
           </div>
           
           {showAdvice && aiAdvice && (
-            <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg p-4 mt-3 border-l-4 border-orange-400">
-              <div className="flex items-start gap-3">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 md:p-8 border-2 border-green-300">
+              <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+                  <p className="text-lg md:text-xl text-gray-700 whitespace-pre-line leading-relaxed font-medium">
                     {aiAdvice}
                   </p>
-                  <div className="mt-3 flex gap-2 flex-col md:flex-row">
-                    <div className="text-sm text-orange-600 font-medium flex-1">
+                  <div className="mt-6 flex gap-3 flex-col md:flex-row">
+                    <div className="text-lg md:text-xl text-green-700 font-bold flex-1">
                       💖 心臓ちゃんより 💖
                     </div>
                     {/* LINE 送信ボタン */}
@@ -969,7 +961,7 @@ export default function GraphPage() {
                             alert('❌ LINE 送信中にエラーが発生しました');
                           }
                         }}
-                        className="bg-green-500 text-white py-1 px-3 rounded-lg font-medium hover:bg-green-600 text-xs md:text-sm whitespace-nowrap"
+                        className="bg-green-500 hover:bg-green-600 text-white py-3 md:py-4 px-6 md:px-8 rounded-xl font-bold text-lg md:text-xl whitespace-nowrap transition-all"
                       >
                         📱 LINE で送信
                       </button>

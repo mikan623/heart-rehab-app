@@ -26,6 +26,7 @@ interface UserProfile {
   height: string;
   targetWeight: string;
   diseases: string[];
+  riskFactors: string[];
   medications: string;
   physicalFunction: string;
   emergencyContact: string;
@@ -42,6 +43,7 @@ export default function ProfilePage() {
     height: '',
     targetWeight: '',
     diseases: [],
+    riskFactors: [],
     medications: '',
     physicalFunction: '',
     emergencyContact: '',
@@ -72,22 +74,21 @@ export default function ProfilePage() {
     'その他',
   ];
 
+  // 動脈硬化危険因子リスト
+  const riskFactorOptions = [
+    '肥満',
+    '喫煙',
+    '飲酒',
+    '精神的ストレス',
+    '運動不足',
+    '生活習慣病',
+    '過労',
+    '家族歴',
+  ];
+
   useEffect(() => {
     const initLiff = async () => {
       try {
-        // ローカル環境の場合はLIFF機能をスキップ
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          console.log('ローカル環境: LIFF機能をスキップ');
-          
-          // 🆕 ローカル環境でもデータベースから取得を試みる
-          const savedProfile = localStorage.getItem('profile_local');
-          if (savedProfile) {
-            setProfile(JSON.parse(savedProfile));
-          }
-          setIsLoading(false);
-          return;
-        }
-  
         if (typeof window !== 'undefined' && window.liff) {
           await window.liff.init({ 
             liffId: process.env.NEXT_PUBLIC_LIFF_ID 
@@ -161,6 +162,7 @@ export default function ProfilePage() {
                     height: data.profile.height?.toString() || '',
                     targetWeight: data.profile.targetWeight?.toString() || '',
                     diseases: data.profile.diseases || [],
+                    riskFactors: data.profile.riskFactors || [],
                     medications: data.profile.medications || '',
                     physicalFunction: data.profile.physicalFunction || '',
                     emergencyContact: data.profile.emergencyContact || '',
@@ -176,6 +178,7 @@ export default function ProfilePage() {
                     height: '',
                     targetWeight: '',
                     diseases: [],
+                    riskFactors: [],
                     medications: '',
                     physicalFunction: '',
                     emergencyContact: '',
@@ -193,6 +196,7 @@ export default function ProfilePage() {
                 height: '',
                 targetWeight: '',
                 diseases: [],
+                riskFactors: [],
                 medications: '',
                 physicalFunction: '',
                 emergencyContact: '',
@@ -218,6 +222,15 @@ export default function ProfilePage() {
       diseases: prev.diseases.includes(disease)
         ? prev.diseases.filter(d => d !== disease)
         : [...prev.diseases, disease]
+    }));
+  };
+
+  const handleRiskFactorToggle = (riskFactor: string) => {
+    setProfile(prev => ({
+      ...prev,
+      riskFactors: prev.riskFactors.includes(riskFactor)
+        ? prev.riskFactors.filter(r => r !== riskFactor)
+        : [...prev.riskFactors, riskFactor]
     }));
   };
 
@@ -259,14 +272,14 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
         <style dangerouslySetInnerHTML={{
@@ -294,7 +307,7 @@ export default function ProfilePage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               プロフィール設定
             </h1>
           </div>
@@ -318,54 +331,54 @@ export default function ProfilePage() {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="p-4">
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          {/* 基本情報 */}
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">基本情報</h2>
+      <main className="px-0 md:p-4">
+        {/* 基本情報セクション */}
+        <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">👤 基本情報</h2>
 
-          {/* 🆕 LINE プロフィール画像を表示 */}
+          {/* LINE プロフィール画像を表示 */}
           {user?.pictureUrl && (
-            <div className="mb-4 flex justify-center">
+            <div className="mb-6 flex justify-center">
               <img
                 src={user.pictureUrl}
                 alt={user.displayName}
-                className="w-24 h-24 rounded-full border-4 border-orange-300 shadow-md object-cover"
+                className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-orange-300 shadow-md object-cover"
               />
             </div>
           )}
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* 名前 */}
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className="block text-sm text-gray-600 mb-1">お名前</label>
+            <div>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-2 md:mb-3">お名前</label>
               <input
                 type="text"
                 value={profile.displayName}
                 onChange={(e) => setProfile({...profile, displayName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="山田太郎"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                placeholder="氏名を入力してください"
               />
             </div>
 
             {/* 年齢 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">年齢</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-2 md:mb-3">年齢</label>
               <input
                 type="number"
                 value={profile.age}
                 onChange={(e) => setProfile({...profile, age: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="65"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                placeholder="年齢を入力してください"
               />
             </div>
 
             {/* 性別 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">性別</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-2 md:mb-3">性別</label>
               <select
                 value={profile.gender}
                 onChange={(e) => setProfile({...profile, gender: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
               >
                 <option value="">選択してください</option>
                 <option value="男性">男性</option>
@@ -376,48 +389,66 @@ export default function ProfilePage() {
 
             {/* 身長 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">身長（cm）</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-2 md:mb-3">身長（cm）</label>
               <input
                 type="number"
                 value={profile.height}
                 onChange={(e) => setProfile({...profile, height: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="170"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                placeholder="身長を入力してください"
               />
             </div>
 
             {/* 目標体重 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">目標体重（kg）</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-2 md:mb-3">目標体重（kg）</label>
               <input
                 type="number"
                 value={profile.targetWeight}
                 onChange={(e) => setProfile({...profile, targetWeight: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="65"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                placeholder="目標体重を入力してください"
               />
             </div>
           </div>
         </div>
 
-        {/* 医療情報 */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">医療情報</h2>
+        {/* 医療情報セクション */}
+        <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-pink-300">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">🏥 医療情報</h2>
           
-          <div className="space-y-3">
+          <div className="space-y-4 md:space-y-6">
             {/* 基礎疾患 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-2">基礎疾患（複数選択可）</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-2">
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-3 md:mb-4">基礎疾患(複数選択可)</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
                 {diseaseOptions.map((disease) => (
-                  <label key={disease} className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-orange-50">
+                  <label key={disease} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50">
                     <input
                       type="checkbox"
                       checked={profile.diseases.includes(disease)}
                       onChange={() => handleDiseaseToggle(disease)}
-                      className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500"
+                      className="w-5 h-5 md:w-6 md:h-6 text-pink-500"
                     />
-                    <span className="text-xs sm:text-sm text-gray-700">{disease}</span>
+                    <span className="text-sm md:text-lg text-gray-700">{disease}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* その他の動脈硬化危険因子 */}
+            <div>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-3 md:mb-4">⚠️他の動脈硬化危険因子(複数選択可)</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+                {riskFactorOptions.map((riskFactor) => (
+                  <label key={riskFactor} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50">
+                    <input
+                      type="checkbox"
+                      checked={profile.riskFactors.includes(riskFactor)}
+                      onChange={() => handleRiskFactorToggle(riskFactor)}
+                      className="w-5 h-5 md:w-6 md:h-6 text-pink-500"
+                    />
+                    <span className="text-sm md:text-lg text-gray-700">{riskFactor}</span>
                   </label>
                 ))}
               </div>
@@ -425,36 +456,36 @@ export default function ProfilePage() {
 
             {/* 服薬情報 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">服薬情報</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-3 md:mb-4">💊服薬情報</label>
               <textarea
                 value={profile.medications}
                 onChange={(e) => setProfile({...profile, medications: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-lg border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400 resize-none"
                 placeholder="例：降圧剤、血液サラサラの薬など"
-                rows={3}
+                rows={5}
               />
             </div>
 
             {/* 身体機能 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">身体機能・制限事項</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-3 md:mb-4">🦵身体機能・制限事項</label>
               <textarea
                 value={profile.physicalFunction}
                 onChange={(e) => setProfile({...profile, physicalFunction: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-lg border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400 resize-none"
                 placeholder="例：歩行時に息切れあり、階段は手すりが必要など"
-                rows={3}
+                rows={5}
               />
             </div>
 
             {/* 緊急連絡先 */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">緊急連絡先</label>
+              <label className="block text-lg md:text-xl font-semibold text-gray-700 mb-3 md:mb-4">📞緊急連絡先</label>
               <input
                 type="tel"
                 value={profile.emergencyContact}
                 onChange={(e) => setProfile({...profile, emergencyContact: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-3 md:py-4 text-lg md:text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
                 placeholder="090-1234-5678"
               />
             </div>
@@ -462,12 +493,14 @@ export default function ProfilePage() {
         </div>
 
         {/* 保存ボタン */}
-        <button
-          onClick={handleSave}
-          className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-600"
-        >
-          保存する
-        </button>
+        <div className="mt-6 md:mt-8 mb-6 flex justify-center">
+          <button
+            onClick={handleSave}
+            className="w-full md:w-2/3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all"
+          >
+            保存する
+          </button>
+        </div>
       </main>
     </div>
   );

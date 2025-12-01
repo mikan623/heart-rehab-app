@@ -414,6 +414,35 @@ export default function NavigationBar() {
     }
   };
 
+  // ログアウト処理
+  const handleLogout = async () => {
+    try {
+      // LIFF からログアウト
+      if (typeof window !== 'undefined' && window.liff && window.liff.logout) {
+        window.liff.logout();
+        console.log('✅ LINE ログアウト完了');
+      }
+      
+      // ローカルストレージをクリア
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('profile') || key.includes('healthRecords') || key.includes('familyMembers')) {
+          localStorage.removeItem(key);
+          console.log('🗑️ ローカルストレージをクリア:', key);
+        }
+      });
+      
+      // 設定メニューを閉じる
+      setShowSettingsMenu(false);
+      
+      // ホームページにリダイレクト
+      window.location.href = '/';
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+      alert('ログアウトに失敗しました');
+    }
+  };
+
   // 設定メニューを閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -437,7 +466,7 @@ export default function NavigationBar() {
       {/* 左側：ナビゲーションボタン（スクロール可能） */}
       <div className="flex gap-0.5 overflow-x-auto pb-1 flex-1">
         <button 
-          onClick={() => window.location.href = '/'}
+          onClick={() => window.location.href = '/health-records'}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <HealthRecordIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">健康記録</span>
@@ -504,6 +533,12 @@ export default function NavigationBar() {
                 }}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 PDF印刷
+              </button>
+              <hr className="my-1" />
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">
+                🚪 ログアウト
               </button>
             </div>
           </div>
