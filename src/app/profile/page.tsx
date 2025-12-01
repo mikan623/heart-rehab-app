@@ -113,9 +113,9 @@ export default function ProfilePage() {
       try {
         const session = getSession();
         
-        // メールログインの場合
-        if (session && !isLineLoggedIn()) {
-          console.log('📧 メールログインユーザー');
+        // メールログインの場合はLIFF初期化をスキップ
+        if (session) {
+          console.log('📧 メールログインユーザー: LIFF初期化をスキップ');
           setProfile(prev => ({
             ...prev,
             userId: session.userId,

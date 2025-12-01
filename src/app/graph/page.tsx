@@ -241,6 +241,13 @@ export default function GraphPage() {
   useEffect(() => {
     const initLiff = async () => {
       try {
+        // メールログインセッションがある場合はLIFF初期化をスキップ
+        const session = getSession();
+        if (session) {
+          console.log('📧 メールログイン検出: LIFF初期化をスキップ');
+          return;
+        }
+
         // ローカル環境の場合はLIFF機能をスキップ
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
           console.log('ローカル環境: LIFF機能をスキップ');

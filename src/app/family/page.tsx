@@ -48,6 +48,14 @@ export default function FamilyPage() {
   useEffect(() => {
     const initData = async () => {
       try {
+        // メールログインセッションがある場合はLIFF初期化をスキップ
+        const session = getSession();
+        if (session) {
+          console.log('📧 メールログイン検出: LIFF初期化をスキップ');
+          setIsLoading(false);
+          return;
+        }
+
         // LIFF初期化処理
         if (typeof window !== 'undefined' && window.liff) {
           try {
