@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
+import { getSession, isLineLoggedIn } from "@/lib/auth";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -182,6 +184,9 @@ interface HealthRecords {
 }
 
 export default function GraphPage() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [savedRecords, setSavedRecords] = useState<HealthRecords>({});
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -207,6 +212,19 @@ export default function GraphPage() {
       return `${baseKey}_local`;
     }
   };
+
+  // 認証チェック
+  useEffect(() => {
+    const session = getSession();
+    const lineLoggedIn = isLineLoggedIn();
+
+    if (!session && !lineLoggedIn) {
+      router.push('/');
+      return;
+    }
+
+    setIsAuthenticated(true);
+  }, [router]);
 
   // LIFF初期化とLINEアプリ検出
   useEffect(() => {
@@ -741,7 +759,16 @@ export default function GraphPage() {
     );
   }
 
-  return (
+  // 認証されていない場合はローディング画面
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
+        <p className="text-gray-600">読み込み中...</p>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
@@ -973,6 +1000,10 @@ export default function GraphPage() {
           )}
         </section>
       </main>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
+      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

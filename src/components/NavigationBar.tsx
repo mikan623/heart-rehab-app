@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { clearSession } from "@/lib/auth";
 import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon } from './NavIcons';
 
 export default function NavigationBar() {
@@ -417,10 +418,21 @@ export default function NavigationBar() {
   // ログアウト処理
   const handleLogout = async () => {
     try {
+      // メールログイン情報をクリア
+      clearSession();
+      console.log('✅ メールログイン情報をクリア');
+      
       // LIFF からログアウト
-      if (typeof window !== 'undefined' && window.liff && window.liff.logout) {
-        window.liff.logout();
-        console.log('✅ LINE ログアウト完了');
+      if (typeof window !== 'undefined' && window.liff) {
+        try {
+          // LIFF が初期化されているかチェック
+          if (window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
+            window.liff.logout();
+            console.log('✅ LINE ログアウト完了');
+          }
+        } catch (liffError) {
+          console.log('⚠️ LINE ログアウトスキップ（LIFF 未初期化）:', liffError);
+        }
       }
       
       // ローカルストレージをクリア

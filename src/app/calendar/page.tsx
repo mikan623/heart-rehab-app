@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
+import { getSession, isLineLoggedIn } from "@/lib/auth";
 
 // 健康記録の型定義
 interface HealthRecord {
@@ -26,6 +28,9 @@ declare global {
 }
 
 export default function CalendarPage() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
@@ -124,6 +129,19 @@ export default function CalendarPage() {
   // 🆕 追加：LINEミニアプリ最適化用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
+
+  // 認証チェック
+  useEffect(() => {
+    const session = getSession();
+    const lineLoggedIn = isLineLoggedIn();
+
+    if (!session && !lineLoggedIn) {
+      router.push('/');
+      return;
+    }
+
+    setIsAuthenticated(true);
+  }, [router]);
 
   // LIFF初期化とLINEアプリ検出
   useEffect(() => {
@@ -469,8 +487,8 @@ export default function CalendarPage() {
     }
   };
 
-  return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
+  return isAuthenticated ? (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
         {/* LINEアプリ用スタイル */}
         {typeof window !== 'undefined' && isLineApp && (
           <style dangerouslySetInnerHTML={{
@@ -1087,6 +1105,10 @@ export default function CalendarPage() {
                 </div>
               )}
       </main>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
+      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

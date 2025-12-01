@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react"; 
+import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
+import { getSession, isLineLoggedIn } from "@/lib/auth";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -28,6 +30,9 @@ declare global {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
@@ -61,6 +66,28 @@ export default function Home() {
   // 入力フィールドの再レンダリングを防ぐためのキー
   const [inputKey, setInputKey] = useState(0);
   
+  // 認証チェック
+  useEffect(() => {
+    const session = getSession();
+    const lineLoggedIn = isLineLoggedIn();
+
+    if (!session && !lineLoggedIn) {
+      // ログインしていない場合はランディングページへ
+      router.push('/');
+      return;
+    }
+
+    // メールログインの場合、user 情報を設定
+    if (session && !lineLoggedIn) {
+      setUser({
+        userId: session.userId,
+        displayName: session.userName
+      });
+    }
+
+    setIsAuthenticated(true);
+  }, [router]);
+
   // ハイドレーション対策: クライアント側で作成日とテーブルデータを設定
   useEffect(() => {
     setPrintCreatedDate(new Date().toLocaleString('ja-JP'));
@@ -810,7 +837,7 @@ export default function Home() {
   }
   `;
 
-  return (
+  return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル追加 */}
       {typeof window !== 'undefined' && isLineApp && (
@@ -1452,6 +1479,10 @@ export default function Home() {
           </tbody>
         </table>
       </div>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
+      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

@@ -14,9 +14,11 @@ datasource db {
 }
 
 model User {
-  id        String   @id  // LINE userId を直接使用
+  id        String   @id  // LINE userId または メールアドレス
   email     String   @unique
   name      String?
+  password  String?  // メール登録ユーザー用（ハッシュ化）
+  authType  String   @default("line")  // "line" または "email"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   

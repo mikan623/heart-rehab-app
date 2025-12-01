@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
+import { getSession, isLineLoggedIn } from "@/lib/auth";
 
 // LIFF型定義を追加
 declare global {
@@ -34,6 +35,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     userId: '',
     displayName: '',
@@ -86,9 +88,37 @@ export default function ProfilePage() {
     '家族歴',
   ];
 
+  // 認証チェック
+  useEffect(() => {
+    const session = getSession();
+    const lineLoggedIn = isLineLoggedIn();
+
+    if (!session && !lineLoggedIn) {
+      router.push('/');
+      return;
+    }
+
+    setIsAuthenticated(true);
+  }, [router]);
+
   useEffect(() => {
     const initLiff = async () => {
       try {
+        const session = getSession();
+        
+        // メールログインの場合
+        if (session && !isLineLoggedIn()) {
+          console.log('📧 メールログインユーザー');
+          setProfile(prev => ({
+            ...prev,
+            userId: session.userId,
+            displayName: session.userName,
+            email: session.userId, // メールアドレスを ID として使用
+          }));
+          setIsLoading(false);
+          return;
+        }
+        
         if (typeof window !== 'undefined' && window.liff) {
           await window.liff.init({ 
             liffId: process.env.NEXT_PUBLIC_LIFF_ID 
@@ -278,7 +308,7 @@ export default function ProfilePage() {
     );
   }
 
-  return (
+  return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
@@ -502,6 +532,10 @@ export default function ProfilePage() {
           </button>
         </div>
       </main>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
+      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }
