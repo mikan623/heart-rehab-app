@@ -69,20 +69,23 @@ export default function Home() {
   // 認証チェック
   useEffect(() => {
     const session = getSession();
-    const lineLoggedIn = isLineLoggedIn();
-
-    if (!session && !lineLoggedIn) {
-      // ログインしていない場合はランディングページへ
-      router.push('/');
-      return;
-    }
-
-    // メールログインの場合、user 情報を設定
-    if (session && !lineLoggedIn) {
+    
+    // メールログインセッション優先（LINE ログインより優先）
+    if (session) {
       setUser({
         userId: session.userId,
         displayName: session.userName
       });
+      setIsAuthenticated(true);
+      return;
+    }
+
+    // メールログインセッションがない場合のみ LINE ログインをチェック
+    const lineLoggedIn = isLineLoggedIn();
+    if (!lineLoggedIn) {
+      // ログインしていない場合はランディングページへ
+      router.push('/');
+      return;
     }
 
     setIsAuthenticated(true);

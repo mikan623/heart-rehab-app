@@ -28,9 +28,16 @@ export default function FamilyPage() {
   // 認証チェック
   useEffect(() => {
     const session = getSession();
-    const lineLoggedIn = isLineLoggedIn();
+    
+    // メールログインセッション優先（LINE ログインより優先）
+    if (session) {
+      setIsAuthenticated(true);
+      return;
+    }
 
-    if (!session && !lineLoggedIn) {
+    // メールログインセッションがない場合のみ LINE ログインをチェック
+    const lineLoggedIn = isLineLoggedIn();
+    if (!lineLoggedIn) {
       router.push('/');
       return;
     }
