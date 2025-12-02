@@ -393,7 +393,7 @@ export default function LandingPage() {
               },
               {
                 q: '医師に相談できますか？',
-                a: 'アプリで記録したデータは医療機関フォーマットでエクスポート可能。医師との相談時に活用できます。'
+                a: 'アプリで記録したデータは医療機関フォーマットでエクスポート可能。PDFで印刷もできるため、受診の際に持って行くと医師との相談時に活用できます。'
               }
             ].map((faq, idx) => (
               <details
@@ -424,7 +424,7 @@ export default function LandingPage() {
             <div>
               <div className="text-5xl mb-4">📧</div>
               <h4 className="font-bold text-gray-800 mb-2">メールサポート</h4>
-              <p className="text-gray-600">support@heart-rehab.jp</p>
+              <p className="text-gray-600">info@heart-rehab.jp</p>
             </div>
             <div>
               <div className="text-5xl mb-4">📚</div>

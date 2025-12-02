@@ -946,11 +946,11 @@ export default function Home() {
                 type="datetime-local"
                 value={selectedDateTime}
                 onChange={(e) => setSelectedDateTime(e.target.value)}
-                className={`w-full px-2 md:px-4 py-2 md:py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold ${
+                className={`w-full px-2 md:px-4 py-4 md:py-3 text-lg md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold ${
                   isLineApp ? 'line-input' : ''
                 }`}
                 style={{
-                  fontSize: 'clamp(14px, 2vw, 18px)',
+                  fontSize: 'clamp(16px, 2vw, 18px)',
                   minHeight: 'auto',
                   ...(isLineApp ? { fontSize: '16px' } : {})
                 }}
