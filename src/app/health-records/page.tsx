@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"; 
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -370,6 +370,15 @@ export default function Home() {
             const profile = await window.liff.getProfile();
             setUser(profile);
             console.log('LINEユーザー情報:', profile);
+            
+            // 🆕 LINE ログイン状態をメモリに保存
+            setLineLogin(profile.userId, profile.displayName);
+            console.log('✅ LINE ログイン状態をメモリに保存');
+            
+            // Supabase に保存（背景で実行、エラー無視）
+            setLineLoggedInDB(profile.userId, true, profile.userId)
+              .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
+              .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
 
             // LINEアプリ内で実行されているかチェック
             if (window.liff.isInClient()) {
@@ -1424,9 +1433,9 @@ export default function Home() {
         <p className="text-center text-gray-600 mb-1">健康記録サマリー</p>
         <p className="text-center text-sm text-gray-500 mb-6">作成日: {printCreatedDate}</p>
 
-        {/* 患者情報 */}
-        <h2 className="text-xl font-bold text-red-600 mb-4">患者情報</h2>
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        {/* 基本情報 */}
+        <h2 className="text-xl font-bold text-red-600 mb-4">【基本情報】</h2>
+        <div className="grid grid-cols-2 gap-4 mb-8 border border-gray-400 p-4">
           <div>
             <p className="font-semibold">お名前: {(() => {
               try {
@@ -1458,6 +1467,16 @@ export default function Home() {
             })()}</p>
           </div>
           <div>
+            <p className="font-semibold">身長: {(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                return profile.height || '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}cm</p>
+          </div>
+          <div>
             <p className="font-semibold">目標体重: {(() => {
               try {
                 const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
@@ -1466,6 +1485,67 @@ export default function Home() {
                 return '未設定';
               }
             })()}kg</p>
+          </div>
+          <div>
+            <p className="font-semibold">緊急連絡先: {(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                return profile.emergencyContact || '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}</p>
+          </div>
+        </div>
+
+        {/* 医療情報 */}
+        <h2 className="text-xl font-bold text-red-600 mb-4">【医療情報】</h2>
+        <div className="border border-gray-400 p-4 mb-8">
+          <div className="mb-4">
+            <p className="font-semibold mb-2">基礎疾患:</p>
+            <p className="ml-4">{(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                const diseases = profile.diseases || [];
+                return diseases.length > 0 ? diseases.join('、') : '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}</p>
+          </div>
+          <div className="mb-4">
+            <p className="font-semibold mb-2">その他の動脈硬化危険因子:</p>
+            <p className="ml-4">{(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                const riskFactors = profile.riskFactors || [];
+                return riskFactors.length > 0 ? riskFactors.join('、') : '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}</p>
+          </div>
+          <div className="mb-4">
+            <p className="font-semibold mb-2">現在の薬物療法:</p>
+            <p className="ml-4">{(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                return profile.medications || '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}</p>
+          </div>
+          <div>
+            <p className="font-semibold mb-2">身体機能:</p>
+            <p className="ml-4">{(() => {
+              try {
+                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+                return profile.physicalFunction || '未設定';
+              } catch {
+                return '未設定';
+              }
+            })()}</p>
           </div>
         </div>
 

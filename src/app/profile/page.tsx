@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 
 // LIFF型定義を追加
 declare global {
@@ -57,6 +57,10 @@ export default function ProfilePage() {
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
   const [liff, setLiff] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  
+  // 🆕 LINE連携関連の状態
+  const [isLineConnecting, setIsLineConnecting] = useState(false);
+  const [isLineConnected, setIsLineConnected] = useState(false);
 
   const getStorageKey = (baseKey: string) => {
     if (profile?.userId) {
@@ -92,36 +96,65 @@ export default function ProfilePage() {
   useEffect(() => {
     const session = getSession();
     
-    // メールログインセッション優先（LINE ログインより優先）
+    // メールログインセッション優先
     if (session) {
       setIsAuthenticated(true);
       return;
     }
 
-    // メールログインセッションがない場合のみ LINE ログインをチェック
-    const lineLoggedIn = isLineLoggedIn();
-    if (!lineLoggedIn) {
-      router.push('/');
+    // LINE ログイン判定（シンプル版 - 即座に判定）
+    if (isLineLoggedIn()) {
+      console.log('✅ LINE ログイン確認');
+      setIsAuthenticated(true);
       return;
     }
 
-    setIsAuthenticated(true);
+    // ログインなし → ホームへ
+    console.log('❌ ログインなし');
+    router.push('/');
   }, [router]);
+
+  // 🆕 LINE連携状態をチェック
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.liff) {
+      try {
+        if (window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
+          setIsLineConnected(window.liff.isLoggedIn());
+        }
+      } catch (error) {
+        console.log('LINE connection check failed:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const initLiff = async () => {
       try {
         const session = getSession();
         
-        // メールログインの場合はLIFF初期化をスキップ
+        // メールログインの場合
         if (session) {
-          console.log('📧 メールログインユーザー: LIFF初期化をスキップ');
+          console.log('📧 メールログインユーザー: プロフィール初期化');
           setProfile(prev => ({
             ...prev,
             userId: session.userId,
             displayName: session.userName,
             email: session.userId, // メールアドレスを ID として使用
           }));
+          
+          // 🆕 メールログインユーザーでもLIFF初期化を試みる（LINE連携用）
+          if (typeof window !== 'undefined' && window.liff) {
+            try {
+              await window.liff.init({ 
+                liffId: process.env.NEXT_PUBLIC_LIFF_ID 
+              });
+              setLiff(window.liff);
+              console.log('✅ LIFF初期化成功（メールログインユーザー用）');
+            } catch (error) {
+              console.log('⚠️ LIFF初期化失敗（無視）:', error);
+            }
+          }
+          
           setIsLoading(false);
           return;
         }
@@ -136,6 +169,15 @@ export default function ProfilePage() {
           if (window.liff.isLoggedIn()) {
             const liffProfile = await window.liff.getProfile();
             setUser(liffProfile);
+            
+            // 🆕 LINE ログイン状態をメモリに保存
+            setLineLogin(liffProfile.userId, liffProfile.displayName);
+            console.log('✅ LINE ログイン状態をメモリに保存');
+            
+            // Supabase に保存（背景で実行、エラー無視）
+            setLineLoggedInDB(liffProfile.userId, true, liffProfile.userId)
+              .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
+              .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
             
             // 📧 LINE プロフィールからメールアドレスを取得
             try {
@@ -271,6 +313,50 @@ export default function ProfilePage() {
     }));
   };
 
+  // 🆕 LINE連携ハンドラ
+  const handleLineConnection = async () => {
+    try {
+      setIsLineConnecting(true);
+      
+      if (liff && !isLineConnected) {
+        // LINE ログイン画面にリダイレクト
+        window.liff.login();
+      }
+    } catch (error) {
+      console.error('LINE連携エラー:', error);
+      alert('LINE連携に失敗しました');
+    } finally {
+      setIsLineConnecting(false);
+    }
+  };
+
+  // 🆕 LINE連携後にプロフィール情報を自動入力
+  useEffect(() => {
+    const updateLineProfile = async () => {
+      if (isLineConnected && liff && window.liff.isLoggedIn()) {
+        try {
+          const liffProfile = await window.liff.getProfile();
+          if (liffProfile) {
+            setUser(liffProfile);
+            console.log('✅ LINEプロフィール自動入力:', liffProfile);
+            
+            // プロフィール情報を自動入力
+            setProfile(prev => ({
+              ...prev,
+              displayName: liffProfile.displayName || prev.displayName,
+            }));
+            
+            setIsLineConnected(true);
+          }
+        } catch (error) {
+          console.error('LINEプロフィール取得エラー:', error);
+        }
+      }
+    };
+    
+    updateLineProfile();
+  }, [isLineConnected, liff]);
+
   const handleSave = async () => {
     try {
       // ローカルストレージに保存（バックアップ）
@@ -369,6 +455,47 @@ export default function ProfilePage() {
 
       {/* メインコンテンツ */}
       <main className="px-0 md:p-4">
+        {/* 🆕 LINE連携セクション（メールログインユーザー向け） - 1番上に配置 */}
+        {getSession() && !isLineConnected && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-green-300">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">🔗 LINE連携</h2>
+            <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
+              LINEと連携することで、LINE上でも健康記録にアクセスできます。
+            </p>
+            <button
+              onClick={handleLineConnection}
+              disabled={isLineConnecting || !liff}
+              className="w-full md:w-auto px-8 py-3 md:py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-lg md:text-xl rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+            >
+              {isLineConnecting ? 'LINE連携中...' : 'LINEと連携する'}
+            </button>
+          </div>
+        )}
+
+        {/* 🆕 LINE連携済みセクション */}
+        {isLineConnected && user && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-blue-300">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">✅ LINE連携完了</h2>
+            <div className="flex items-center gap-4">
+              {user.pictureUrl && (
+                <img
+                  src={user.pictureUrl}
+                  alt={user.displayName}
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-blue-300 shadow-md object-cover"
+                />
+              )}
+              <div>
+                <p className="text-lg md:text-xl font-semibold text-gray-700">
+                  {user.displayName} として連携済み
+                </p>
+                <p className="text-sm md:text-base text-gray-600 mt-1">
+                  LINEアカウントと連携されています
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 基本情報セクション */}
         <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">👤 基本情報</h2>

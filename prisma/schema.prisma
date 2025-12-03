@@ -14,13 +14,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id  // LINE userId または メールアドレス
-  email     String   @unique
-  name      String?
-  password  String?  // メール登録ユーザー用（ハッシュ化）
-  authType  String   @default("line")  // "line" または "email"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id  // LINE userId または メールアドレス
+  email          String   @unique
+  name           String?
+  password       String?  // メール登録ユーザー用（ハッシュ化）
+  authType       String   @default("line")  // "line" または "email"
+  lineConnected  Boolean  @default(false)  // 🆕 LINE 連携状態
+  lineUserId     String?  @unique          // 🆕 LINE ユーザーID
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   
   // リレーション
   profiles      Profile[]
@@ -76,6 +78,7 @@ model FamilyMember {
   id           String   @id @default(cuid())
   userId       String
   name         String
+  email        String   // 🆕 メールアドレス
   relationship String
   lineUserId   String?
   isRegistered Boolean  @default(false)

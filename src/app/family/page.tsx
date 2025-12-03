@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 
 // 家族メンバーの型定義
 interface FamilyMember {
   id: string;
   name: string;
+  email: string;
   relationship: string;
   lineUserId?: string;
   isRegistered: boolean; // string から boolean に変更
@@ -29,20 +30,22 @@ export default function FamilyPage() {
   useEffect(() => {
     const session = getSession();
     
-    // メールログインセッション優先（LINE ログインより優先）
+    // メールログインセッション優先
     if (session) {
       setIsAuthenticated(true);
       return;
     }
 
-    // メールログインセッションがない場合のみ LINE ログインをチェック
-    const lineLoggedIn = isLineLoggedIn();
-    if (!lineLoggedIn) {
-      router.push('/');
+    // LINE ログイン判定（シンプル版 - 即座に判定）
+    if (isLineLoggedIn()) {
+      console.log('✅ LINE ログイン確認');
+      setIsAuthenticated(true);
       return;
     }
 
-    setIsAuthenticated(true);
+    // ログインなし → ホームへ
+    console.log('❌ ログインなし');
+    router.push('/');
   }, [router]);
 
   useEffect(() => {
@@ -66,6 +69,15 @@ export default function FamilyPage() {
             if (window.liff.isLoggedIn()) {
               const profile = await window.liff.getProfile();
               const userId = profile.userId;
+              
+              // 🆕 LINE ログイン状態をメモリに保存
+              setLineLogin(userId, profile.displayName);
+              console.log('✅ LINE ログイン状態をメモリに保存');
+              
+              // Supabase に保存（背景で実行、エラー無視）
+              setLineLoggedInDB(userId, true, userId)
+                .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
+                .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
 
               // 🆕 LINEアプリ内判定
               if (window.liff.isInClient()) {
@@ -246,8 +258,8 @@ export default function FamilyPage() {
       if (!member) return;
 
       // バリデーション
-      if (!member.name || !member.relationship) {
-        alert('名前と関係性を入力してください');
+      if (!member.name || !member.email) {
+        alert('名前とメールアドレスを入力してください');
         return;
       }
 
@@ -294,6 +306,7 @@ export default function FamilyPage() {
           body: JSON.stringify({
             memberId: id,
             name: member.name,
+            email: member.email,
             relationship: member.relationship,
             lineUserId: member.lineUserId,
             isRegistered: member.isRegistered
@@ -354,7 +367,8 @@ export default function FamilyPage() {
       const newMember: FamilyMember = {
         id: Date.now().toString(), // 一時的なID
         name: '',
-        relationship: '配偶者',
+        email: '',
+        relationship: '',
         isRegistered: false
       };
       
@@ -362,7 +376,7 @@ export default function FamilyPage() {
       setFamilyMembers(prev => [...prev, newMember]);
       
       // 🆕 データベースには保存しない
-      // （名前と LINE User ID が入力されたら updateFamilyMember で保存）
+      // （名前と メールアドレス が入力されたら updateFamilyMember で保存）
       console.log('✅ 新しい家族メンバーをローカルに追加');
     } catch (error) {
       console.error('❌ エラー:', error);
@@ -628,23 +642,6 @@ export default function FamilyPage() {
                   </button>
                 </div>
 
-                {/* 関係性 */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">関係性</label>
-                  <select
-                    value={member.relationship}
-                    onChange={(e) => updateFamilyMember(member.id, 'relationship', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 font-semibold"
-                  >
-                    <option value="配偶者">配偶者</option>
-                    <option value="子供">子供</option>
-                    <option value="親">親</option>
-                    <option value="兄弟">兄弟</option>
-                    <option value="姉妹">姉妹</option>
-                    <option value="その他">その他</option>
-                  </select>
-                </div>
-
                 {/* 名前 */}
                 <div className="mb-4">
                   <label className="block text-lg font-semibold text-gray-700 mb-2">名前</label>
@@ -655,6 +652,36 @@ export default function FamilyPage() {
                     className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
                     placeholder="山田太郎"
                   />
+                </div>
+
+                {/* メールアドレス */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">メールアドレス</label>
+                  <input
+                    type="email"
+                    value={member.email}
+                    onChange={(e) => updateFamilyMember(member.id, 'email', e.target.value)}
+                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    placeholder="example@email.com"
+                  />
+                </div>
+
+                {/* 関係性 */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">関係性</label>
+                  <select
+                    value={member.relationship}
+                    onChange={(e) => updateFamilyMember(member.id, 'relationship', e.target.value)}
+                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 font-semibold"
+                  >
+                    <option value="">選択してください</option>
+                    <option value="配偶者">配偶者</option>
+                    <option value="子供">子供</option>
+                    <option value="親">親</option>
+                    <option value="兄弟">兄弟</option>
+                    <option value="姉妹">姉妹</option>
+                    <option value="その他">その他</option>
+                  </select>
                 </div>
 
                 {/* LINE User ID */}
@@ -678,9 +705,9 @@ export default function FamilyPage() {
                   {member.id.length <= 15 && (
                     <button
                       onClick={() => saveFamilyMemberToDatabase(member.id)}
-                      disabled={!member.name || !member.relationship}
+                      disabled={!member.name || !member.email}
                       className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
-                        member.name && member.relationship
+                        member.name && member.email
                           ? 'bg-blue-500 text-white hover:bg-blue-600'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
@@ -692,11 +719,11 @@ export default function FamilyPage() {
                   {/* 登録ボタン */}
                   <button
                     onClick={() => registerFamilyMember(member.id)}
-                    disabled={!member.name || Boolean(member.isRegistered)}
+                    disabled={!member.name || !member.email || Boolean(member.isRegistered)}
                     className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
                       Boolean(member.isRegistered)
                         ? 'bg-green-500 text-white cursor-not-allowed'
-                        : member.name
+                        : member.name && member.email
                         ? 'bg-orange-500 text-white hover:bg-orange-600'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}

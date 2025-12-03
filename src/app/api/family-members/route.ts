@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
       data: {
         userId,
         name: familyMember.name || '',
-        relationship: familyMember.relationship || '家族',
+        email: familyMember.email || '',
+        relationship: familyMember.relationship || '',
         lineUserId: familyMember.lineUserId || null,
         isRegistered: familyMember.isRegistered || false,
       }

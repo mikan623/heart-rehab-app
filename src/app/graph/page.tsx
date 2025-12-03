@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -217,8 +217,9 @@ export default function GraphPage() {
   useEffect(() => {
     const session = getSession();
     
-    // メールログインセッション優先（LINE ログインより優先）
+    // メールログインセッション優先
     if (session) {
+      console.log('📧 メールログイン確認');
       setUser({
         userId: session.userId,
         displayName: session.userName
@@ -227,14 +228,16 @@ export default function GraphPage() {
       return;
     }
 
-    // メールログインセッションがない場合のみ LINE ログインをチェック
-    const lineLoggedIn = isLineLoggedIn();
-    if (!lineLoggedIn) {
-      router.push('/');
+    // LINE ログイン判定（シンプル版 - 即座に判定）
+    if (isLineLoggedIn()) {
+      console.log('✅ LINE ログイン確認');
+      setIsAuthenticated(true);
       return;
     }
 
-    setIsAuthenticated(true);
+    // ログインなし → ホームへ
+    console.log('❌ ログインなし');
+    router.push('/');
   }, [router]);
 
   // LIFF初期化とLINEアプリ検出
