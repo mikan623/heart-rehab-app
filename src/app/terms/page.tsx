@@ -1,5 +1,4 @@
 "use client";
-import NavigationBar from "@/components/NavigationBar";
 
 export default function TermsPage() {
   return (
@@ -13,21 +12,27 @@ export default function TermsPage() {
               利用規約
             </h1>
           </div>
-          <NavigationBar />
+          {/* ホームに戻るボタン */}
+          <a 
+            href="/" 
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
+            ホームに戻る
+          </a>
         </div>
 
         {/* スマホ版：縦並び */}
         <div className="md:hidden">
           {/* タイトル部分 */}
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center justify-between gap-3 mb-2">
             <h1 className="text-lg font-bold text-orange-800">
               利用規約
             </h1>
-          </div>
-          
-          {/* ナビゲーションボタン */}
-          <div className="flex justify-center">
-            <NavigationBar />
+            {/* ホームに戻るボタン */}
+            <a 
+              href="/" 
+              className="px-3 py-1 bg-orange-500 text-white rounded-lg font-medium text-sm hover:bg-orange-600 transition-colors">
+              戻る
+            </a>
           </div>
         </div>
       </header>
