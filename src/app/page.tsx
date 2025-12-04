@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { setLineLoggedInDB, setLineLogin } from '@/lib/auth';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -40,7 +41,45 @@ export default function LandingPage() {
 
           // ログイン状態をチェック
           if (window.liff.isLoggedIn()) {
-            // ログイン済みなら即座に健康記録ページに移動
+            // ✅ LINE ログイン済み時：ユーザー情報を取得して Supabase に保存
+            try {
+              const profile = await window.liff.getProfile();
+              console.log('✅ LINE プロフィール取得:', profile);
+              
+              // 🆕 メモリに保存
+              setLineLogin(profile.userId, profile.displayName);
+              
+              // 🆕 Supabase にユーザー情報を保存（users テーブル）
+              await setLineLoggedInDB(profile.userId, true, profile.userId);
+              console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
+
+              // 🆕 プロフィール情報を Supabase(profiles) に初回保存
+              try {
+                const res = await fetch(`/api/profiles?userId=${profile.userId}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  if (!data.profile) {
+                    await fetch('/api/profiles', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId: profile.userId,
+                        profile: {
+                          displayName: profile.displayName || '',
+                        },
+                      }),
+                    });
+                    console.log('✅ LINE プロフィールを Supabase(profiles) に初期保存');
+                  }
+                }
+              } catch (profileSaveError) {
+                console.log('⚠️ プロフィール初期保存エラー（無視）:', profileSaveError);
+              }
+            } catch (profileError) {
+              console.error('⚠️ LINE プロフィール取得エラー:', profileError);
+            }
+            
+            // 健康記録ページに移動
             router.push('/health-records');
             return;
           } else {
@@ -58,9 +97,17 @@ export default function LandingPage() {
   }, [router]);
 
   // LINE ログイン
-  const handleLineLogin = () => {
+  const handleLineLogin = async () => {
     if (liff && !isLoggedIn) {
-      window.liff.login();
+      try {
+        // LINE ログイン画面に遷移
+        window.liff.login();
+        
+        // ページリロード後、LIFF 初期化時にユーザーデータが保存される
+      } catch (error) {
+        console.error('LINE ログインエラー:', error);
+        setError('LINE ログインに失敗しました');
+      }
     }
   };
 
