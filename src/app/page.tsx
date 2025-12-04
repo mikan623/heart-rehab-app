@@ -45,6 +45,19 @@ export default function LandingPage() {
             try {
               const profile = await window.liff.getProfile();
               console.log('✅ LINE プロフィール取得:', profile);
+
+              // 📧 LINE メールアドレス取得（あれば）
+              let lineEmail = '';
+              try {
+                const liffIdToken = await window.liff.getIDToken();
+                if (liffIdToken) {
+                  const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
+                  lineEmail = decodedToken.email || '';
+                  console.log('📧 LINE メールアドレス取得:', lineEmail);
+                }
+              } catch (emailError) {
+                console.log('⚠️ LINE メールアドレス取得エラー（無視）:', emailError);
+              }
               
               // 🆕 メモリに保存
               setLineLogin(profile.userId, profile.displayName);
@@ -66,10 +79,11 @@ export default function LandingPage() {
                         userId: profile.userId,
                         profile: {
                           displayName: profile.displayName || '',
+                          email: lineEmail || undefined,
                         },
                       }),
                     });
-                    console.log('✅ LINE プロフィールを Supabase(profiles) に初期保存');
+                    console.log('✅ LINE プロフィールを Supabase(profiles) に初期保存（メール含む）');
                   }
                 }
               } catch (profileSaveError) {
@@ -521,7 +535,7 @@ export default function LandingPage() {
           <div className="mt-4 flex justify-center gap-6">
             <a href="/terms" className="hover:text-orange-600 transition">利用規約</a>
             <a href="/privacy" className="hover:text-orange-600 transition">プライバシーポリシー</a>
-            <a href="mailto:support@heart-rehab.jp" className="hover:text-orange-600 transition">お問い合わせ</a>
+            <a href="/contact" className="hover:text-orange-600 transition">お問い合わせ</a>
           </div>
         </div>
       </footer>

@@ -82,8 +82,18 @@ export async function POST(request: NextRequest) {
       user = await prisma.user.create({
         data: {
           id: userId,
-          email: `${userId}@example.com`,
+          // LINE ログイン時に取得したメールがあればそれを優先して保存
+          email: profile.email || `${userId}@example.com`,
           name: profile.displayName || `User ${userId}`
+        }
+      });
+    } else if (profile.email || profile.displayName) {
+      // 既存ユーザーの場合も、メールや名前が渡ってきたら更新
+      user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: profile.email || user.email,
+          name: profile.displayName || user.name,
         }
       });
     }
