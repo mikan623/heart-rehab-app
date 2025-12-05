@@ -28,6 +28,7 @@ model User {
   profiles      Profile[]
   healthRecords HealthRecord[]
   familyMembers FamilyMember[]
+  familyInvites FamilyInvite[]
   
   @@map("users")
 }
@@ -100,3 +101,16 @@ model ContactMessage {
 
   @@map("contact_messages")
 }
+
+model FamilyInvite {
+  id        String   @id @default(cuid())
+  patientId String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  patient   User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("family_invites")
+}
+

@@ -18,13 +18,17 @@ interface FamilyMember {
 export default function FamilyPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 🆕 追加：LINEミニアプリ最適化用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
+
+  // 家族用招待QRコード用の状態
+  const [inviteQrUrls, setInviteQrUrls] = useState<Record<string, string>>({});
+  const [generatingInviteFor, setGeneratingInviteFor] = useState<string | null>(null);
 
   // 認証チェック
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function FamilyPage() {
             if (window.liff.isLoggedIn()) {
               const profile = await window.liff.getProfile();
               const userId = profile.userId;
+              setCurrentUserId(userId);
               
               // 🆕 LINE ログイン状態をメモリに保存
               setLineLogin(userId, profile.displayName);
@@ -161,6 +166,54 @@ export default function FamilyPage() {
   
   // LINE Messaging API設定
   const LINE_CHANNEL_ACCESS_TOKEN = process.env.NEXT_PUBLIC_LINE_ACCESS_TOKEN;
+
+  // 家族用招待QRコードを生成
+  const generateFamilyInviteQr = async (memberId: string) => {
+    try {
+      if (!currentUserId) {
+        alert('ユーザー情報の取得に失敗しました。もう一度ページを開き直してください。');
+        return;
+      }
+
+      setGeneratingInviteFor(memberId);
+
+      const response = await fetch('/api/family-invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: currentUserId })
+      });
+
+      if (!response.ok) {
+        console.error('❌ 招待リンク作成失敗:', response.status);
+        alert('招待用QRコードの作成に失敗しました。時間をおいて再度お試しください。');
+        return;
+      }
+
+      const data = await response.json();
+      const inviteId = data.inviteId as string;
+
+      // LIFF の URL を生成（LINE上で開く想定）
+      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+      let inviteUrl = '';
+      if (liffId) {
+        inviteUrl = `https://liff.line.me/${liffId}?familyInviteId=${inviteId}`;
+      } else if (typeof window !== 'undefined') {
+        inviteUrl = `${window.location.origin}/family-invite?familyInviteId=${inviteId}`;
+      }
+
+      setInviteQrUrls(prev => ({
+        ...prev,
+        [memberId]: inviteUrl
+      }));
+
+      console.log('✅ 家族招待URL生成:', inviteUrl);
+    } catch (error) {
+      console.error('❌ 招待QR生成エラー:', error);
+      alert('招待用QRコードの作成に失敗しました。');
+    } finally {
+      setGeneratingInviteFor(null);
+    }
+  };
 
   // LINE Messaging APIで家族にメッセージを送信
   const sendLineMessageToFamily = async (memberId: string, message: string) => {
@@ -730,6 +783,30 @@ export default function FamilyPage() {
                   >
                     {Boolean(member.isRegistered) ? '✅ 登録済み' : '🤝 LINEで招待'}
                   </button>
+                </div>
+
+                {/* 家族用QRコードボタン＆表示 */}
+                <div className="mt-4">
+                  <button
+                    onClick={() => generateFamilyInviteQr(member.id)}
+                    disabled={generatingInviteFor === member.id || !currentUserId}
+                    className="w-full md:w-auto py-2 px-4 rounded-lg font-semibold text-sm md:text-base border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 disabled:opacity-60"
+                  >
+                    {generatingInviteFor === member.id ? 'QRコード生成中...' : '📱 家族用QRコードを表示'}
+                  </button>
+
+                  {inviteQrUrls[member.id] && (
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteQrUrls[member.id])}`}
+                        alt="家族用招待QRコード"
+                        className="w-40 h-40 bg-white p-2 rounded-lg border border-orange-200"
+                      />
+                      <p className="text-xs text-gray-500 text-center break-all">
+                        LINEアプリでこのQRコードを読み取ると、家族として登録できます。
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -82,6 +82,94 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// 家族にLINEメッセージを送信するヘルパー
+async function notifyFamilyMembers(userId: string, savedRecord: any) {
+  try {
+    if (!prisma || !process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+      console.log('⚠️ LINE通知スキップ: PrismaまたはLINE_CHANNEL_ACCESS_TOKENが未設定');
+      return;
+    }
+
+    // 患者プロフィール（名前があれば使う）
+    const profile = await prisma.profile.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: { displayName: true },
+    });
+
+    // 登録済みの家族メンバーを取得
+    const familyMembers = await prisma.familyMember.findMany({
+      where: {
+        userId,
+        isRegistered: true,
+        lineUserId: { not: null },
+      },
+    });
+
+    if (!familyMembers.length) {
+      console.log('👨‍👩‍👧‍👦 家族メンバーなし、LINE通知スキップ');
+      return;
+    }
+
+    // 送信メッセージを作成
+    const namePart = profile?.displayName
+      ? `${profile.displayName} さんの健康記録です。\n\n`
+      : '';
+
+    const message =
+      `💖 健康記録のお知らせ 💖\n\n` +
+      namePart +
+      `📅 日付: ${savedRecord.date}\n` +
+      `⏰ 時間: ${savedRecord.time}\n` +
+      `🩺 血圧: ${savedRecord.bloodPressureSystolic}/${savedRecord.bloodPressureDiastolic} mmHg\n` +
+      `💓 脈拍: ${savedRecord.pulse ?? '-'} 回/分\n` +
+      `⚖️ 体重: ${savedRecord.weight ?? '-'} kg\n` +
+      (savedRecord.dailyLife ? `📝 メモ: ${savedRecord.dailyLife}\n` : '') +
+      `\n心臓ちゃんより 💖`;
+
+    const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+    for (const member of familyMembers) {
+      if (!member.lineUserId) continue;
+
+      const body = {
+        to: member.lineUserId,
+        messages: [
+          {
+            type: 'text',
+            text: message,
+          },
+        ],
+      };
+
+      try {
+        const res = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('❌ LINE送信失敗:', {
+            status: res.status,
+            body: text,
+          });
+        } else {
+          console.log('✅ 家族へのLINE通知送信成功:', member.id);
+        }
+      } catch (err) {
+        console.error('❌ LINE送信エラー:', err);
+      }
+    }
+  } catch (error) {
+    console.error('❌ 家族通知ヘルパーエラー:', error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const connected = await ensurePrismaConnection();
@@ -174,6 +262,11 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('✅ Health record saved successfully:', savedRecord.id);
+
+    // 🆕 家族へLINEで健康記録を通知（エラーは握りつぶす）
+    notifyFamilyMembers(userId, savedRecord).catch((err) => {
+      console.error('❌ 家族通知非同期エラー:', err);
+    });
     
     return NextResponse.json({ 
       success: true, 
