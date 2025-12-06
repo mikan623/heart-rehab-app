@@ -23,6 +23,16 @@ export default function LandingPage() {
   useEffect(() => {
     setIsClient(true);
 
+    // 🔁 familyInviteId が付いた招待URLで開かれた場合は、家族登録画面へリダイレクト
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const familyInviteId = params.get('familyInviteId');
+      if (familyInviteId) {
+        router.push(`/family-invite?familyInviteId=${familyInviteId}`);
+        return;
+      }
+    }
+
     // ローカルストレージからセッション確認
     const sessionToken = localStorage.getItem('sessionToken');
     if (sessionToken) {

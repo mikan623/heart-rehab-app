@@ -81,6 +81,38 @@ export async function POST(request: NextRequest) {
         }
       });
     }
+
+    // 重複チェック（メール）
+    if (familyMember.email) {
+      const existingByEmail = await prisma.familyMember.findFirst({
+        where: {
+          userId,
+          email: familyMember.email,
+        },
+      });
+      if (existingByEmail) {
+        return NextResponse.json(
+          { error: 'このメールアドレスはすでに家族として登録されています。' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // 重複チェック（LINE userId）
+    if (familyMember.lineUserId) {
+      const existingByLineId = await prisma.familyMember.findFirst({
+        where: {
+          userId,
+          lineUserId: familyMember.lineUserId,
+        },
+      });
+      if (existingByLineId) {
+        return NextResponse.json(
+          { error: 'このLINEアカウントはすでに家族として登録されています。' },
+          { status: 409 }
+        );
+      }
+    }
     
     // 家族メンバーを作成
     const savedFamilyMember = await prisma.familyMember.create({
@@ -103,6 +135,15 @@ export async function POST(request: NextRequest) {
     
   } catch (error: any) {
     console.error('❌ Family member save error:', error);
+
+    // 一意制約違反（保険）
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: '同じ家族情報が既に登録されています。' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json({ 
       error: 'Failed to save family member',
       details: error.message 

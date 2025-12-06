@@ -29,6 +29,7 @@ export default function FamilyInvitePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [inviteId, setInviteId] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -124,7 +125,16 @@ export default function FamilyInvitePage() {
       });
 
       if (!res.ok) {
-        throw new Error("家族登録に失敗しました。");
+        let message = "家族登録に失敗しました。";
+        try {
+          const data = await res.json();
+          if (res.status === 409 && data?.error) {
+            message = data.error;
+          }
+        } catch {
+          // ignore
+        }
+        throw new Error(message);
       }
 
       // 招待を使用済みに更新（任意）
@@ -136,6 +146,7 @@ export default function FamilyInvitePage() {
         });
       }
 
+      setCompleted(true);
       alert("家族として登録が完了しました。これから健康記録が共有されます。");
     } catch (err: any) {
       console.error(err);
@@ -185,12 +196,13 @@ export default function FamilyInvitePage() {
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               あなたのお名前
             </label>
-            <input
+              <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               required
+              disabled={completed}
             />
           </div>
 
@@ -203,6 +215,7 @@ export default function FamilyInvitePage() {
               onChange={(e) => setRelationship(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               required
+              disabled={completed}
             >
               <option value="">選択してください</option>
               <option value="配偶者">配偶者</option>
@@ -224,24 +237,32 @@ export default function FamilyInvitePage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="example@email.com"
+              disabled={completed}
             />
           </div>
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || completed}
             className="w-full py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-full hover:shadow-lg disabled:opacity-60"
           >
-            {submitting ? "登録中..." : "この内容で登録する"}
+            {completed ? "登録済み" : submitting ? "登録中..." : "この内容で登録する"}
           </button>
         </form>
 
         <p className="text-xs text-gray-500 text-center">
           登録後は、このLINEアカウントにご家族の健康記録が自動で送信されます。
         </p>
+
+        {completed && (
+          <p className="text-sm text-green-700 text-center font-semibold">
+            登録ありがとうございます。このLINEアカウントにご家族の健康記録が自動で共有されます。
+          </p>
+        )}
       </div>
     </div>
   );
 }
+
 
 

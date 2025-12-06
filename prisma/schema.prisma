@@ -89,6 +89,8 @@ model FamilyMember {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("family_members")
+  @@unique([userId, email])
+  @@unique([userId, lineUserId])
 }
 
 model ContactMessage {
