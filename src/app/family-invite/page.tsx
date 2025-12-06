@@ -30,6 +30,7 @@ export default function FamilyInvitePage() {
 
   const [inviteId, setInviteId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -108,7 +109,7 @@ export default function FamilyInvitePage() {
     setError(null);
 
     try {
-      // 家族メンバーとして登録
+      // 家族メンバーとして登録（Messaging API の userId はまだ保存しない）
       const res = await fetch("/api/family-members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,8 +119,6 @@ export default function FamilyInvitePage() {
             name,
             email,
             relationship,
-            lineUserId: familyUserId,
-            isRegistered: true,
           },
         }),
       });
@@ -137,6 +136,11 @@ export default function FamilyInvitePage() {
         throw new Error(message);
       }
 
+      const result = await res.json();
+      if (result?.familyMember?.linkCode) {
+        setLinkCode(result.familyMember.linkCode);
+      }
+
       // 招待を使用済みに更新（任意）
       if (inviteId) {
         await fetch("/api/family-invites", {
@@ -147,7 +151,7 @@ export default function FamilyInvitePage() {
       }
 
       setCompleted(true);
-      alert("家族として登録が完了しました。これから健康記録が共有されます。");
+      alert("家族として登録が完了しました。公式LINEアカウントに招待コードを送信して連携を完了してください。");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "登録に失敗しました。");
@@ -255,9 +259,27 @@ export default function FamilyInvitePage() {
         </p>
 
         {completed && (
-          <p className="text-sm text-green-700 text-center font-semibold">
-            登録ありがとうございます。このLINEアカウントにご家族の健康記録が自動で共有されます。
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-green-700 text-center font-semibold">
+              登録ありがとうございます。あと少しで連携が完了します。
+            </p>
+            {linkCode && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+                <p className="text-sm text-gray-800 text-center font-semibold">
+                  ① 心臓リハビリ手帳の公式LINEアカウントを友だち追加してください。
+                </p>
+                <p className="text-sm text-gray-800 text-center font-semibold">
+                  ② 公式LINEのトーク画面で、次の招待コードをメッセージとして送信してください。
+                </p>
+                <p className="text-2xl font-mono font-bold text-center text-orange-700 tracking-widest">
+                  {linkCode}
+                </p>
+                <p className="text-xs text-gray-500 text-center">
+                  招待コードが送信されると、このLINEアカウントにご家族の健康記録が自動で共有されます。
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

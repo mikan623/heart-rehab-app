@@ -97,11 +97,10 @@ async function notifyFamilyMembers(userId: string, savedRecord: any) {
       select: { displayName: true },
     });
 
-    // 登録済みの家族メンバーを取得
+    // このユーザーに紐づく家族メンバーを取得（LINEユーザーIDが登録されている人すべて）
     const familyMembers = await prisma.familyMember.findMany({
       where: {
         userId,
-        isRegistered: true,
         lineUserId: { not: null },
       },
     });

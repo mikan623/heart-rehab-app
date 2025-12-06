@@ -114,6 +114,19 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // linkCode を生成（ユーザー別に一意）
+    let linkCode: string | null = null;
+    const generateCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+    let tries = 0;
+    while (!linkCode && tries < 5) {
+      const candidate = generateCode();
+      const exists = await prisma.familyMember.findFirst({
+        where: { userId, linkCode: candidate },
+      });
+      if (!exists) linkCode = candidate;
+      tries += 1;
+    }
+
     // 家族メンバーを作成
     const savedFamilyMember = await prisma.familyMember.create({
       data: {
@@ -121,8 +134,10 @@ export async function POST(request: NextRequest) {
         name: familyMember.name || '',
         email: familyMember.email || '',
         relationship: familyMember.relationship || '',
-        lineUserId: familyMember.lineUserId || null,
-        isRegistered: familyMember.isRegistered || false,
+        // lineUserId は Webhook 経由で登録するためここでは保存しない
+        lineUserId: null,
+        isRegistered: false,
+        linkCode,
       }
     });
     

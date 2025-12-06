@@ -83,6 +83,7 @@ model FamilyMember {
   relationship String
   lineUserId   String?
   isRegistered Boolean  @default(false)
+  linkCode     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
@@ -91,6 +92,7 @@ model FamilyMember {
   @@map("family_members")
   @@unique([userId, email])
   @@unique([userId, lineUserId])
+  @@unique([userId, linkCode])
 }
 
 model ContactMessage {

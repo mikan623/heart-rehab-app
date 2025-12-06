@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,13 +33,71 @@ export async function POST(request: NextRequest) {
       
       // メッセージ受信イベント
       if (event.type === 'message' && event.message.type === 'text') {
-        console.log('💬 Message:', event.message.text);
-        console.log('👤 From user:', event.source.userId);
-        
-        // 「健康記録」というキーワードを受け取ったら返信
-        if (event.message.text.includes('健康記録')) {
-          const replyMessage = `✅ 健康記録を受け取りました！\n\n今日も記録をありがとうございます。\n心臓ちゃんが応援しています💖`;
-          
+        const text: string = (event.message.text || '').trim();
+        const fromUserId: string | undefined = event.source?.userId;
+
+        console.log('💬 Message:', text);
+        console.log('👤 From user:', fromUserId);
+
+        // 1) 家族招待コードとして処理（例: 英数字6〜10文字を全て大文字にして扱う）
+        if (fromUserId) {
+          const normalized = text.replace(/\s+/g, '').toUpperCase();
+
+          try {
+            const connected = await ensurePrismaConnection();
+            if (connected && prisma) {
+              const member = await prisma.familyMember.findFirst({
+                where: { linkCode: normalized },
+              });
+
+              if (member) {
+                console.log('🔗 招待コード一致: familyMember', member.id);
+
+                await prisma.familyMember.update({
+                  where: { id: member.id },
+                  data: {
+                    lineUserId: fromUserId,
+                    isRegistered: true,
+                  },
+                });
+
+                const successMessage =
+                  '✅ 家族アカウントの連携が完了しました！\n' +
+                  'これ以降、このLINEアカウントにご家族の健康記録が自動で共有されます。';
+
+                try {
+                  const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      replyToken: event.replyToken,
+                      message: successMessage,
+                    }),
+                  });
+
+                  if (replyResponse.ok) {
+                    console.log('✅ 招待コード連携完了メッセージ送信成功');
+                  } else {
+                    console.error('❌ 招待コード連携完了メッセージ送信失敗');
+                  }
+                } catch (error) {
+                  console.error('❌ 招待コード連携完了メッセージ送信エラー:', error);
+                }
+
+                // 招待コードとして処理できた場合はここで次のイベントへ
+                continue;
+              }
+            }
+          } catch (error) {
+            console.error('❌ 招待コード処理エラー:', error);
+          }
+        }
+
+        // 2) 「健康記録」というキーワードを受け取ったら返信
+        if (text.includes('健康記録')) {
+          const replyMessage =
+            '✅ 健康記録を受け取りました！\n\n今日も記録をありがとうございます。\n心臓ちゃんが応援しています💖';
+
           try {
             const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
               method: 'POST',
@@ -48,7 +107,7 @@ export async function POST(request: NextRequest) {
                 message: replyMessage,
               }),
             });
-            
+
             if (replyResponse.ok) {
               console.log('✅ Webhook 返信送信成功');
             } else {
