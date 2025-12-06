@@ -125,7 +125,7 @@ export default function PrivacyPage() {
               </p>
               <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
                 <li>LINE の個人情報ポリシーも適用されます</li>
-                <li>LINE プロフィール情報（表示名、プロフィール画像）がアプリに保存されます</li>
+                <li>LINE プロフィール情報（表示名、プロフィール画像、LINEユーザーID）がアプリに保存されます</li>
                 <li>LINE ログイン情報の詳細については、LINE の公式ドキュメントをご参照ください</li>
               </ul>
             </section>
