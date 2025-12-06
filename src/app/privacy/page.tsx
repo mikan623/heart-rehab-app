@@ -72,7 +72,7 @@ export default function PrivacyPage() {
                 <li>LINE ログイン時に取得される LINE プロフィール情報（表示名、プロフィール画像など）</li>
                 <li>ユーザーが手動で入力する健康データ（血圧、脈拍、体重など）</li>
                 <li>食事や運動などの日常生活データ</li>
-                <li>家族共有機能で共有される家族メンバー情報</li>
+                <li>家族共有機能により登録・共有される家族メンバー情報（氏名、続柄、LINEユーザーID、メールアドレスなど）</li>
               </ul>
             </section>
 
@@ -142,10 +142,14 @@ export default function PrivacyPage() {
             <section className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">第8条（ローカルストレージについて）</h3>
               <p className="text-sm leading-relaxed">
-                本アプリは、ユーザーのデバイスのローカルストレージにも
-                健康データを保存する場合があります。
-                これらのデータはユーザーのデバイス内のみに保存され、
-                ユーザーの許可なく外部に送信されることはありません。
+                本アプリは、ユーザーの利便性向上や一時的なバックアップのために、
+                ユーザーのデバイスのローカルストレージに一部の情報（ログインセッション情報、
+                プロフィール情報、健康記録データの一時保存、家族共有設定 など）を保存する場合があります。
+                これらのデータは主にオフライン環境での利用や入力内容の保持を目的としており、
+                原則としてユーザーのデバイス内でのみ利用されます。
+                ユーザーはブラウザの設定やアプリ内のログアウト操作などにより、
+                これらのローカルデータを削除することができます。
+                ローカルストレージに保存された情報を、ユーザーの同意なく外部に送信することはありません。
               </p>
             </section>
 
@@ -172,10 +176,13 @@ export default function PrivacyPage() {
               <p className="text-sm leading-relaxed">
                 本プライバシーポリシーについてご不明な点や
                 個人情報の取り扱いについてのご質問がございましたら、
-                以下までお気軽にお問い合わせください。
+                本アプリ内の「お問い合わせフォーム」よりご連絡ください。
               </p>
               <p className="text-sm leading-relaxed mt-3">
-                <strong>メール：</strong> privacy@heart-rehab.jp
+                <strong>お問い合わせフォーム：</strong>
+                <a href="/contact" className="text-orange-600 hover:underline">
+                  お問い合わせページ
+                </a>
               </p>
             </section>
 
