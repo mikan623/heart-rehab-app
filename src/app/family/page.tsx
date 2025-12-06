@@ -26,9 +26,9 @@ export default function FamilyPage() {
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
 
-  // 家族用招待QRコード用の状態
-  const [inviteQrUrls, setInviteQrUrls] = useState<Record<string, string>>({});
-  const [generatingInviteFor, setGeneratingInviteFor] = useState<string | null>(null);
+  // 家族用招待QRコード用の状態（全体用）
+  const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
+  const [generatingInvite, setGeneratingInvite] = useState(false);
 
   // 認証チェック
   useEffect(() => {
@@ -167,15 +167,15 @@ export default function FamilyPage() {
   // LINE Messaging API設定
   const LINE_CHANNEL_ACCESS_TOKEN = process.env.NEXT_PUBLIC_LINE_ACCESS_TOKEN;
 
-  // 家族用招待QRコードを生成
-  const generateFamilyInviteQr = async (memberId: string) => {
+  // 家族用招待QRコードを生成（家族メンバー共通）
+  const generateFamilyInviteQr = async () => {
     try {
       if (!currentUserId) {
         alert('ユーザー情報の取得に失敗しました。もう一度ページを開き直してください。');
         return;
       }
 
-      setGeneratingInviteFor(memberId);
+      setGeneratingInvite(true);
 
       const response = await fetch('/api/family-invites', {
         method: 'POST',
@@ -201,17 +201,14 @@ export default function FamilyPage() {
         inviteUrl = `${window.location.origin}/family-invite?familyInviteId=${inviteId}`;
       }
 
-      setInviteQrUrls(prev => ({
-        ...prev,
-        [memberId]: inviteUrl
-      }));
+      setInviteQrUrl(inviteUrl);
 
       console.log('✅ 家族招待URL生成:', inviteUrl);
     } catch (error) {
       console.error('❌ 招待QR生成エラー:', error);
       alert('招待用QRコードの作成に失敗しました。');
     } finally {
-      setGeneratingInviteFor(null);
+      setGeneratingInvite(false);
     }
   };
 
@@ -668,17 +665,39 @@ export default function FamilyPage() {
       >
         {/* 家族メンバー管理セクション */}
         <div className="bg-orange-50 rounded-lg border-2 border-orange-300 p-4 md:p-6">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
               👨‍👩‍👧‍👦 家族メンバー
             </h2>
-            <button
-              onClick={addFamilyMember}
-              className="bg-green-500 text-white py-3 px-4 md:px-6 rounded-lg font-bold text-lg hover:bg-green-600"
-            >
-              ➕ 追加
-            </button>
+            <div className="flex flex-col md:flex-row gap-3">
+              <button
+                onClick={generateFamilyInviteQr}
+                disabled={generatingInvite || !currentUserId}
+                className="py-2 px-4 rounded-lg font-semibold text-sm md:text-base border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 disabled:opacity-60"
+              >
+                {generatingInvite ? 'QRコード生成中...' : '📱 家族用QRコードを表示'}
+              </button>
+              <button
+                onClick={addFamilyMember}
+                className="bg-green-500 text-white py-3 px-4 md:px-6 rounded-lg font-bold text-lg hover:bg-green-600"
+              >
+                ➕ 追加
+              </button>
+            </div>
           </div>
+
+          {inviteQrUrl && (
+            <div className="mb-6 flex flex-col items-center gap-2">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteQrUrl)}`}
+                alt="家族用招待QRコード"
+                className="w-40 h-40 bg-white p-2 rounded-lg border border-orange-200"
+              />
+              <p className="text-xs text-gray-500 text-center break-all">
+                LINEアプリでこのQRコードを読み取ると、家族として登録できます。
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             {familyMembers.map((member) => (
@@ -783,30 +802,6 @@ export default function FamilyPage() {
                   >
                     {Boolean(member.isRegistered) ? '✅ 登録済み' : '🤝 LINEで招待'}
                   </button>
-                </div>
-
-                {/* 家族用QRコードボタン＆表示 */}
-                <div className="mt-4">
-                  <button
-                    onClick={() => generateFamilyInviteQr(member.id)}
-                    disabled={generatingInviteFor === member.id || !currentUserId}
-                    className="w-full md:w-auto py-2 px-4 rounded-lg font-semibold text-sm md:text-base border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 disabled:opacity-60"
-                  >
-                    {generatingInviteFor === member.id ? 'QRコード生成中...' : '📱 家族用QRコードを表示'}
-                  </button>
-
-                  {inviteQrUrls[member.id] && (
-                    <div className="mt-4 flex flex-col items-center gap-2">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteQrUrls[member.id])}`}
-                        alt="家族用招待QRコード"
-                        className="w-40 h-40 bg-white p-2 rounded-lg border border-orange-200"
-                      />
-                      <p className="text-xs text-gray-500 text-center break-all">
-                        LINEアプリでこのQRコードを読み取ると、家族として登録できます。
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
