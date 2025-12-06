@@ -665,7 +665,7 @@ export default function FamilyPage() {
       >
         {/* 家族メンバー管理セクション */}
         <div className="bg-orange-50 rounded-lg border-2 border-orange-300 p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
               👨‍👩‍👧‍👦 家族メンバー
             </h2>
@@ -686,18 +686,42 @@ export default function FamilyPage() {
             </div>
           </div>
 
-          {inviteQrUrl && (
-            <div className="mb-6 flex flex-col items-center gap-2">
+          {/* 共通QRコード表示エリア：左 = 家族用招待QR / 右 = 公式アカウントQR */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm font-semibold text-gray-800">家族用招待QRコード</p>
+              {inviteQrUrl ? (
+                <>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                      inviteQrUrl
+                    )}`}
+                    alt="家族用招待QRコード"
+                    className="w-40 h-40 bg-white p-2 rounded-lg border border-orange-200"
+                  />
+                  <p className="text-xs text-gray-500 text-center break-all">
+                    LINEアプリでこのQRコードを読み取ると、家族として登録できます。
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 text-center">
+                  「📱 家族用QRコードを表示」ボタンを押すと、ここに招待用QRコードが表示されます。
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm font-semibold text-gray-800">心臓リハビリ手帳 公式LINEアカウント</p>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteQrUrl)}`}
-                alt="家族用招待QRコード"
-                className="w-40 h-40 bg-white p-2 rounded-lg border border-orange-200"
+                src="/line-official-qr.png"
+                alt="心臓リハビリ手帳 公式LINEアカウント QRコード"
+                className="w-40 h-40 bg-white p-2 rounded-lg border border-green-300"
               />
-              <p className="text-xs text-gray-500 text-center break-all">
-                LINEアプリでこのQRコードを読み取ると、家族として登録できます。
+              <p className="text-xs text-gray-500 text-center">
+                このQRコードをLINEアプリで読み取ると、心臓リハビリ手帳の公式アカウントを友だち追加できます。
               </p>
             </div>
-          )}
+          </div>
 
           <div className="space-y-4">
             {familyMembers.map((member) => (
