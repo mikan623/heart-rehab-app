@@ -413,62 +413,45 @@ export default function GraphPage() {
         return;
       }
       
-      // プロンプト作成
-      const prompt = `
-  患者プロフィール:
-  - 年齢: ${profile?.age || '未設定'}歳
-  - 性別: ${profile?.gender || '未設定'}
-  - 身長: ${profile?.height || '未設定'}cm
-  - 目標体重: ${profile?.targetWeight || '未設定'}kg
-  - 疾患: ${profile?.diseases?.join(', ') || 'なし'}
+      // Hugging Face 用に健康記録をテキストにまとめる
+      const recordText = [
+        `患者プロフィール:`,
+        `- 年齢: ${profile?.age || '未設定'}歳`,
+        `- 性別: ${profile?.gender || '未設定'}`,
+        `- 身長: ${profile?.height || '未設定'}cm`,
+        `- 目標体重: ${profile?.targetWeight || '未設定'}kg`,
+        `- 疾患: ${profile?.diseases?.join(', ') || 'なし'}`,
+        ``,
+        `直近のバイタル:`,
+        `- 日付: ${latestDate} / 時刻: ${latestTime}`,
+        `- 血圧: ${latestRecord.bloodPressure.systolic}/${latestRecord.bloodPressure.diastolic} mmHg`,
+        `- 脈拍: ${latestRecord.pulse} bpm`,
+        `- 体重: ${latestRecord.weight} kg`,
+        ``,
+        `運動内容: ${latestRecord.exercise.type} ${latestRecord.exercise.duration}分`,
+        `食事: 主食${latestRecord.meal.staple}, 主菜${latestRecord.meal.mainDish}, 副菜${latestRecord.meal.sideDish}`,
+        latestRecord.dailyLife ? `メモ: ${latestRecord.dailyLife}` : '',
+      ].join('\n');
 
-  直近のバイタル:
-  - 血圧: ${latestRecord.bloodPressure.systolic}/${latestRecord.bloodPressure.diastolic} mmHg
-  - 脈拍: ${latestRecord.pulse} bpm
-  - 体重: ${latestRecord.weight} kg
-
-  運動内容: ${latestRecord.exercise.type} ${latestRecord.exercise.duration}分
-  食事: 主食${latestRecord.meal.staple}, 主菜${latestRecord.meal.mainDish}, 副菜${latestRecord.meal.sideDish}
-
-  循環器リハビリ指導員として、この患者に具体的で実践的なアドバイスを日本語で簡潔に教えてください。
-  `;
-
-      // Next.js API Route経由でアドバイス取得
-      const response = await fetch('/api/advice', {
+      // Hugging Face APIラッパー経由でアドバイス取得
+      const response = await fetch('/api/ai/advice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          healthData: {
-            summary: {
-              totalRecords: Object.keys(savedRecords).length,
-              latestDate: latestDate,
-            },
-            records: savedRecords,
-          },
-          profile: profile,
-        }),
+        body: JSON.stringify({ recordText }),
       });
 
-      const data = await response.json();
-      
-      // 🔍 デバッグ用ログを追加
-      console.log('📥 API Response:', { 
-        ok: response.ok, 
-        status: response.status,
-        data 
-      });
-      
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || data?.details || 'アドバイスの取得に失敗しました。');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.error('AI advice API error:', data);
+        throw new Error(data?.error || 'アドバイスの取得に失敗しました。');
       }
-      
-      console.log('✅ Setting advice:', data.advice); // これも追加
-      
-      setAiAdvice(data.advice);
+
+      const data = await response.json();
+      setAiAdvice(data.advice || 'アドバイスを取得できませんでした。');
       setShowAdvice(true);
 
       // AIアドバイスに基づいて心臓ちゃんの表情を更新
-      const emotion = getHeartEmotionFromAdvice(data.advice);
+      const emotion = getHeartEmotionFromAdvice(data.advice || '');
       setHeartEmotion(emotion);
 
       return;
@@ -981,39 +964,8 @@ export default function GraphPage() {
                   <p className="text-lg md:text-xl text-gray-700 whitespace-pre-line leading-relaxed font-medium">
                     {aiAdvice}
                   </p>
-                  <div className="mt-6 flex gap-3 flex-col md:flex-row">
-                    <div className="text-lg md:text-xl text-green-700 font-bold flex-1">
-                      💖 心臓ちゃんより 💖
-                    </div>
-                    {/* LINE 送信ボタン */}
-                    {user?.userId && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const response = await fetch('/api/line/send-message', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                userId: user.userId,
-                                message: `💖 AIアドバイス 💖\n\n${aiAdvice}`,
-                              }),
-                            });
-                            
-                            if (response.ok) {
-                              alert('✅ LINE でアドバイスを送信しました！');
-                            } else {
-                              alert('❌ LINE 送信に失敗しました');
-                            }
-                          } catch (error) {
-                            console.error('LINE 送信エラー:', error);
-                            alert('❌ LINE 送信中にエラーが発生しました');
-                          }
-                        }}
-                        className="bg-green-500 hover:bg-green-600 text-white py-3 md:py-4 px-6 md:px-8 rounded-xl font-bold text-lg md:text-xl whitespace-nowrap transition-all"
-                      >
-                        📱 LINE で送信
-                      </button>
-                    )}
+                  <div className="mt-6 text-lg md:text-xl text-green-700 font-bold">
+                    💖 心臓ちゃんより 💖
                   </div>
                 </div>
               </div>
