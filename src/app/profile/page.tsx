@@ -475,7 +475,10 @@ export default function ProfilePage() {
         {/* 🆕 LINE連携済みセクション */}
         {isLineConnected && user && (
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-blue-300">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">✅ LINE連携完了</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 md:mb-3">✅ LINE連携完了</h2>
+            <p className="text-sm md:text-base text-blue-700 font-semibold mb-3">
+              🎉 LINEアカウントと連携しました！
+            </p>
             <div className="flex items-center gap-4">
               {user.pictureUrl && (
                 <img
@@ -489,7 +492,7 @@ export default function ProfilePage() {
                   {user.displayName} として連携済み
                 </p>
                 <p className="text-sm md:text-base text-gray-600 mt-1">
-                  LINEアカウントと連携されています
+                  これ以降、このLINEアカウントとメールログインのプロフィールが連携されます。
                 </p>
               </div>
             </div>

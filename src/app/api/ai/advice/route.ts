@@ -35,8 +35,9 @@ export async function POST(request: NextRequest) {
 
     const prompt = `${systemPrompt}\n\n=== 健康記録 ===\n${recordText}\n\n=== 出力 ===`;
 
+    // 📝 2025以降の仕様変更に対応: api-inference.huggingface.co → router.huggingface.co
     const response = await fetch(
-      `https://api-inference.huggingface.co/models/${HF_MODEL_ID}`,
+      `https://router.huggingface.co/models/${HF_MODEL_ID}`,
       {
         method: 'POST',
         headers: {
