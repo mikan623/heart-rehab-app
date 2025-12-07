@@ -30,6 +30,10 @@ export default function FamilyPage() {
   const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
 
+  // 記録忘れリマインダー設定
+  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [reminderTime, setReminderTime] = useState('21:00');
+
   // 認証チェック
   useEffect(() => {
     const session = getSession();
@@ -53,6 +57,69 @@ export default function FamilyPage() {
     console.log('❌ ログインなし');
     router.push('/');
   }, [router]);
+
+  // 記録忘れリマインダー設定を読み込み（DB優先・localStorageはフォールバック）
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (typeof window === 'undefined') return;
+
+      // まず localStorage から暫定値を読み込み（ちらつき防止）
+      const savedEnabled = localStorage.getItem('reminderEnabled');
+      const savedTime = localStorage.getItem('reminderTime');
+      if (savedEnabled !== null) {
+        setReminderEnabled(savedEnabled === 'true');
+      }
+      if (savedTime) {
+        setReminderTime(savedTime);
+      }
+
+      // currentUserId が分かったら DB から正式な値を取得
+      if (!currentUserId) return;
+      try {
+        const res = await fetch(`/api/reminder-settings?userId=${encodeURIComponent(currentUserId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setReminderEnabled(data.reminderEnabled ?? false);
+          if (data.reminderTime) {
+            setReminderTime(data.reminderTime);
+          }
+        }
+      } catch (error) {
+        console.error('❌ リマインダー設定取得エラー:', error);
+      }
+    };
+
+    loadSettings();
+  }, [currentUserId]);
+
+  // 設定変更時に保存（localStorage + DB）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // localStorage
+    localStorage.setItem('reminderEnabled', String(reminderEnabled));
+    localStorage.setItem('reminderTime', reminderTime);
+
+    // DB（ユーザーIDが分かっているときのみ）
+    const saveToDb = async () => {
+      if (!currentUserId) return;
+      try {
+        await fetch('/api/reminder-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUserId,
+            reminderEnabled,
+            reminderTime,
+          }),
+        });
+      } catch (error) {
+        console.error('❌ リマインダー設定保存エラー:', error);
+      }
+    };
+
+    saveToDb();
+  }, [reminderEnabled, reminderTime, currentUserId]);
 
   useEffect(() => {
     const initData = async () => {
@@ -261,52 +328,7 @@ export default function FamilyPage() {
     return false;
   };
 
-  // 健康記録を家族全員に自動送信
-  const shareHealthRecordToAllFamily = async (healthRecord: any) => {
-    const message = `💖 心臓ちゃんからの健康報告 💖\n\n` +
-      `日時: ${new Date().toLocaleDateString('ja-JP')}\n` +
-      `血圧: ${healthRecord.bloodPressure?.systolic || ''}/${healthRecord.bloodPressure?.diastolic || ''}mmHg\n` +
-      `脈拍: ${healthRecord.pulse || ''}回/分\n` +
-      `体重: ${healthRecord.weight || ''}kg\n` +
-      `運動: ${healthRecord.exercise?.type || ''} ${healthRecord.exercise?.duration || ''}分\n` +
-      `食事: 主食${healthRecord.meal?.staple || ''} 主菜${healthRecord.meal?.mainDish || ''} 副菜${healthRecord.meal?.sideDish || ''}\n` +
-      `\n心臓ちゃんからのメッセージ: 今日もお疲れ様でした！💪`;
-
-    // 登録済みの家族メンバーに送信
-    const registeredMembers = familyMembers.filter(member => 
-      member.isRegistered && member.lineUserId
-    );
-
-    for (const member of registeredMembers) {
-      await sendLineMessageToFamily(member.lineUserId!, message);
-    }
-  };
-
-  // 異常値検出時の緊急通知
-  const sendEmergencyNotification = async (healthRecord: any) => {
-    const isAbnormal = 
-      parseInt(healthRecord.bloodPressure?.systolic) > 180 ||
-      parseInt(healthRecord.bloodPressure?.diastolic) > 110 ||
-      parseInt(healthRecord.pulse) > 120 ||
-      parseInt(healthRecord.pulse) < 50;
-
-    if (isAbnormal) {
-      const emergencyMessage = `🚨 緊急通知 🚨\n\n` +
-        `異常な値が検出されました！\n` +
-        `血圧: ${healthRecord.bloodPressure?.systolic || ''}/${healthRecord.bloodPressure?.diastolic || ''}mmHg\n` +
-        `脈拍: ${healthRecord.pulse || ''}回/分\n` +
-        `\n早急に医師に相談することをお勧めします。\n` +
-        `心臓ちゃんより💖`;
-
-      const registeredMembers = familyMembers.filter(member => 
-        member.isRegistered && member.lineUserId
-      );
-
-      for (const member of registeredMembers) {
-        await sendLineMessageToFamily(member.lineUserId!, emergencyMessage);
-      }
-    }
-  };
+  // ※ 健康記録の共有や異常値通知の実処理は /api/health-records 側で行う想定です。
 
   // 家族メンバーを更新する関数（ローカルのみ）
   const updateFamilyMember = (id: string, field: keyof FamilyMember, value: string | boolean) => {
@@ -492,105 +514,7 @@ export default function FamilyPage() {
     }
   };
 
-  // 健康記録を家族に共有する関数
-  const shareHealthRecord = async () => {
-    try {
-      // 最新の健康記録を取得
-      const healthRecords = localStorage.getItem('healthRecords');
-      const profile = localStorage.getItem('profile_local');
-      
-      if (!healthRecords) {
-        alert('共有する健康記録がありません。');
-        return;
-      }
-
-      const records = JSON.parse(healthRecords);
-      const profileData = profile ? JSON.parse(profile) : null;
-      
-      // 最新の記録日を取得
-      const latestDate = Object.keys(records).sort().reverse()[0];
-      const latestRecord = records[latestDate];
-      
-      if (!latestRecord) {
-        alert('共有する記録がありません。');
-        return;
-      }
-
-      // 共有メッセージを作成
-      const shareMessage = `💖 健康記録の共有 💖
-
-  ${profileData?.displayName || 'ユーザー'}さんからの健康記録です。
-
-  📅 記録日: ${latestDate}
-  ${profileData?.age ? `👤 年齢: ${profileData.age}歳` : ''}
-  ${profileData?.gender ? `👤 性別: ${profileData.gender}` : ''}
-
-  📊 最新の記録:
-  ${latestRecord.morning ? `🌅 朝: 血圧 ${latestRecord.morning.bloodPressure.systolic}/${latestRecord.morning.bloodPressure.diastolic}mmHg, 脈拍 ${latestRecord.morning.pulse}回/分, 体重 ${latestRecord.morning.weight}kg` : ''}
-  ${latestRecord.afternoon ? `☀️ 昼: 血圧 ${latestRecord.afternoon.bloodPressure.systolic}/${latestRecord.afternoon.bloodPressure.diastolic}mmHg, 脈拍 ${latestRecord.afternoon.pulse}回/分, 体重 ${latestRecord.afternoon.weight}kg` : ''}
-  ${latestRecord.evening ? `🌙 夜: 血圧 ${latestRecord.evening.bloodPressure.systolic}/${latestRecord.evening.bloodPressure.diastolic}mmHg, 脈拍 ${latestRecord.evening.pulse}回/分, 体重 ${latestRecord.evening.weight}kg` : ''}
-
-  心臓ちゃんより 💖`;
-
-      // LINEで共有
-      if (typeof window !== 'undefined' && window.liff) {
-        if (window.liff.isInClient()) {
-          await window.liff.shareTargetPicker([
-            {
-              type: 'text',
-              text: shareMessage
-            }
-          ]);
-          alert('健康記録を家族に共有しました！');
-        } else {
-          // ローカル環境でのテスト用
-          console.log('Share message:', shareMessage);
-          alert('健康記録の共有準備が完了しました！（テスト用）');
-        }
-      } else {
-        // ローカル環境でのテスト用
-        console.log('Share message:', shareMessage);
-        alert('健康記録の共有準備が完了しました！（テスト用）');
-      }
-    } catch (error: unknown) {
-      console.error('Share health record error:', error);
-      alert('共有に失敗しました。');
-    }
-  };
-
-  // 記録忘れ通知を送信する関数
-  const sendReminderNotification = async () => {
-    try {
-      const reminderMessage = `⏰ 記録忘れ通知 ⏰
-
-  今日の健康記録をまだ入力していません。
-
-  血圧、脈拍、体重の記録を忘れずに入力してくださいね！
-
-  心臓ちゃんより 💖`;
-
-      if (typeof window !== 'undefined' && window.liff) {
-        if (window.liff.isInClient()) {
-          await window.liff.shareTargetPicker([
-            {
-              type: 'text',
-              text: reminderMessage
-            }
-          ]);
-          alert('記録忘れ通知を送信しました！');
-        } else {
-          console.log('Reminder message:', reminderMessage);
-          alert('記録忘れ通知の準備が完了しました！（テスト用）');
-        }
-      } else {
-        console.log('Reminder message:', reminderMessage);
-        alert('記録忘れ通知の準備が完了しました！（テスト用）');
-      }
-    } catch (error: unknown) {
-      console.error('Send reminder notification error:', error);
-      alert('通知の送信に失敗しました。');
-    }
-  };
+  // ※ 共有設定画面では、記録忘れリマインダーのON/OFFと時刻のみを管理します。
 
   if (isLoading) {
     return (
@@ -857,7 +781,7 @@ export default function FamilyPage() {
             📤 共有設定
           </h2>
 
-          <div className="space-y-4 mb-6">
+          <div className="space-y-4 mb-2">
             {/* 健康記録の自動共有（固定の説明） */}
             <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200">
               <div className="w-7 h-7 flex items-center justify-center">
@@ -871,33 +795,32 @@ export default function FamilyPage() {
               </div>
             </div>
 
-            {/* リマインダー機能（オン・オフのチェックボックス） */}
-            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
-              <input type="checkbox" className="w-7 h-7 text-blue-500" defaultChecked />
-              <div>
-                <p className="text-lg font-semibold text-gray-800">記録忘れリマインダーを使う</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  記録を忘れたときに、下の「⏰ 記録忘れ通知」ボタンからリマインドメッセージを送れます。
-                </p>
+            {/* リマインダー機能（オン・オフ＋時刻設定） */}
+            <label className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  className="w-7 h-7 text-blue-500"
+                  checked={reminderEnabled}
+                  onChange={(e) => setReminderEnabled(e.target.checked)}
+                />
+                <div>
+                  <p className="text-lg font-semibold text-gray-800">記録忘れリマインダーを使う</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    毎日指定した時間に、記録を忘れないようLINEでお知らせする設定です（※自動送信処理は今後追加予定）。
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 md:pr-2">
+                <span className="text-xs text-gray-500">通知時刻</span>
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="border border-blue-300 rounded-md px-2 py-1 text-sm text-gray-800 bg-white"
+                />
               </div>
             </label>
-          </div>
-
-          {/* 共有機能ボタン */}
-          <div className="flex gap-3 flex-col md:flex-row">
-            <button
-              onClick={shareHealthRecord}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-4 rounded-lg font-bold text-lg hover:from-blue-600 hover:to-blue-700"
-            >
-              📊 健康記録を共有
-            </button>
-
-            <button
-              onClick={sendReminderNotification}
-              className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-4 px-4 rounded-lg font-bold text-lg hover:from-yellow-600 hover:to-yellow-700"
-            >
-              ⏰ 記録忘れ通知
-            </button>
           </div>
         </div>
       </main>
