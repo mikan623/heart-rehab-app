@@ -217,6 +217,56 @@ export default function Home() {
     return n < 0 ? '0' : String(n);
   };
 
+  // 現在入力中の記録をテキストにまとめる（AI用）
+  const buildRecordTextForAI = () => {
+    const [datePart, timePart] = selectedDateTime.split('T');
+    const timeDisplay = timePart ? timePart.slice(0, 5) : '';
+
+    return [
+      `日付: ${datePart || ''}`,
+      `時間: ${timeDisplay}`,
+      `収縮期血圧(上): ${healthRecord.bloodPressure.systolic || '-'} mmHg`,
+      `拡張期血圧(下): ${healthRecord.bloodPressure.diastolic || '-'} mmHg`,
+      `脈拍: ${healthRecord.pulse || '-'} 回/分`,
+      `体重: ${healthRecord.weight || '-'} kg`,
+      `運動: ${healthRecord.exercise.type || '-'} / ${healthRecord.exercise.duration || '-'} 分`,
+      `食事: 主食 ${healthRecord.meal.staple.join(', ') || '-'} / 主菜 ${healthRecord.meal.mainDish.join(', ') || '-'} / 副菜 ${healthRecord.meal.sideDish.join(', ') || '-'} / その他 ${healthRecord.meal.other || '-'}`,
+      `服薬: ${healthRecord.medicationTaken ? '飲んだ' : '未入力'}`,
+      healthRecord.dailyLife ? `メモ: ${healthRecord.dailyLife}` : '',
+    ].join('\n');
+  };
+
+  // AIアドバイスを取得
+  const handleGetAiAdvice = async () => {
+    try {
+      setAiLoading(true);
+      setAiAdvice(null);
+
+      const recordText = buildRecordTextForAI();
+
+      const res = await fetch('/api/ai/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordText }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('AI advice error:', data);
+        alert('AIアドバイスの取得に失敗しました。時間をおいて再度お試しください。');
+        return;
+      }
+
+      const data = await res.json();
+      setAiAdvice(data.advice || 'アドバイスを取得できませんでした。');
+    } catch (error) {
+      console.error('AI advice fetch error:', error);
+      alert('AIアドバイスの取得中にエラーが発生しました。');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
     if (user?.userId) {
@@ -299,6 +349,10 @@ export default function Home() {
   // 🆕 追加：LINEアプリ内判定用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
+
+  // AIアドバイス
+  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // 現在時刻を自動セット
   useEffect(() => {
@@ -1360,6 +1414,32 @@ export default function Home() {
                 return getButtonText();
               })()}
             </button>
+          </div>
+        </section>
+
+        {/* AIアドバイスセクション */}
+        <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-4 mb-4 w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-800">
+              🤖 AIアドバイス
+            </h3>
+            <button
+              type="button"
+              onClick={handleGetAiAdvice}
+              disabled={aiLoading}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-purple-500 hover:bg-purple-600 disabled:opacity-60"
+            >
+              {aiLoading ? 'AIアドバイス生成中...' : 'AIアドバイスを生成'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            現在入力中の健康記録をもとに、一般的な生活上のアドバイスを表示します。
+            医療行為や診断ではなく、あくまで参考情報としてご利用ください。
+          </p>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 min-h-[80px] text-sm whitespace-pre-line text-gray-800">
+            {aiAdvice
+              ? aiAdvice
+              : '「AIアドバイスを生成」ボタンを押すと、ここにアドバイスが表示されます。'}
           </div>
         </section>
 
