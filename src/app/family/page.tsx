@@ -36,6 +36,8 @@ export default function FamilyPage() {
     
     // メールログインセッション優先
     if (session) {
+      // 患者IDとしてメールログインのユーザーIDを使用
+      setCurrentUserId(session.userId);
       setIsAuthenticated(true);
       return;
     }
@@ -55,11 +57,33 @@ export default function FamilyPage() {
   useEffect(() => {
     const initData = async () => {
       try {
-        // メールログインセッションがある場合はLIFF初期化をスキップ
+        // メールログインセッションがある場合：LIFF初期化はスキップしつつ、家族情報はDBから取得
         const session = getSession();
         if (session) {
-          console.log('📧 メールログイン検出: LIFF初期化をスキップ');
-          setIsLoading(false);
+          console.log('📧 メールログイン検出: 家族メンバーをDBから取得');
+          try {
+            const response = await fetch(`/api/family-members?userId=${session.userId}`);
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ 家族メンバーをデータベースから取得(メールログイン):', data.familyMembers.length);
+              setFamilyMembers(data.familyMembers);
+            } else {
+              console.error('データベース取得エラー(メールログイン)、localStorageから読み込み');
+              const savedFamily = localStorage.getItem('familyMembers');
+              if (savedFamily) {
+                const parsedFamily = JSON.parse(savedFamily);
+                const convertedFamily = parsedFamily.map((member: any) => ({
+                  ...member,
+                  isRegistered: member.isRegistered === 'true' || member.isRegistered === true
+                }));
+                setFamilyMembers(convertedFamily);
+              }
+            }
+          } catch (error) {
+            console.error('家族メンバー取得エラー(メールログイン):', error);
+          } finally {
+            setIsLoading(false);
+          }
           return;
         }
 
