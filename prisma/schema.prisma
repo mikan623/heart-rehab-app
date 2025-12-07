@@ -20,7 +20,8 @@ model User {
   password       String?  // メール登録ユーザー用（ハッシュ化）
   authType       String   @default("line")  // "line" または "email"
   lineConnected  Boolean  @default(false)  // 🆕 LINE 連携状態
-  lineUserId     String?  @unique          // 🆕 LINE ユーザーID
+  lineUserId     String?  @unique          // 🆕 LINE Messaging API ユーザーID
+  selfLinkCode   String?  @unique          // 🆕 本人用招待コード（公式アカとのひも付け用）
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   
@@ -56,23 +57,23 @@ model Profile {
 
 model HealthRecord {
   id                    String   @id @default(cuid())
-  userId                String
+  userId                String   @map("user_id")
   date                  String   @db.Text
   time                  String
-  bloodPressureSystolic Int
-  bloodPressureDiastolic Int
+  bloodPressureSystolic Int      @map("blood_pressure_systolic")
+  bloodPressureDiastolic Int     @map("blood_pressure_diastolic")
   pulse                 Int?
   weight                Float?
-  exercise              Json? // { type: string, duration: string }
-  meal                  Json? // { staple: string[], mainDish: string[], sideDish: string[], other: string }
-  dailyLife             String?
-  medicationTaken       Boolean?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  exercise              Json?    // { type: string, duration: string }
+  meal                  Json?    // { staple: string[], mainDish: string[], sideDish: string[], other: string }
+  dailyLife             String?  @map("daily_life")
+  medicationTaken       Boolean? @map("medication_taken")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt      @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@map("healthRecords")
+  @@map("health_records")
 }
 
 model FamilyMember {

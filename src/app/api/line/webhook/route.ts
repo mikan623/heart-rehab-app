@@ -39,13 +39,14 @@ export async function POST(request: NextRequest) {
         console.log('💬 Message:', text);
         console.log('👤 From user:', fromUserId);
 
-        // 1) 家族招待コードとして処理（例: 英数字6〜10文字を全て大文字にして扱う）
+        // 1) 家族招待コード / 本人用コードとして処理（英数字を全て大文字にして扱う）
         if (fromUserId) {
           const normalized = text.replace(/\s+/g, '').toUpperCase();
 
           try {
             const connected = await ensurePrismaConnection();
             if (connected && prisma) {
+              // 1-1) 家族用招待コードとして一致するかチェック
               const member = await prisma.familyMember.findFirst({
                 where: { linkCode: normalized },
               });
@@ -85,6 +86,49 @@ export async function POST(request: NextRequest) {
                 }
 
                 // 招待コードとして処理できた場合はここで次のイベントへ
+                continue;
+              }
+
+              // 1-2) 本人用招待コードとして User.selfLinkCode をチェック
+              const user = await prisma.user.findFirst({
+                where: { selfLinkCode: normalized },
+              });
+
+              if (user) {
+                console.log('🔗 本人用招待コード一致: user', user.id);
+
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data: {
+                    lineUserId: fromUserId,
+                    lineConnected: true,
+                  },
+                });
+
+                const selfSuccessMessage =
+                  '✅ 本人アカウントの連携が完了しました！\n' +
+                  'これ以降、このLINEアカウントにご自身の健康記録が自動で届きます。';
+
+                try {
+                  const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      replyToken: event.replyToken,
+                      message: selfSuccessMessage,
+                    }),
+                  });
+
+                  if (replyResponse.ok) {
+                    console.log('✅ 本人用連携完了メッセージ送信成功');
+                  } else {
+                    console.error('❌ 本人用連携完了メッセージ送信失敗');
+                  }
+                } catch (error) {
+                  console.error('❌ 本人用連携完了メッセージ送信エラー:', error);
+                }
+
+                // 本人用コードとして処理できた場合もここで次のイベントへ
                 continue;
               }
             }

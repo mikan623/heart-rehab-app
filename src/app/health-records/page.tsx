@@ -66,6 +66,27 @@ export default function Home() {
   // 入力フィールドの再レンダリングを防ぐためのキー
   const [inputKey, setInputKey] = useState(0);
   
+  // 本人用招待コード
+  const [selfLinkCode, setSelfLinkCode] = useState<string | null>(null);
+
+  // 本人用招待コードを取得
+  const fetchSelfLinkCode = async (userId: string) => {
+    try {
+      if (!userId) return;
+      const res = await fetch(`/api/self-link-code?userId=${encodeURIComponent(userId)}`);
+      if (!res.ok) {
+        console.error('❌ self-link-code 取得失敗:', res.status);
+        return;
+      }
+      const data = await res.json();
+      if (data.code) {
+        setSelfLinkCode(data.code);
+      }
+    } catch (error) {
+      console.error('❌ self-link-code 取得エラー:', error);
+    }
+  };
+
   // 認証チェック
   useEffect(() => {
     const session = getSession();
@@ -77,6 +98,8 @@ export default function Home() {
         displayName: session.userName
       });
       setIsAuthenticated(true);
+      // 本人用招待コードを取得
+      fetchSelfLinkCode(session.userId);
       return;
     }
 
@@ -379,6 +402,9 @@ export default function Home() {
             setLineLoggedInDB(profile.userId, true, profile.userId)
               .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
               .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
+
+            // 本人用招待コードを取得
+            fetchSelfLinkCode(profile.userId);
 
             // LINEアプリ内で実行されているかチェック
             if (window.liff.isInClient()) {
@@ -927,6 +953,23 @@ export default function Home() {
           <p className="text-orange-800 text-sm mt-1">
             今日も健康記録を入力しましょう。
           </p>
+        </div>
+      )}
+
+      {/* 本人用招待コード案内（公式LINEに送るコード） */}
+      {selfLinkCode && (
+        <div className="bg-green-50 border border-green-300 px-4 py-3 mx-4 mb-4 rounded-lg">
+          <p className="text-green-800 text-sm font-semibold mb-1">
+            ご自身のLINEにも健康記録の通知を受け取りたい方へ
+          </p>
+          <p className="text-green-800 text-xs md:text-sm mb-2">
+            公式アカウントを友だち追加したあと、
+            <span className="font-bold">このコードをトークで送信してください。</span>
+            （1回送るだけでOKです）
+          </p>
+          <div className="inline-block bg-white px-4 py-2 rounded-md border border-green-400 font-mono text-lg tracking-widest text-green-900">
+            {selfLinkCode}
+          </div>
         </div>
       )}
 

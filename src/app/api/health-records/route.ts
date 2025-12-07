@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 家族にLINEメッセージを送信するヘルパー
+// 家族・本人にLINEメッセージを送信するヘルパー
 async function notifyFamilyMembers(userId: string, savedRecord: any) {
   try {
     if (!prisma || !process.env.LINE_CHANNEL_ACCESS_TOKEN) {
@@ -105,8 +105,14 @@ async function notifyFamilyMembers(userId: string, savedRecord: any) {
       },
     });
 
-    if (!familyMembers.length) {
-      console.log('👨‍👩‍👧‍👦 家族メンバーなし、LINE通知スキップ');
+    // 本人の Messaging API userId も取得
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { lineUserId: true },
+    });
+
+    if (!familyMembers.length && !user?.lineUserId) {
+      console.log('👨‍👩‍👧‍👦 家族メンバーおよび本人LINE未連携のため、LINE通知スキップ');
       return;
     }
 
@@ -128,6 +134,7 @@ async function notifyFamilyMembers(userId: string, savedRecord: any) {
 
     const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
+    // 家族全員に送信
     for (const member of familyMembers) {
       if (!member.lineUserId) continue;
 
@@ -164,8 +171,44 @@ async function notifyFamilyMembers(userId: string, savedRecord: any) {
         console.error('❌ LINE送信エラー:', err);
       }
     }
+
+    // 本人にも送信（連携済みの場合）
+    if (user?.lineUserId) {
+      const selfBody = {
+        to: user.lineUserId,
+        messages: [
+          {
+            type: 'text',
+            text: message,
+          },
+        ],
+      };
+
+      try {
+        const res = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(selfBody),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('❌ 本人へのLINE送信失敗:', {
+            status: res.status,
+            body: text,
+          });
+        } else {
+          console.log('✅ 本人へのLINE通知送信成功:', user.lineUserId);
+        }
+      } catch (err) {
+        console.error('❌ 本人へのLINE送信エラー:', err);
+      }
+    }
   } catch (error) {
-    console.error('❌ 家族通知ヘルパーエラー:', error);
+    console.error('❌ 家族・本人通知ヘルパーエラー:', error);
   }
 }
 

@@ -858,17 +858,28 @@ export default function FamilyPage() {
           </h2>
 
           <div className="space-y-4 mb-6">
+            {/* 健康記録の自動共有（固定の説明） */}
+            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200">
+              <div className="w-7 h-7 flex items-center justify-center">
+                <span className="text-blue-500 text-2xl">✓</span>
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-800">健康記録は自動でLINEに共有されます</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  健康記録を保存すると、ご家族と本人のLINEに自動で通知されます。
+                </p>
+              </div>
+            </div>
+
+            {/* リマインダー機能（オン・オフのチェックボックス） */}
             <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
               <input type="checkbox" className="w-7 h-7 text-blue-500" defaultChecked />
-              <span className="text-lg font-semibold text-gray-800">健康記録を自動共有</span>
-            </label>
-            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
-              <input type="checkbox" className="w-7 h-7 text-blue-500" defaultChecked />
-              <span className="text-lg font-semibold text-gray-800">記録忘れの通知を送信</span>
-            </label>
-            <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
-              <input type="checkbox" className="w-7 h-7 text-blue-500" />
-              <span className="text-lg font-semibold text-gray-800">異常値の通知を送信</span>
+              <div>
+                <p className="text-lg font-semibold text-gray-800">記録忘れリマインダーを使う</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  記録を忘れたときに、下の「⏰ 記録忘れ通知」ボタンからリマインドメッセージを送れます。
+                </p>
+              </div>
             </label>
           </div>
 
