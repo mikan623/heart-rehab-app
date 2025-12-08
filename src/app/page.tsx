@@ -52,6 +52,8 @@ export default function LandingPage() {
           // ログイン状態をチェック
           if (window.liff.isLoggedIn()) {
             // ✅ LINE ログイン済み時：ユーザー情報を取得して Supabase に保存
+            let isNewProfile = false;
+
             try {
               const profile = await window.liff.getProfile();
               console.log('✅ LINE プロフィール取得:', profile);
@@ -82,6 +84,7 @@ export default function LandingPage() {
                 if (res.ok) {
                   const data = await res.json();
                   if (!data.profile) {
+                    isNewProfile = true;
                     await fetch('/api/profiles', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -103,8 +106,12 @@ export default function LandingPage() {
               console.error('⚠️ LINE プロフィール取得エラー:', profileError);
             }
             
-            // 健康記録ページに移動
-            router.push('/health-records');
+            // 🆕 初回ログイン時はプロフィール入力へ、それ以外は健康記録ページへ
+            if (isNewProfile) {
+              router.push('/profile');
+            } else {
+              router.push('/health-records');
+            }
             return;
           } else {
             // ログインしていない場合のみウェルカムページを表示
@@ -193,12 +200,15 @@ export default function LandingPage() {
       const data = await response.json();
       
       // セッションをローカルストレージに保存
-      localStorage.setItem('sessionToken', data.sessionToken || Buffer.from(`${data.user.id}:${Date.now()}`).toString('base64'));
+      localStorage.setItem(
+        'sessionToken',
+        data.sessionToken || Buffer.from(`${data.user.id}:${Date.now()}`).toString('base64')
+      );
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userName', data.user.name || '');
 
-      // 健康記録ページへ移動
-      router.push('/health-records');
+      // 🆕 新規登録後はまずプロフィール入力ページへ
+      router.push('/profile');
     } catch (err) {
       setError('通信エラーが発生しました');
       console.error(err);

@@ -22,126 +22,21 @@ export default function NavigationBar() {
     }
   };
 
-  // 医療機関用データエクスポート
-  const exportHealthData = async () => {
+  // ローカルストレージからログインユーザー情報を取得
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      let userId = 'user-1';
-      let liffDisplayName = '';
-
-      // ローカル環境以外ではLIFFからuserIdを取得
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        try {
-          if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-            const liffProfile = await window.liff.getProfile();
-            userId = liffProfile.userId;
-            liffDisplayName = liffProfile.displayName; // ✅ LINE名を保存
-          }
-        } catch (error) {
-          console.log('⚠️ LIFFユーザーID取得エラー:', error);
-        }
+      const storedId = localStorage.getItem('userId');
+      const storedName = localStorage.getItem('userName') || '';
+      if (storedId) {
+        setUser({ userId: storedId, displayName: storedName });
       }
-
-      // 🆕 データベースから最新のデータを取得
-      let exportData: any = {
-        patientInfo: {
-          name: liffDisplayName || '未設定', // ✅ LINE名をデフォルトに
-          age: '未設定',
-          gender: '未設定',
-          targetWeight: '未設定',
-          diseases: [],
-          medications: '',
-          physicalFunction: ''
-        },
-        healthRecords: {},
-        exportDate: new Date().toISOString(),
-        version: '1.0'
-      };
-
-      // プロフィール取得
-      try {
-        const profileResponse = await fetch(`/api/profiles?userId=${userId}`);
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          if (profileData.profile) {
-            exportData.patientInfo = {
-              name: liffDisplayName || profileData.profile.displayName || '未設定', // ✅ LINE名優先
-              age: profileData.profile.age || '未設定',
-              gender: profileData.profile.gender || '未設定',
-              targetWeight: profileData.profile.targetWeight || '未設定',
-              diseases: profileData.profile.diseases || [],
-              medications: profileData.profile.medications || '',
-              physicalFunction: profileData.profile.physicalFunction || ''
-            };
-          } else if (liffDisplayName) {
-            // プロフィールなし、LINE名のみで初期化
-            exportData.patientInfo.name = liffDisplayName;
-          }
-        }
-      } catch (error) {
-        console.log('⚠️ プロフィール取得エラー:', error);
-        const localProfile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-        exportData.patientInfo = {
-          name: liffDisplayName || localProfile.displayName || '未設定',
-          age: localProfile.age || '未設定',
-          gender: localProfile.gender || '未設定',
-          targetWeight: localProfile.targetWeight || '未設定',
-          diseases: localProfile.diseases || [],
-          medications: localProfile.medications || '',
-          physicalFunction: localProfile.physicalFunction || ''
-        };
-      }
-
-      // 健康記録取得
-      try {
-        const healthResponse = await fetch(`/api/health-records?userId=${userId}`);
-        if (healthResponse.ok) {
-          const healthData = await healthResponse.json();
-          
-          // データベースの形式をエクスポート用に変換
-          healthData.records.forEach((record: any) => {
-            const dateKey = record.date.split('T')[0];
-            const timeKey = record.time;
-            
-            if (!exportData.healthRecords[dateKey]) {
-              exportData.healthRecords[dateKey] = {};
-            }
-            
-            exportData.healthRecords[dateKey][timeKey] = {
-              bloodPressure: {
-                systolic: record.bloodPressure.systolic,
-                diastolic: record.bloodPressure.diastolic
-              },
-              pulse: record.pulse,
-              weight: record.weight,
-              exercise: record.exercise || {},
-              meal: record.meal || {},
-              dailyLife: record.dailyLife || ''
-            };
-          });
-        }
-      } catch (error) {
-        console.log('⚠️ 健康記録取得エラー:', error);
-        const localRecords = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
-        exportData.healthRecords = localRecords;
-      }
-
-      // JSONファイルとしてダウンロード
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-        type: 'application/json' 
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `心臓リハビリ記録_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      alert('医療機関用データをエクスポートしました。\nこのファイルを医療機関に共有してください。');
-    } catch (error) {
-      console.error('エクスポートエラー:', error);
-      alert('エクスポートに失敗しました。');
+    } catch (e) {
+      console.log('⚠️ NavigationBar: ユーザー情報読み込みエラー（無視）', e);
     }
-  };
+  }, []);
+
+  // 医療機関用データエクスポート（旧機能）は廃止済み
 
   const formatTime24h = (t: string) => {
     // morning/afternoon/evening を時刻へ
@@ -186,24 +81,32 @@ export default function NavigationBar() {
       let liffDisplayName = '';
       
       try {
-        // LINEユーザーIDを取得
+        // ユーザーIDを取得（メール/セッションログイン → LIFF → デフォルト の優先順）
         let userId = 'user-1'; // デフォルト
   
-        // ローカル環境ではLIFF機能をスキップ
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-          try {
-            if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-              const liffProfile = await window.liff.getProfile();
-              userId = liffProfile.userId;
-              liffDisplayName = liffProfile.displayName;
-              console.log('✅ LIFFユーザーIDを取得:', userId);
+        if (typeof window !== 'undefined') {
+          const storedId = localStorage.getItem('userId');
+          const storedName = localStorage.getItem('userName') || '';
+          if (storedId) {
+            userId = storedId;
+            liffDisplayName = storedName;
+            console.log('✅ NavigationBar: localStorage の userId を使用:', userId);
+          } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // 本番環境のみ LIFF からuserId取得
+            try {
+              if (window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+                const liffProfile = await window.liff.getProfile();
+                userId = liffProfile.userId;
+                liffDisplayName = liffProfile.displayName;
+                console.log('✅ LIFFユーザーIDを取得:', userId);
+              }
+            } catch (error) {
+              console.log('⚠️ LIFFユーザーID取得エラー、デフォルトを使用:', error);
+              userId = 'user-1';
             }
-          } catch (error) {
-            console.log('⚠️ LIFFユーザーID取得エラー、デフォルトを使用:', error);
-            userId = 'user-1';
+          } else {
+            console.log('🏠 ローカル環境: デフォルトユーザーIDを使用');
           }
-        } else {
-          console.log('🏠 ローカル環境: デフォルトユーザーIDを使用');
         }
   
         console.log('💾 NavigationBar: データベースからデータ取得を試行中', { userId });
@@ -509,17 +412,17 @@ export default function NavigationBar() {
         </button>
       </div>
   
-      {/* 右側：設定ボタン（固定） */}
+      {/* 右側：メニューボタン（固定） */}
       <div className="relative">
         <button 
           onClick={() => {
-            console.log('設定ボタンがクリックされました');
+            console.log('メニューボタンがクリックされました');
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
           className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
           <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
-          <span className="text-[10px] md:text-xs">設定</span>
+          <span className="text-[10px] md:text-xs">メニュー</span>
         </button>
   
         {showSettingsMenu && (
@@ -532,11 +435,6 @@ export default function NavigationBar() {
                 }}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 利用規約
-              </button>
-              <button 
-                onClick={exportHealthData}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                医療機関用エクスポート
               </button>
               <button
                 onClick={() => {

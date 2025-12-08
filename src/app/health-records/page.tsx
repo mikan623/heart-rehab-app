@@ -7,6 +7,16 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // 健康記録の型定義
+type EditSection =
+  | 'bloodPressure'
+  | 'pulse'
+  | 'weight'
+  | 'exercise'
+  | 'meal'
+  | 'medication'
+  | 'dailyLife'
+  | null;
+
 interface HealthRecord {
   bloodPressure: { systolic: string; diastolic: string };
   pulse: string;
@@ -284,6 +294,9 @@ export default function Home() {
 
   // 詳細表示用の状態を追加
   const [showHeartRehabInfo, setShowHeartRehabInfo] = useState(false);
+
+  // 各項目編集用モーダルの状態
+  const [activeSection, setActiveSection] = useState<EditSection>(null);
 
   // LIFF関連の状態を追加
   const [liff, setLiff] = useState<any>(null);
@@ -1016,161 +1029,294 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 入力フォーム - セクション分けされたカード型 */}
+          {/* 入力フォーム - セクション分けされたカード型（モーダル起動ボタン） */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <button
+              type="button"
+              onClick={() => setActiveSection('bloodPressure')}
+              className="w-full bg-white border-2 border-orange-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                🩸 血圧
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {(healthRecord as any)?.bloodPressure?.systolic ||
+                (healthRecord as any)?.bloodPressure?.diastolic
+                  ? `${(healthRecord as any)?.bloodPressure?.systolic || '-'} / ${
+                      (healthRecord as any)?.bloodPressure?.diastolic || '-'
+                    }`
+                  : '未入力'}
+              </span>
+            </button>
 
-          {/* 血圧セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-orange-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">🩸 血圧</h3>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  収縮期（上）
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  onKeyDown={blockInvalidKeys}
-                  value={healthRecord?.bloodPressure?.systolic || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        bloodPressure: {
-                          ...healthRecord?.bloodPressure,
-                          systolic: value
+            <button
+              type="button"
+              onClick={() => setActiveSection('pulse')}
+              className="w-full bg-white border-2 border-pink-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                💓 脈拍
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {healthRecord.pulse ? `${healthRecord.pulse} 回/分` : '未入力'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection('weight')}
+              className="w-full bg-white border-2 border-yellow-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                ⚖️ 体重
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {healthRecord.weight ? `${healthRecord.weight} kg` : '未入力'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection('exercise')}
+              className="w-full bg-white border-2 border-green-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                🚴 運動内容
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {(healthRecord as any)?.exercise?.type ||
+                (healthRecord as any)?.exercise?.duration
+                  ? `${(healthRecord as any)?.exercise?.type || ''} ${
+                      (healthRecord as any)?.exercise?.duration || ''
+                    }分`
+                  : '未入力'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection('meal')}
+              className="w-full bg-white border-2 border-red-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                🍽️ 食事内容
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {Array.isArray((healthRecord as any)?.meal?.staple) &&
+                (healthRecord as any).meal.staple.length
+                  ? true
+                  : false ||
+                    (Array.isArray((healthRecord as any)?.meal?.mainDish) &&
+                      (healthRecord as any).meal.mainDish.length
+                      ? true
+                      : false) ||
+                    (Array.isArray((healthRecord as any)?.meal?.sideDish) &&
+                      (healthRecord as any).meal.sideDish.length
+                      ? true
+                      : false) ||
+                    (healthRecord as any)?.meal?.other
+                  ? '入力済み'
+                  : '未入力'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection('medication')}
+              className="w-full bg-white border-2 border-blue-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                💊 服薬確認
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {healthRecord.medicationTaken ? '今、薬飲みました' : '未入力'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection('dailyLife')}
+              className="w-full bg-white border-2 border-purple-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between md:col-span-2"
+            >
+              <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                ✏️ 自由記載
+              </span>
+              <span className="text-base md:text-xl font-semibold text-gray-700">
+                {healthRecord.dailyLife ? '入力済み' : '未入力'}
+              </span>
+            </button>
+          </div>
+
+          {/* 各セクションの編集モーダル */}
+          {activeSection === 'bloodPressure' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl border-2 border-orange-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    🩸 血圧
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-lg font-semibold text-gray-700 mb-3">
+                      収縮期（上）
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      onKeyDown={blockInvalidKeys}
+                      value={healthRecord?.bloodPressure?.systolic || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                          setHealthRecord({
+                            ...healthRecord,
+                            bloodPressure: {
+                              ...healthRecord?.bloodPressure,
+                              systolic: value
+                            }
+                          });
                         }
-                      });
-                    }
-                  }}
-                  placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
-                  style={{WebkitAppearance: 'textfield' as any}}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  拡張期（下）
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  onKeyDown={blockInvalidKeys}
-                  value={healthRecord?.bloodPressure?.diastolic || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        bloodPressure: {
-                          ...healthRecord?.bloodPressure,
-                          diastolic: value
+                      }}
+                      placeholder="0"
+                      className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                      style={{ WebkitAppearance: 'textfield' as any }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-lg font-semibold text-gray-700 mb-3">
+                      拡張期（下）
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      onKeyDown={blockInvalidKeys}
+                      value={healthRecord?.bloodPressure?.diastolic || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                          setHealthRecord({
+                            ...healthRecord,
+                            bloodPressure: {
+                              ...healthRecord?.bloodPressure,
+                              diastolic: value
+                            }
+                          });
                         }
-                      });
-                    }
-                  }}
-                  placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
-                  style={{WebkitAppearance: 'textfield' as any}}
-                />
+                      }}
+                      placeholder="0"
+                      className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                      style={{ WebkitAppearance: 'textfield' as any }}
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600"
+                  >
+                    閉じる
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* 脈拍セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-pink-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">💓 脈拍</h3>
-            <label className="block text-lg font-semibold text-gray-700 mb-3">
-              脈拍数
-            </label>
-            <div className="flex items-end gap-4">
-              <input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                onKeyDown={blockInvalidKeys}
-                value={healthRecord?.pulse || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                    setHealthRecord({
-                      ...healthRecord,
-                      pulse: value
-                    });
-                  }
-                }}
-                placeholder="0"
-                className="w-full px-4 py-3 text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
-                style={{WebkitAppearance: 'textfield' as any}}
-              />
-              <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">回/分</span>
-            </div>
-          </div>
-
-          {/* 体重セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-yellow-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">⚖️ 体重</h3>
-            <label className="block text-lg font-semibold text-gray-700 mb-3">
-              体重
-            </label>
-            <div className="flex items-end gap-4">
-              <div className="flex-1">
-                <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  onKeyDown={blockInvalidKeys}
-                  value={healthRecord?.weight || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        weight: value
-                      });
-                    }
-                  }}
-                  placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 placeholder:text-gray-400"
-                  style={{WebkitAppearance: 'textfield' as any}}
-                />
-              </div>
-              <span className="text-xl text-gray-600 font-semibold">kg</span>
-            </div>
-          </div>
-
-          {/* 運動内容セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-green-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">🚴 運動内容</h3>
-            <div className="space-y-4">
-              <div>
+          {activeSection === 'pulse' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl border-2 border-pink-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    💓 脈拍
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
                 <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  運動の種類
+                  脈拍数
                 </label>
-                <select
-                  value={healthRecord?.exercise?.type || ''}
-                  onChange={(e) => setHealthRecord({
-                    ...healthRecord,
-                    exercise: {
-                      ...healthRecord?.exercise,
-                      type: e.target.value
-                    }
-                  })}
-                  className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
-                >
-                  <option value="">選択してください</option>
-                  <option value="歩行">歩行</option>
-                  <option value="ランニング">ランニング</option>
-                  <option value="自転車">自転車</option>
-                  <option value="筋トレ">筋トレ</option>
-                  <option value="その他">その他</option>
-                </select>
+                <div className="flex items-end gap-4">
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    onKeyDown={blockInvalidKeys}
+                    value={healthRecord?.pulse || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setHealthRecord({
+                          ...healthRecord,
+                          pulse: value
+                        });
+                      }
+                    }}
+                    placeholder="0"
+                    className="w-full px-4 py-3 text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
+                    style={{ WebkitAppearance: 'textfield' as any }}
+                  />
+                  <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">
+                    回/分
+                  </span>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-pink-500 text-white font-bold hover:bg-pink-600"
+                  >
+                    閉じる
+                  </button>
+                </div>
               </div>
-              <div>
+            </div>
+          )}
+
+          {activeSection === 'weight' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl border-2 border-yellow-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    ⚖️ 体重
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
                 <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  運動時間
+                  体重
                 </label>
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
@@ -1179,144 +1325,349 @@ export default function Home() {
                       min={0}
                       inputMode="numeric"
                       onKeyDown={blockInvalidKeys}
-                      value={healthRecord?.exercise?.duration || ''}
+                      value={healthRecord?.weight || ''}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value === '' || /^\d*\.?\d*$/.test(value)) {
                           setHealthRecord({
                             ...healthRecord,
-                            exercise: {
-                              ...healthRecord?.exercise,
-                              duration: value
-                            }
+                            weight: value
                           });
                         }
                       }}
                       placeholder="0"
-                      className="w-full px-4 py-3 text-xl border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 placeholder:text-gray-400"
-                      style={{WebkitAppearance: 'textfield' as any}}
+                      className="w-full px-4 py-3 text-xl border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 placeholder:text-gray-400"
+                      style={{ WebkitAppearance: 'textfield' as any }}
                     />
                   </div>
-                  <span className="text-xl text-gray-600 font-semibold">分</span>
+                  <span className="text-xl text-gray-600 font-semibold">kg</span>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-yellow-400 text-white font-bold hover:bg-yellow-500"
+                  >
+                    閉じる
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* 食事内容セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-red-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">🍽️ 食事内容</h3>
-            
-            {/* 主食・主菜・副菜を横並びに */}
-            <div className="grid grid-cols-3 gap-2 md:gap-6 mb-6">
-              {/* 主食 */}
-              <div>
-                <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">主食</label>
-                <div className="space-y-1 md:space-y-4">
-                  {['ごはん', 'パン', 'めん', 'いも類'].map(item => (
-                    <label key={item} className="flex items-center space-x-2 md:space-x-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.staple).includes(item)}
-                        onChange={(e) => handleMealChange('staple', item, e.target.checked)}
-                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
-                    </label>
-                  ))}
+          {activeSection === 'exercise' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl border-2 border-green-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-0 flex items-center gap-2">
+                    🚴 運動内容
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
                 </div>
-              </div>
-
-              {/* 主菜 */}
-              <div>
-                <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">主菜</label>
-                <div className="space-y-1 md:space-y-4">
-                  {['魚', '肉', '卵'].map(item => (
-                    <label key={item} className="flex items-center space-x-2 md:space-x-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(item)}
-                        onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
-                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-700 mb-3">
+                      運動の種類
                     </label>
-                  ))}
+                    <select
+                      value={healthRecord?.exercise?.type || ''}
+                      onChange={(e) =>
+                        setHealthRecord({
+                          ...healthRecord,
+                          exercise: {
+                            ...healthRecord?.exercise,
+                            type: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
+                    >
+                      <option value="">選択してください</option>
+                      <option value="歩行">歩行</option>
+                      <option value="ランニング">ランニング</option>
+                      <option value="自転車">自転車</option>
+                      <option value="筋トレ">筋トレ</option>
+                      <option value="その他">その他</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-700 mb-3">
+                      運動時間
+                    </label>
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          onKeyDown={blockInvalidKeys}
+                          value={healthRecord?.exercise?.duration || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              setHealthRecord({
+                                ...healthRecord,
+                                exercise: {
+                                  ...healthRecord?.exercise,
+                                  duration: value
+                                }
+                              });
+                            }
+                          }}
+                          placeholder="0"
+                          className="w-full px-4 py-3 text-xl border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 placeholder:text-gray-400"
+                          style={{ WebkitAppearance: 'textfield' as any }}
+                        />
+                      </div>
+                      <span className="text-xl text-gray-600 font-semibold">分</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* 副菜 */}
-              <div>
-                <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">副菜</label>
-                <div className="space-y-1 md:space-y-4">
-                  {['野菜', '海藻', 'きのこ', '汁物', '漬物'].map(item => (
-                    <label key={item} className="flex items-center space-x-2 md:space-x-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(item)}
-                        onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
-                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                      />
-                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
-                    </label>
-                  ))}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600"
+                  >
+                    閉じる
+                  </button>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* その他 */}
-            <div>
-              <label className="block text-lg font-semibold text-gray-700 mb-3">その他</label>
-              <input
-                type="text"
-                value={healthRecord?.meal?.other || ''}
-                onChange={(e) => setHealthRecord({
-                  ...healthRecord,
-                  meal: {
-                    ...healthRecord.meal,
-                    other: e.target.value
+          {activeSection === 'meal' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-4xl border-2 border-red-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    🍽️ 食事内容
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                  {/* 主食 */}
+                  <div>
+                    <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
+                      主食
+                    </label>
+                    <div className="space-y-1 md:space-y-4">
+                      {['ごはん', 'パン', 'めん', 'いも類'].map((item) => (
+                        <label
+                          key={item}
+                          className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={convertStringToArray(healthRecord?.meal?.staple).includes(
+                              item
+                            )}
+                            onChange={(e) => handleMealChange('staple', item, e.target.checked)}
+                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 主菜 */}
+                  <div>
+                    <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
+                      主菜
+                    </label>
+                    <div className="space-y-1 md:space-y-4">
+                      {['魚', '肉', '卵'].map((item) => (
+                        <label
+                          key={item}
+                          className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(
+                              item
+                            )}
+                            onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
+                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 副菜 */}
+                  <div>
+                    <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
+                      副菜
+                    </label>
+                    <div className="space-y-1 md:space-y-4">
+                      {['野菜', '海藻', 'きのこ', '汁物', '漬物'].map((item) => (
+                        <label
+                          key={item}
+                          className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(
+                              item
+                            )}
+                            onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
+                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* その他 */}
+                <div>
+                  <label className="block text-lg font-semibold text-gray-700 mb-3">
+                    その他
+                  </label>
+                  <input
+                    type="text"
+                    value={healthRecord?.meal?.other || ''}
+                    onChange={(e) =>
+                      setHealthRecord({
+                        ...healthRecord,
+                        meal: {
+                          ...healthRecord.meal,
+                          other: e.target.value
+                        }
+                      })
+                    }
+                    placeholder="果物、乳製品など"
+                    className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500 placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-red-400 text-white font-bold hover:bg-red-500"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'medication' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl border-2 border-blue-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    💊 服薬確認
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <label className="flex items-center space-x-4 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50">
+                  <input
+                    type="checkbox"
+                    checked={healthRecord?.medicationTaken || false}
+                    onChange={(e) =>
+                      setHealthRecord({
+                        ...healthRecord,
+                        medicationTaken: e.target.checked
+                      })
+                    }
+                    className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-xl text-gray-700">今、薬飲みました</span>
+                </label>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'dailyLife' && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-transparent px-4"
+              onClick={() => setActiveSection(null)}
+            >
+              <div
+                className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-3xl border-2 border-purple-300 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    ✏️ 自由記載
+                  </h3>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="text-2xl text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  気分、体調の変化、気になったこと
+                </label>
+                <textarea
+                  value={healthRecord?.dailyLife || ''}
+                  onChange={(e) =>
+                    setHealthRecord({
+                      ...healthRecord,
+                      dailyLife: e.target.value
+                    })
                   }
-                })}
-                placeholder="果物、乳製品など"
-                className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500 placeholder:text-gray-400"
-              />
+                  placeholder="自由にお書きください"
+                  rows={6}
+                  className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+                />
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-6 py-2 rounded-lg bg-purple-500 text-white font-bold hover:bg-purple-600"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* 服薬確認セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-blue-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">💊 服薬確認</h3>
-            <label className="flex items-center space-x-4 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50">
-              <input
-                type="checkbox"
-                checked={healthRecord?.medicationTaken || false}
-                onChange={(e) => setHealthRecord({
-                  ...healthRecord,
-                  medicationTaken: e.target.checked
-                })}
-                className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <span className="text-xl text-gray-700">今、薬飲みました</span>
-            </label>
-          </div>
-
-          {/* 自由記載セクション */}
-          <div className="bg-white rounded-none md:rounded-2xl p-4 md:p-6 mb-1 md:mb-4 shadow-none md:shadow-md border-2 border-purple-300 w-full">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">✏️ 自由記載</h3>
-            <label className="block text-lg font-semibold text-gray-700 mb-3">
-              気分、体調の変化、気になったこと
-            </label>
-            <textarea
-              value={healthRecord?.dailyLife || ''}
-              onChange={(e) => setHealthRecord({
-                ...healthRecord,
-                dailyLife: e.target.value
-              })}
-              placeholder="自由にお書きください"
-              rows={6}
-              className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
-            />
-          </div>
+          )}
             
             {/* ボタンテキストを生成する関数 */}
             {(() => {
