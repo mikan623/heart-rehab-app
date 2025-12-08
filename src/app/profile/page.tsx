@@ -114,17 +114,39 @@ export default function ProfilePage() {
     router.push('/');
   }, [router]);
 
-  // 🆕 LINE連携状態をチェック
+  // 🆕 LINE連携状態をチェック（LIFF or Supabase）
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.liff) {
+    const checkLineConnection = async () => {
+      // 1) LIFFでログイン済みならそれを優先
+      if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
+        try {
+          if (window.liff.isLoggedIn()) {
+            setIsLineConnected(true);
+            return;
+          }
+        } catch (error) {
+          console.log('LINE connection check (LIFF) failed:', error);
+        }
+      }
+
+      // 2) メールログインユーザーの場合は Supabase 上の連携状態を確認
+      const session = getSession();
+      if (!session) return;
+
       try {
-        if (window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
-          setIsLineConnected(window.liff.isLoggedIn());
+        const res = await fetch(`/api/auth/line-connection?userId=${encodeURIComponent(session.userId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.lineConnected) {
+            setIsLineConnected(true);
+          }
         }
       } catch (error) {
-        console.log('LINE connection check failed:', error);
+        console.log('LINE connection check (Supabase) failed:', error);
       }
-    }
+    };
+
+    checkLineConnection();
   }, []);
 
   useEffect(() => {
@@ -491,14 +513,14 @@ export default function ProfilePage() {
         )}
 
         {/* 🆕 LINE連携済みセクション */}
-        {isLineConnected && user && (
+        {isLineConnected && (
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-blue-300">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 md:mb-3">✅ LINE連携完了</h2>
             <p className="text-sm md:text-base text-blue-700 font-semibold mb-3">
               🎉 LINEアカウントと連携しました！
             </p>
             <div className="flex items-center gap-4">
-              {user.pictureUrl && (
+              {user?.pictureUrl && (
                 <img
                   src={user.pictureUrl}
                   alt={user.displayName}
@@ -507,7 +529,7 @@ export default function ProfilePage() {
               )}
               <div>
                 <p className="text-lg md:text-xl font-semibold text-gray-700">
-                  {user.displayName} として連携済み
+                  {(user?.displayName || 'LINEアカウント')} として連携済み
                 </p>
                 <p className="text-sm md:text-base text-gray-600 mt-1">
                   これ以降、このLINEアカウントとメールログインのプロフィールが連携されます。
