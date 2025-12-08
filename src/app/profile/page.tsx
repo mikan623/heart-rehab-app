@@ -495,49 +495,6 @@ export default function ProfilePage() {
 
       {/* メインコンテンツ */}
       <main className="px-0 md:p-4">
-        {/* 🆕 LINE連携セクション（メールログインユーザー向け） - 1番上に配置 */}
-        {getSession() && !isLineConnected && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-green-300">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">🔗 LINE連携</h2>
-            <p className="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
-              LINEと連携することで、LINE上でも健康記録にアクセスできます。
-            </p>
-            <button
-              onClick={handleLineConnection}
-              disabled={isLineConnecting || !liff}
-              className="w-full md:w-auto px-8 py-3 md:py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-lg md:text-xl rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-            >
-              {isLineConnecting ? 'LINE連携中...' : 'LINEと連携する'}
-            </button>
-          </div>
-        )}
-
-        {/* 🆕 LINE連携済みセクション */}
-        {isLineConnected && (
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-blue-300">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 md:mb-3">✅ LINE連携完了</h2>
-            <p className="text-sm md:text-base text-blue-700 font-semibold mb-3">
-              🎉 LINEアカウントと連携しました！
-            </p>
-            <div className="flex items-center gap-4">
-              {user?.pictureUrl && (
-                <img
-                  src={user.pictureUrl}
-                  alt={user.displayName}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-blue-300 shadow-md object-cover"
-                />
-              )}
-              <div>
-                <p className="text-lg md:text-xl font-semibold text-gray-700">
-                  {(user?.displayName || 'LINEアカウント')} として連携済み
-                </p>
-                <p className="text-sm md:text-base text-gray-600 mt-1">
-                  これ以降、このLINEアカウントとメールログインのプロフィールが連携されます。
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 基本情報セクション */}
         <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
@@ -699,14 +656,36 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 保存ボタン */}
-        <div className="mt-6 md:mt-8 mb-6 flex justify-center">
-          <button
-            onClick={handleSave}
-            className="w-full md:w-2/3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all"
-          >
-            保存する
-          </button>
+        {/* LINE連携ボタン＋保存ボタン */}
+        <div className="mt-6 md:mt-8 mb-6 flex flex-col md:flex-row gap-3 md:gap-4 justify-center">
+          {/* LINE連携ボタン */}
+          <div className="w-full md:w-auto flex justify-center">
+            <button
+              onClick={handleLineConnection}
+              disabled={isLineConnecting || !liff || isLineConnected}
+              className={`w-full md:w-auto px-8 py-3 md:py-4 rounded-full font-bold text-lg md:text-xl shadow-lg transition-all ${
+                isLineConnected
+                  ? 'bg-gray-300 text-gray-600 cursor-default'
+                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+              } disabled:opacity-60`}
+            >
+              {isLineConnected
+                ? 'LINE連携済み'
+                : isLineConnecting
+                ? 'LINE連携中...'
+                : 'LINEと連携する'}
+            </button>
+          </div>
+
+          {/* 保存ボタン */}
+          <div className="w-full md:w-2/3">
+            <button
+              onClick={handleSave}
+              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all"
+            >
+              保存する
+            </button>
+          </div>
         </div>
       </main>
     </div>

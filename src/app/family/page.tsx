@@ -145,6 +145,11 @@ export default function FamilyPage() {
     saveToDb();
   }, [reminderEnabled, reminderTime, currentUserId]);
 
+  // 少なくとも1人でもLINE通知先があるかどうか（家族の登録状況から判定）
+  const hasLineShareDestination = familyMembers.some(
+    (member) => Boolean(member.lineUserId) && Boolean(member.isRegistered)
+  );
+
   useEffect(() => {
     const initData = async () => {
       try {
@@ -806,15 +811,39 @@ export default function FamilyPage() {
           </h2>
 
           <div className="space-y-4 mb-2">
-            {/* 健康記録の自動共有（固定の説明） */}
-            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-blue-200">
-              <div className="w-7 h-7 flex items-center justify-center">
-                <span className="text-blue-500 text-2xl">✓</span>
+            {/* 健康記録の自動共有ステータス */}
+            <div
+              className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
+                hasLineShareDestination
+                  ? 'bg-white border-blue-200'
+                  : 'bg-gray-50 border-gray-200'
+              }`}
+            >
+              <div
+                className={`w-7 h-7 flex items-center justify-center rounded border-2 ${
+                  hasLineShareDestination ? 'border-blue-400 bg-blue-50' : 'border-gray-400 bg-white'
+                }`}
+              >
+                {hasLineShareDestination && (
+                  <span className="text-blue-500 text-xl">✓</span>
+                )}
               </div>
               <div>
-                <p className="text-lg font-semibold text-gray-800">健康記録は自動でLINEに共有されます</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  健康記録を保存すると、ご家族と本人のLINEに自動で通知されます。
+                <p
+                  className={`text-lg font-semibold ${
+                    hasLineShareDestination ? 'text-gray-800' : 'text-gray-400'
+                  }`}
+                >
+                  健康記録は自動でLINEに共有されます
+                </p>
+                <p
+                  className={`text-xs mt-1 ${
+                    hasLineShareDestination ? 'text-gray-500' : 'text-gray-400'
+                  }`}
+                >
+                  {hasLineShareDestination
+                    ? '健康記録を保存すると、ご家族と本人のLINEに自動で通知されます。'
+                    : 'ご家族やご自身のLINE連携を設定すると、健康記録を保存したときに自動で通知されます。'}
                 </p>
               </div>
             </div>

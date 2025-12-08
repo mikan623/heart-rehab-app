@@ -173,6 +173,7 @@ export default function GraphPage() {
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
   const [showAdvice, setShowAdvice] = useState(false);
+  const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight'>('bloodPressure');
 
   // 🆕 追加：LINEミニアプリ最適化用の状態
   const [isLineApp, setIsLineApp] = useState(false);
@@ -629,7 +630,7 @@ export default function GraphPage() {
         fill: { value: normalRanges.bloodPressure.diastolic.max }, // 60から90まで塗りつぶし
         order: 0, // 最も奥に描画
       },
-      // 背景: 正常範囲 (収縮期) - Y軸90から140の間を薄い緑色で塗りつぶし
+      // 背景: 正常範囲 (収縮期) - Y軸90から140の間を薄い赤色で塗りつぶし
       {
         label: '正常範囲 (収縮期)',
         data: Array(graphData.labels.length).fill(normalRanges.bloodPressure.systolic.min), // 90
@@ -733,7 +734,6 @@ export default function GraphPage() {
         borderWidth: 2,
         borderDash: [5, 5], // 点線
         fill: false,
-        order: 1,
       }] : []),
       // 実際のデータ線: 体重
       {
@@ -745,7 +745,6 @@ export default function GraphPage() {
         pointRadius: 3,
         borderWidth: 2,
         fill: false,
-        order: 2,
       },
     ],
   };
@@ -915,45 +914,86 @@ export default function GraphPage() {
   
         {/* グラフ表示エリア */}
         <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-3 md:mb-6 w-full border-2 border-pink-300 mx-0 md:mx-0">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">
             📊 健康記録の推移
           </h2>
-          
-          {/* グラフ表示 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            {/* 血圧グラフ */}
+
+          {/* 指標タブ */}
+          <div className="flex mb-4 md:mb-6 bg-gray-100 rounded-full p-1">
+            <button
+              onClick={() => setActiveMetric('bloodPressure')}
+              className={`flex-1 py-2 md:py-3 rounded-full text-sm md:text-base font-semibold transition ${
+                activeMetric === 'bloodPressure'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'text-gray-600'
+              }`}
+            >
+              🩸 血圧
+            </button>
+            <button
+              onClick={() => setActiveMetric('pulse')}
+              className={`flex-1 py-2 md:py-3 rounded-full text-sm md:text-base font-semibold transition ${
+                activeMetric === 'pulse'
+                  ? 'bg-pink-500 text-white shadow-md'
+                  : 'text-gray-600'
+              }`}
+            >
+              💓 脈拍
+            </button>
+            <button
+              onClick={() => setActiveMetric('weight')}
+              className={`flex-1 py-2 md:py-3 rounded-full text-sm md:text-base font-semibold transition ${
+                activeMetric === 'weight'
+                  ? 'bg-purple-500 text-white shadow-md'
+                  : 'text-gray-600'
+              }`}
+            >
+              ⚖️ 体重
+            </button>
+          </div>
+
+          {/* 選択中の指標のグラフを全幅で表示 */}
+          {activeMetric === 'bloodPressure' && (
             <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-red-300">
-              <h3 className="text-xl md:text-2xl font-bold text-red-800 mb-2 md:mb-3 text-center">
+              <h3 className="text-xl md:text-2xl font-bold text-red-800 mb-2 md:mb-3">
                 🩸 血圧
               </h3>
-              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">正常範囲: 120/80 mmHg</p>
+              <p className="text-sm md:text-base text-gray-600 mb-4 font-semibold">
+                正常範囲: 120/80 mmHg
+              </p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={bloodPressureChartData} options={chartOptions} />
               </div>
             </div>
+          )}
 
-            {/* 脈拍グラフ */}
+          {activeMetric === 'pulse' && (
             <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-blue-300">
-              <h3 className="text-xl md:text-2xl font-bold text-blue-800 mb-2 md:mb-3 text-center">
+              <h3 className="text-xl md:text-2xl font-bold text-blue-800 mb-2 md:mb-3">
                 💓 脈拍
               </h3>
-              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">正常範囲: 60-100 回/分</p>
+              <p className="text-sm md:text-base text-gray-600 mb-4 font-semibold">
+                正常範囲: 60-100 回/分
+              </p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={pulseChartData} options={chartOptions} />
               </div>
             </div>
+          )}
 
-            {/* 体重グラフ */}
+          {activeMetric === 'weight' && (
             <div className="bg-gradient-to-br p-4 md:p-6 rounded-lg border-2 border-purple-300">
-              <h3 className="text-xl md:text-2xl font-bold text-purple-800 mb-2 md:mb-3 text-center">
+              <h3 className="text-xl md:text-2xl font-bold text-purple-800 mb-2 md:mb-3">
                 ⚖️ 体重
               </h3>
-              <p className="text-sm md:text-base text-gray-600 text-center mb-4 font-semibold">目標体重との比較</p>
+              <p className="text-sm md:text-base text-gray-600 mb-4 font-semibold">
+                目標体重との比較
+              </p>
               <div className="h-[300px] md:h-[500px]">
                 <Line data={weightChartData} options={chartOptions} />
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* アドバイスセクション */}

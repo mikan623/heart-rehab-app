@@ -560,35 +560,35 @@ export default function CalendarPage() {
         {typeof window !== 'undefined' && (
           <style
             dangerouslySetInnerHTML={{
-              __html: `
+            __html: `
                 ${isLineApp ? `
-                .line-app-container {
-                  height: calc(100vh - 60px);
-                  overflow-y: auto;
-                  -webkit-overflow-scrolling: touch;
-                }
-                .line-app-container input,
-                .line-app-container select,
-                .line-app-container textarea {
-                  font-size: 16px !important;
-                  transform: translateZ(0);
-                }
-                .line-app-container input[type="number"] {
-                  -webkit-appearance: textfield;
-                  -moz-appearance: textfield;
-                }
-                .line-app-container input:not([type="number"]),
-                .line-app-container select,
-                .line-app-container textarea {
-                  -webkit-appearance: none;
-                }
-                .line-app-container button {
-                  min-height: 44px;
-                  padding: 12px 16px;
-                }
-                .line-app-container * {
-                  -webkit-overflow-scrolling: touch;
-                }
+              .line-app-container {
+                height: calc(100vh - 60px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+              }
+              .line-app-container input,
+              .line-app-container select,
+              .line-app-container textarea {
+                font-size: 16px !important;
+                transform: translateZ(0);
+              }
+              .line-app-container input[type="number"] {
+                -webkit-appearance: textfield;
+                -moz-appearance: textfield;
+              }
+              .line-app-container input:not([type="number"]),
+              .line-app-container select,
+              .line-app-container textarea {
+                -webkit-appearance: none;
+              }
+              .line-app-container button {
+                min-height: 44px;
+                padding: 12px 16px;
+              }
+              .line-app-container * {
+                -webkit-overflow-scrolling: touch;
+              }
                 ` : ''}
                 ${stampStyles}
               `,
@@ -659,7 +659,7 @@ export default function CalendarPage() {
             </button>
           </div>
 
-              {/* カレンダー全体を外枠で囲む */}
+          {/* カレンダー全体を外枠で囲む */}
           <div className="border-2 border-orange-400 rounded-none md:rounded-lg overflow-hidden bg-white w-full">
               {/* 曜日ヘッダー */}
               <div className="grid grid-cols-7 bg-gradient-to-r from-orange-400 to-pink-400">
@@ -714,8 +714,8 @@ export default function CalendarPage() {
                                 .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
                                 .slice(0, 3)  // 1日最大3スタンプ（朝・昼・夜）
                                 .map(([time, record]) => {
-                                  if (!record) return null;
-
+                                if (!record) return null;
+                                
                                   const slot = getTimeSlot(time);
                                   let src = '';
                                   let alt = '';
@@ -734,8 +734,8 @@ export default function CalendarPage() {
                                     recentStamp &&
                                     recentStamp.date === dateKey &&
                                     recentStamp.time === time;
-
-                                  return (
+                                
+                                return (
                                     <img
                                       key={time}
                                       src={src}
@@ -744,8 +744,8 @@ export default function CalendarPage() {
                                         isRecent ? 'stamp-animate-big' : 'stamp-animate'
                                       }`}
                                     />
-                                  );
-                                })}
+                                );
+                              })}
                               {/* 3件以上ある場合は「+n個」とテキストで表示 */}
                               {dayRecords && Object.keys(dayRecords).length > 3 && (
                                 <div className="text-[10px] md:text-xs text-gray-600 font-bold">
