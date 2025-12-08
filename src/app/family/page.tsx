@@ -34,6 +34,27 @@ export default function FamilyPage() {
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState('21:00');
 
+  // 本人用招待コード（公式LINEとの連携用）
+  const [selfLinkCode, setSelfLinkCode] = useState<string | null>(null);
+
+  // 本人用招待コードを取得
+  const fetchSelfLinkCode = async (userId: string) => {
+    try {
+      if (!userId) return;
+      const res = await fetch(`/api/self-link-code?userId=${encodeURIComponent(userId)}`);
+      if (!res.ok) {
+        console.error('❌ self-link-code 取得失敗:', res.status);
+        return;
+      }
+      const data = await res.json();
+      if (data.code) {
+        setSelfLinkCode(data.code);
+      }
+    } catch (error) {
+      console.error('❌ self-link-code 取得エラー:', error);
+    }
+  };
+
   // 認証チェック
   useEffect(() => {
     const session = getSession();
@@ -58,7 +79,7 @@ export default function FamilyPage() {
     router.push('/');
   }, [router]);
 
-  // 記録忘れリマインダー設定を読み込み（DB優先・localStorageはフォールバック）
+  // 記録忘れリマインダー設定＋本人用招待コードを読み込み（DB優先・localStorageはフォールバック）
   useEffect(() => {
     const loadSettings = async () => {
       if (typeof window === 'undefined') return;
@@ -73,7 +94,7 @@ export default function FamilyPage() {
         setReminderTime(savedTime);
       }
 
-      // currentUserId が分かったら DB から正式な値を取得
+      // currentUserId が分かったら DB から正式な値や本人コードを取得
       if (!currentUserId) return;
       try {
         const res = await fetch(`/api/reminder-settings?userId=${encodeURIComponent(currentUserId)}`);
@@ -84,8 +105,11 @@ export default function FamilyPage() {
             setReminderTime(data.reminderTime);
           }
         }
+
+        // 本人用招待コードも取得
+        await fetchSelfLinkCode(currentUserId);
       } catch (error) {
-        console.error('❌ リマインダー設定取得エラー:', error);
+        console.error('❌ リマインダー設定 or self-link-code 取得エラー:', error);
       }
     };
 
@@ -823,6 +847,23 @@ export default function FamilyPage() {
             </label>
           </div>
         </div>
+
+        {/* 本人用招待コード案内（公式LINEに送るコード） */}
+        {selfLinkCode && (
+          <section className="mt-6 bg-green-50 border border-green-300 px-4 py-3 rounded-lg">
+            <p className="text-green-800 text-sm font-semibold mb-1">
+              ご自身のLINEにも健康記録の通知を受け取りたい方へ
+            </p>
+            <p className="text-green-800 text-xs md:text-sm mb-2">
+              公式アカウントを友だち追加したあと、
+              <span className="font-bold"> このコードをトークで送信してください。</span>
+              （1回送るだけでOKです）
+            </p>
+            <div className="inline-block bg-white px-4 py-2 rounded-md border border-green-400 font-mono text-lg tracking-widest text-green-900">
+              {selfLinkCode}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   ) : (

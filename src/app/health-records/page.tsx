@@ -66,27 +66,6 @@ export default function Home() {
   // 入力フィールドの再レンダリングを防ぐためのキー
   const [inputKey, setInputKey] = useState(0);
   
-  // 本人用招待コード
-  const [selfLinkCode, setSelfLinkCode] = useState<string | null>(null);
-
-  // 本人用招待コードを取得
-  const fetchSelfLinkCode = async (userId: string) => {
-    try {
-      if (!userId) return;
-      const res = await fetch(`/api/self-link-code?userId=${encodeURIComponent(userId)}`);
-      if (!res.ok) {
-        console.error('❌ self-link-code 取得失敗:', res.status);
-        return;
-      }
-      const data = await res.json();
-      if (data.code) {
-        setSelfLinkCode(data.code);
-      }
-    } catch (error) {
-      console.error('❌ self-link-code 取得エラー:', error);
-    }
-  };
-
   // 認証チェック
   useEffect(() => {
     const session = getSession();
@@ -98,8 +77,6 @@ export default function Home() {
         displayName: session.userName
       });
       setIsAuthenticated(true);
-      // 本人用招待コードを取得
-      fetchSelfLinkCode(session.userId);
       return;
     }
 
@@ -236,37 +213,6 @@ export default function Home() {
     ].join('\n');
   };
 
-  // AIアドバイスを取得
-  const handleGetAiAdvice = async () => {
-    try {
-      setAiLoading(true);
-      setAiAdvice(null);
-
-      const recordText = buildRecordTextForAI();
-
-      const res = await fetch('/api/ai/advice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordText }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.error('AI advice error:', data);
-        alert('AIアドバイスの取得に失敗しました。時間をおいて再度お試しください。');
-        return;
-      }
-
-      const data = await res.json();
-      setAiAdvice(data.advice || 'アドバイスを取得できませんでした。');
-    } catch (error) {
-      console.error('AI advice fetch error:', error);
-      alert('AIアドバイスの取得中にエラーが発生しました。');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
     if (user?.userId) {
@@ -349,10 +295,6 @@ export default function Home() {
   // 🆕 追加：LINEアプリ内判定用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
-
-  // AIアドバイス
-  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
 
   // 現在時刻を自動セット
   useEffect(() => {
@@ -456,9 +398,6 @@ export default function Home() {
             setLineLoggedInDB(profile.userId, true, profile.userId)
               .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
               .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
-
-            // 本人用招待コードを取得
-            fetchSelfLinkCode(profile.userId);
 
             // LINEアプリ内で実行されているかチェック
             if (window.liff.isInClient()) {
@@ -1010,23 +949,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* 本人用招待コード案内（公式LINEに送るコード） */}
-      {selfLinkCode && (
-        <div className="bg-green-50 border border-green-300 px-4 py-3 mx-4 mb-4 rounded-lg">
-          <p className="text-green-800 text-sm font-semibold mb-1">
-            ご自身のLINEにも健康記録の通知を受け取りたい方へ
-          </p>
-          <p className="text-green-800 text-xs md:text-sm mb-2">
-            公式アカウントを友だち追加したあと、
-            <span className="font-bold">このコードをトークで送信してください。</span>
-            （1回送るだけでOKです）
-          </p>
-          <div className="inline-block bg-white px-4 py-2 rounded-md border border-green-400 font-mono text-lg tracking-widest text-green-900">
-            {selfLinkCode}
-          </div>
-        </div>
-      )}
-
       {/* メインコンテンツ */}
       <main 
         className={`px-0 md:p-3 ${isLineApp ? 'line-app-container' : ''}`}
@@ -1414,32 +1336,6 @@ export default function Home() {
                 return getButtonText();
               })()}
             </button>
-          </div>
-        </section>
-
-        {/* AIアドバイスセクション */}
-        <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-4 mb-4 w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xl md:text-2xl font-bold text-gray-800">
-              🤖 AIアドバイス
-            </h3>
-            <button
-              type="button"
-              onClick={handleGetAiAdvice}
-              disabled={aiLoading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-purple-500 hover:bg-purple-600 disabled:opacity-60"
-            >
-              {aiLoading ? 'AIアドバイス生成中...' : 'AIアドバイスを生成'}
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mb-3">
-            現在入力中の健康記録をもとに、一般的な生活上のアドバイスを表示します。
-            医療行為や診断ではなく、あくまで参考情報としてご利用ください。
-          </p>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 min-h-[80px] text-sm whitespace-pre-line text-gray-800">
-            {aiAdvice
-              ? aiAdvice
-              : '「AIアドバイスを生成」ボタンを押すと、ここにアドバイスが表示されます。'}
           </div>
         </section>
 

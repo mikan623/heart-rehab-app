@@ -111,42 +111,21 @@ const getHeartImage = (emotion: string) => {
   return '/heart.png';
 };
 
-// AIアドバイスに基づいて心臓ちゃんの表情を決定
+// アドバイス内容に基づいて心臓ちゃんの表情を決定
 const getHeartEmotionFromAdvice = (advice: string) => {
   if (!advice) return 'normal';
   
   // ポジティブなキーワード
-  const positiveKeywords = [
-    '良い', '素晴らしい', '完璧', '理想', '正常', '改善', '向上', 
-    'おめでとう', '成功', '良い調子', '安定', '健康的', '適切',
-    '推奨', '継続', '順調', '良い結果', '優秀', '素晴らしい結果'
-  ];
-  
+  const positiveKeywords = ['良好', '安定', '問題ありません', '良い調子', '近づいて', 'できています', 'バランスよく', 'しっかり'];
   // ネガティブなキーワード
-  const negativeKeywords = [
-    '注意', '危険', '問題', '改善が必要', '心配', '高血圧', '異常',
-    '見直し', '気をつけて', '要観察', '不調', '悪化', '危険信号',
-    '医療機関', '医師', '相談', '検査', '治療', '警告'
-  ];
-  
-  // ポジティブなキーワードの数をカウント
-  const positiveCount = positiveKeywords.filter(keyword => 
-    advice.includes(keyword)
-  ).length;
-  
-  // ネガティブなキーワードの数をカウント
-  const negativeCount = negativeKeywords.filter(keyword => 
-    advice.includes(keyword)
-  ).length;
-  
-  // 感情を決定
-  if (positiveCount > negativeCount && positiveCount > 0) {
-    return 'happy'; // 笑顔
-  } else if (negativeCount > positiveCount && negativeCount > 0) {
-    return 'sad'; // 悲しい
-  } else {
-    return 'normal'; // 普通
-  }
+  const negativeKeywords = ['高め', '低め', '注意', '離れて', '記録がありません', '偏り', '偏食', '見直し'];
+
+  const positiveCount = positiveKeywords.filter((k) => advice.includes(k)).length;
+  const negativeCount = negativeKeywords.filter((k) => advice.includes(k)).length;
+
+  if (positiveCount > negativeCount && positiveCount > 0) return 'happy';
+  if (negativeCount > positiveCount && negativeCount > 0) return 'sad';
+  return 'normal';
 };
 
 // Chart.jsの登録
@@ -173,6 +152,7 @@ interface HealthRecord {
     sideDish: string;    // 副菜
     other: string;       // その他
   };
+  medicationTaken?: boolean; // 服薬状況（オプション）
 }
 
 interface HealthRecords {
@@ -348,7 +328,8 @@ export default function GraphPage() {
             weight: record.weight,
             exercise: record.exercise,
             meal: record.meal,
-            dailyLife: record.dailyLife
+            dailyLife: record.dailyLife,
+            medicationTaken: record.medicationTaken
           };
         });
         
@@ -381,7 +362,7 @@ export default function GraphPage() {
   // 心臓ちゃんの表情状態を追加
   const [heartEmotion, setHeartEmotion] = useState('normal');
 
-  // AIアドバイス取得関数（Hugging Face API版）
+  // アドバイス取得関数（ルールベース）
   const getAIAdvice = async () => {
     setIsLoadingAdvice(true);
     try {
@@ -413,45 +394,101 @@ export default function GraphPage() {
         return;
       }
       
-      // Hugging Face 用に健康記録をテキストにまとめる
-      const recordText = [
-        `患者プロフィール:`,
-        `- 年齢: ${profile?.age || '未設定'}歳`,
-        `- 性別: ${profile?.gender || '未設定'}`,
-        `- 身長: ${profile?.height || '未設定'}cm`,
-        `- 目標体重: ${profile?.targetWeight || '未設定'}kg`,
-        `- 疾患: ${profile?.diseases?.join(', ') || 'なし'}`,
-        ``,
-        `直近のバイタル:`,
-        `- 日付: ${latestDate} / 時刻: ${latestTime}`,
-        `- 血圧: ${latestRecord.bloodPressure.systolic}/${latestRecord.bloodPressure.diastolic} mmHg`,
-        `- 脈拍: ${latestRecord.pulse} bpm`,
-        `- 体重: ${latestRecord.weight} kg`,
-        ``,
-        `運動内容: ${latestRecord.exercise.type} ${latestRecord.exercise.duration}分`,
-        `食事: 主食${latestRecord.meal.staple}, 主菜${latestRecord.meal.mainDish}, 副菜${latestRecord.meal.sideDish}`,
-        latestRecord.dailyLife ? `メモ: ${latestRecord.dailyLife}` : '',
-      ].join('\n');
+      // ① 血圧・脈拍の評価
+      const systolic = parseInt(latestRecord.bloodPressure.systolic);
+      const diastolic = parseInt(latestRecord.bloodPressure.diastolic);
+      const pulse = latestRecord.pulse ? parseInt(latestRecord.pulse) : NaN;
 
-      // Hugging Face APIラッパー経由でアドバイス取得
-      const response = await fetch('/api/ai/advice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordText }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        console.error('AI advice API error:', data);
-        throw new Error(data?.error || 'アドバイスの取得に失敗しました。');
+      let bpMessage = '';
+      if (!isNaN(systolic) && !isNaN(diastolic)) {
+        if (systolic < 140 && diastolic < 90) {
+          bpMessage = '✅ 血圧は概ね良好です。この調子を維持しましょう。';
+        } else {
+          bpMessage = `⚠️ 血圧はやや高め（${systolic}/${diastolic}mmHg）です。無理のない範囲で生活習慣を見直し、必要に応じて主治医と相談してください。`;
+        }
+      } else {
+        bpMessage = 'ℹ️ 血圧の記録が不足しているため、詳しいコメントはできませんでした。';
       }
 
-      const data = await response.json();
-      setAiAdvice(data.advice || 'アドバイスを取得できませんでした。');
+      let pulseMessage = '';
+      if (!isNaN(pulse)) {
+        if (pulse >= 60 && pulse <= 100) {
+          pulseMessage = '✅ 脈拍は安定しています。';
+        } else {
+          pulseMessage = `⚠️ 脈拍はやや異常な範囲（${latestRecord.pulse} 回/分）です。体調に注意し、気になる場合は主治医に相談してください。`;
+        }
+      } else {
+        pulseMessage = 'ℹ️ 脈拍の記録がありませんでした。';
+      }
+
+      // ② 体重と目標体重
+      let weightMessage = '';
+      const currentWeight = latestRecord.weight ? parseFloat(latestRecord.weight) : NaN;
+      const targetWeight = profile?.targetWeight ? Number(profile.targetWeight) : NaN;
+      if (!isNaN(currentWeight) && !isNaN(targetWeight)) {
+        const diff = currentWeight - targetWeight;
+        const absDiff = Math.abs(diff);
+        if (absDiff <= 1) {
+          weightMessage = `✅ 体重は目標体重（${targetWeight}kg）に近づいています。良い調子です。`;
+        } else if (diff > 0) {
+          weightMessage = `⚠️ 現在の体重は目標より少し高めです（差: 約${absDiff.toFixed(1)}kg）。食事と運動のバランスを少し見直してみましょう。`;
+        } else {
+          weightMessage = `⚠️ 現在の体重は目標より少し低めです（差: 約${absDiff.toFixed(1)}kg）。無理な減量になっていないか注意してください。`;
+        }
+      } else {
+        weightMessage = 'ℹ️ 体重または目標体重の情報が不足しているため、体重に関するコメントは控えます。';
+      }
+
+      // ③ 運動内容
+      const hasExercise = !!(latestRecord.exercise?.type || latestRecord.exercise?.duration);
+      const exerciseMessage = hasExercise
+        ? '✅ 運動の記録ができています。この調子で無理のない範囲で継続しましょう。'
+        : '⚠️ 今日の運動記録は入力されていません。体調の良い日は、短時間でも体を動かす習慣をつけていきましょう。';
+
+      // ④ 食事内容
+      const meal = latestRecord.meal || { staple: '', mainDish: '', sideDish: '', other: '' };
+      const mealItems = [meal.staple, meal.mainDish, meal.sideDish].filter((v) => v && v.trim().length > 0);
+      let mealMessage = '';
+      if (mealItems.length >= 2) {
+        mealMessage = '✅ 主食・主菜・副菜がバランスよく取れています。引き続き、このバランスを意識してみてください。';
+      } else if (mealItems.length === 1) {
+        mealMessage = '⚠️ 食事が少し偏り気味かもしれません。主菜や副菜も意識して取り入れてみましょう。';
+      } else {
+        mealMessage = 'ℹ️ 食事の記録がありませんでした。できる範囲で簡単にメモしておくと、振り返りに役立ちます。';
+      }
+
+      // ⑤ 薬
+      let medicationMessage = '';
+      if (latestRecord.medicationTaken === true) {
+        medicationMessage = '✅ 処方されたお薬をしっかり飲めています。この調子で続けましょう。';
+      } // false や undefined の場合はコメントなし
+
+      const adviceLines = [
+        `📅 対象の日付: ${latestDate} / 時刻: ${latestTime}`,
+        '',
+        bpMessage,
+        pulseMessage,
+        '',
+        weightMessage,
+        '',
+        exerciseMessage,
+        '',
+        mealMessage,
+      ];
+
+      if (medicationMessage) {
+        adviceLines.push('', medicationMessage);
+      }
+
+      adviceLines.push('', '💖 心臓ちゃんより 💖');
+
+      const finalAdvice = adviceLines.join('\n');
+
+      setAiAdvice(finalAdvice);
       setShowAdvice(true);
 
       // AIアドバイスに基づいて心臓ちゃんの表情を更新
-      const emotion = getHeartEmotionFromAdvice(data.advice || '');
+      const emotion = getHeartEmotionFromAdvice(finalAdvice);
       setHeartEmotion(emotion);
 
       return;
@@ -919,7 +956,7 @@ export default function GraphPage() {
           </div>
         </div>
 
-        {/* AIアドバイスセクション */}
+        {/* アドバイスセクション */}
         <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-4 md:mb-6 w-full border-2 border-green-300 mx-0 md:mx-0">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-0 mb-4 md:mb-6">
             {/* タイトル部分 */}
@@ -932,7 +969,7 @@ export default function GraphPage() {
                   className="w-full h-full object-contain heartbeat-float"
                 />
               </div>
-              💡 AIアドバイス
+              💡 アドバイス
             </h2>
 
             {/* ボタングループ */}
@@ -964,9 +1001,6 @@ export default function GraphPage() {
                   <p className="text-lg md:text-xl text-gray-700 whitespace-pre-line leading-relaxed font-medium">
                     {aiAdvice}
                   </p>
-                  <div className="mt-6 text-lg md:text-xl text-green-700 font-bold">
-                    💖 心臓ちゃんより 💖
-                  </div>
                 </div>
               </div>
             </div>

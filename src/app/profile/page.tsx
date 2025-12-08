@@ -150,6 +150,24 @@ export default function ProfilePage() {
               });
               setLiff(window.liff);
               console.log('✅ LIFF初期化成功（メールログインユーザー用）');
+
+              // 🔗 すでにLINEログイン済みなら、連携完了状態にする
+              if (window.liff.isLoggedIn && window.liff.isLoggedIn()) {
+                setIsLineConnected(true);
+                try {
+                  const liffProfile = await window.liff.getProfile();
+                  setUser(liffProfile);
+                  console.log('✅ LINEプロフィール取得（メールログイン連携後）:', liffProfile);
+
+                  // 表示名だけでも自動入力
+                  setProfile(prev => ({
+                    ...prev,
+                    displayName: liffProfile.displayName || prev.displayName,
+                  }));
+                } catch (e) {
+                  console.log('⚠️ LINEプロフィール取得エラー（メールログイン連携後）:', e);
+                }
+              }
             } catch (error) {
               console.log('⚠️ LIFF初期化失敗（無視）:', error);
             }
