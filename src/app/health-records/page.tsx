@@ -631,6 +631,22 @@ export default function Home() {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
         
+        // カレンダーページ用に直近の記録情報を保存（スタンプ演出用）
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(
+              'lastSavedRecord',
+              JSON.stringify({
+                date: dateKey,
+                time: timeKey,
+                savedAt: Date.now(),
+              })
+            );
+          } catch (e) {
+            console.log('⚠️ lastSavedRecord 保存エラー（無視）:', e);
+          }
+        }
+        
         // ✨ Messaging API チャネル用 LIFF で Bot にメッセージを送信（自動送信）
         if (typeof window !== 'undefined') {
           setTimeout(() => {
@@ -707,6 +723,20 @@ export default function Home() {
         };
         localStorage.setItem(getStorageKey('healthRecords'), JSON.stringify(saved));
         alert(`${timeKey}の健康記録をローカルストレージに保存しました！`);
+        
+        // カレンダーページ用に直近の記録情報を保存（スタンプ演出用）
+        try {
+          localStorage.setItem(
+            'lastSavedRecord',
+            JSON.stringify({
+              date: dateKey,
+              time: timeKey,
+              savedAt: Date.now(),
+            })
+          );
+        } catch (e) {
+          console.log('⚠️ lastSavedRecord 保存エラー（無視）:', e);
+        }
         
         // フォームをリセット
         setHealthRecord({

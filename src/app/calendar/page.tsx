@@ -113,6 +113,7 @@ export default function CalendarPage() {
     time: string;
     record: any;
   } | null>(null);
+  const [recentStamp, setRecentStamp] = useState<{ date: string; time: string } | null>(null);
 
   // 記録データを保存する状態を追加
   const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: any}}>({});
@@ -294,6 +295,27 @@ export default function CalendarPage() {
   useEffect(() => {
     const currentUserId = user?.userId || 'user-1';
     fetchHealthRecords(currentUserId);
+    
+    // 直近の記録（健康記録ページから遷移してきた場合など）をチェック
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('lastSavedRecord');
+        if (raw) {
+          const parsed = JSON.parse(raw) as { date?: string; time?: string; savedAt?: number };
+          if (parsed.date && parsed.time && parsed.savedAt) {
+            const elapsed = Date.now() - parsed.savedAt;
+            // 5分以内ならハイライト対象にする
+            if (elapsed <= 5 * 60 * 1000) {
+              setRecentStamp({ date: parsed.date, time: parsed.time });
+            } else {
+              setRecentStamp(null);
+            }
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ lastSavedRecord 読み込みエラー（無視）:', e);
+      }
+    }
   }, [user]);
 
   // カレンダー生成
@@ -346,11 +368,12 @@ export default function CalendarPage() {
     return t;
   };
 
-  // 時間色分け
-  const getTimeColor = (time: string) => {
-    if (time >= '06:00' && time < '12:00') return 'bg-green-100 text-green-800';
-    if (time >= '12:00' && time < '18:00') return 'bg-blue-100 text-blue-800';
-    return 'bg-purple-100 text-purple-800';
+  // 朝・昼・夜のスロット判定
+  const getTimeSlot = (time: string): 'morning' | 'noon' | 'night' => {
+    const t = formatTime24h(time);
+    if (t >= '04:00' && t < '12:00') return 'morning';
+    if (t >= '12:00' && t < '18:00') return 'noon';
+    return 'night';
   };
 
   // 編集開始
@@ -510,41 +533,67 @@ export default function CalendarPage() {
     }
   };
 
+  const stampStyles = `
+  @keyframes stamp-pop {
+    0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+    60% { transform: scale(1.1) rotate(3deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .stamp-animate {
+    animation: stamp-pop 0.35s ease-out;
+    transform-origin: center;
+  }
+  @keyframes stamp-pop-big {
+    0% { transform: scale(0.1) rotate(-20deg); opacity: 0; }
+    60% { transform: scale(1.25) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1.05) rotate(0deg); opacity: 1; }
+  }
+  .stamp-animate-big {
+    animation: stamp-pop-big 0.5s ease-out;
+    transform-origin: center;
+  }
+  `;
+
   return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-        {/* LINEアプリ用スタイル */}
-        {typeof window !== 'undefined' && isLineApp && (
-          <style dangerouslySetInnerHTML={{
-            __html: `
-              .line-app-container {
-                height: calc(100vh - 60px);
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-              }
-              .line-app-container input,
-              .line-app-container select,
-              .line-app-container textarea {
-                font-size: 16px !important;
-                transform: translateZ(0);
-              }
-              .line-app-container input[type="number"] {
-                -webkit-appearance: textfield;
-                -moz-appearance: textfield;
-              }
-              .line-app-container input:not([type="number"]),
-              .line-app-container select,
-              .line-app-container textarea {
-                -webkit-appearance: none;
-              }
-              .line-app-container button {
-                min-height: 44px;
-                padding: 12px 16px;
-              }
-              .line-app-container * {
-                -webkit-overflow-scrolling: touch;
-              }
-            `
-          }} />
+        {/* LINEアプリ用スタイル & スタンプアニメーション */}
+        {typeof window !== 'undefined' && (
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                ${isLineApp ? `
+                .line-app-container {
+                  height: calc(100vh - 60px);
+                  overflow-y: auto;
+                  -webkit-overflow-scrolling: touch;
+                }
+                .line-app-container input,
+                .line-app-container select,
+                .line-app-container textarea {
+                  font-size: 16px !important;
+                  transform: translateZ(0);
+                }
+                .line-app-container input[type="number"] {
+                  -webkit-appearance: textfield;
+                  -moz-appearance: textfield;
+                }
+                .line-app-container input:not([type="number"]),
+                .line-app-container select,
+                .line-app-container textarea {
+                  -webkit-appearance: none;
+                }
+                .line-app-container button {
+                  min-height: 44px;
+                  padding: 12px 16px;
+                }
+                .line-app-container * {
+                  -webkit-overflow-scrolling: touch;
+                }
+                ` : ''}
+                ${stampStyles}
+              `,
+            }}
+          />
         )}
         {/* ヘッダー */}
         <header 
@@ -610,7 +659,7 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {/* カレンダー全体を外枠で囲む */}
+              {/* カレンダー全体を外枠で囲む */}
           <div className="border-2 border-orange-400 rounded-none md:rounded-lg overflow-hidden bg-white w-full">
               {/* 曜日ヘッダー */}
               <div className="grid grid-cols-7 bg-gradient-to-r from-orange-400 to-pink-400">
@@ -657,42 +706,50 @@ export default function CalendarPage() {
                           {day.date}
                         </div>
                         
-                        {/* 記録一覧 */}
+                        {/* 記録スタンプ */}
                         <div className="flex-1 w-full overflow-y-auto">
                           {dayRecords && (
-                            <div className="space-y-1">
+                            <div className="flex flex-wrap gap-1">
                               {Object.entries(dayRecords)
                                 .sort(([t1], [t2]) => formatTime24h(t1).localeCompare(formatTime24h(t2)))
-                                .slice(0, 3)  // 🆕 スマホでは最大3件まで表示
+                                .slice(0, 3)  // 1日最大3スタンプ（朝・昼・夜）
                                 .map(([time, record]) => {
-                                if (!record) return null;
-                                
-                                // 時間表記を統一（morning/afternoon/evening を時間に変換）
-                                const getDisplayTime = (time: string) => {
-                                  if (time === 'morning') return '08:00';
-                                  if (time === 'afternoon') return '14:00';
-                                  if (time === 'evening') return '20:00';
-                                  return time; // 既に時間形式の場合はそのまま
-                                };
-                                
-                                const displayTime = getDisplayTime(time);
-                                
-                                return (
-                                  <div key={time} className={`text-xs md:text-sm ${getTimeColor(displayTime)} px-1 py-0.5 rounded font-medium truncate`}>
-                                    {/* スマホでは簡略化、PCでは詳細表示 */}
-                                    <div className="block md:hidden truncate font-bold">
-                                      {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}
-                                    </div>
-                                    <div className="hidden md:block text-xs truncate font-semibold">
-                                      {displayTime}: {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''} {(record as HealthRecord).pulse || ''}回 {(record as HealthRecord).weight || ''}kg
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              {/* 🆕 3件以上ある場合は「+n件」と表示 */}
+                                  if (!record) return null;
+
+                                  const slot = getTimeSlot(time);
+                                  let src = '';
+                                  let alt = '';
+                                  if (slot === 'morning') {
+                                    src = '/Morning%20Stamp.png';
+                                    alt = '朝の記録スタンプ';
+                                  } else if (slot === 'noon') {
+                                    src = '/Noon%20Stamp.png';
+                                    alt = '昼の記録スタンプ';
+                                  } else {
+                                    src = '/Night%20Stamp.png';
+                                    alt = '夜の記録スタンプ';
+                                  }
+
+                                  const isRecent =
+                                    recentStamp &&
+                                    recentStamp.date === dateKey &&
+                                    recentStamp.time === time;
+
+                                  return (
+                                    <img
+                                      key={time}
+                                      src={src}
+                                      alt={alt}
+                                      className={`w-7 h-7 md:w-9 md:h-9 ${
+                                        isRecent ? 'stamp-animate-big' : 'stamp-animate'
+                                      }`}
+                                    />
+                                  );
+                                })}
+                              {/* 3件以上ある場合は「+n個」とテキストで表示 */}
                               {dayRecords && Object.keys(dayRecords).length > 3 && (
-                                <div className="text-xs text-gray-600 px-1 py-0.5 md:hidden font-bold">
-                                  +{Object.keys(dayRecords).length - 3}件
+                                <div className="text-[10px] md:text-xs text-gray-600 font-bold">
+                                  +{Object.keys(dayRecords).length - 3}
                                 </div>
                               )}
                             </div>
