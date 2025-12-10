@@ -438,6 +438,22 @@ export default function NavigationBar() {
               </button>
               <button
                 onClick={() => {
+                  window.location.href = '/privacy';
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                プライバシーポリシー
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = '/contact';
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                お問い合わせ
+              </button>
+              <button
+                onClick={() => {
                   exportToPDF();
                   setShowSettingsMenu(false);
                 }}
