@@ -36,6 +36,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isEmailLogin, setIsEmailLogin] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     userId: '',
     displayName: '',
@@ -99,6 +100,7 @@ export default function ProfilePage() {
     // メールログインセッション優先
     if (session) {
       setIsAuthenticated(true);
+      setIsEmailLogin(true);
       return;
     }
 
@@ -106,6 +108,7 @@ export default function ProfilePage() {
     if (isLineLoggedIn()) {
       console.log('✅ LINE ログイン確認');
       setIsAuthenticated(true);
+      setIsEmailLogin(false);
       return;
     }
 
@@ -658,24 +661,26 @@ export default function ProfilePage() {
 
         {/* LINE連携ボタン＋保存ボタン */}
         <div className="mt-6 md:mt-8 mb-6 flex flex-col md:flex-row gap-3 md:gap-4 justify-center">
-          {/* LINE連携ボタン */}
-          <div className="w-full md:w-auto flex justify-center">
-            <button
-              onClick={handleLineConnection}
-              disabled={isLineConnecting || !liff || isLineConnected}
-              className={`w-full md:w-auto px-8 py-3 md:py-4 rounded-full font-bold text-lg md:text-xl shadow-lg transition-all ${
-                isLineConnected
-                  ? 'bg-gray-300 text-gray-600 cursor-default'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
-              } disabled:opacity-60`}
-            >
-              {isLineConnected
-                ? 'LINE連携済み'
-                : isLineConnecting
-                ? 'LINE連携中...'
-                : 'LINEと連携する'}
-            </button>
-          </div>
+          {/* LINE連携ボタン（メールログイン時のみ表示） */}
+          {isEmailLogin && (
+            <div className="w-full md:w-auto flex justify-center">
+              <button
+                onClick={handleLineConnection}
+                disabled={isLineConnecting || !liff || isLineConnected}
+                className={`w-full md:w-auto px-8 py-3 md:py-4 rounded-full font-bold text-lg md:text-xl shadow-lg transition-all ${
+                  isLineConnected
+                    ? 'bg-gray-300 text-gray-600 cursor-default'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+                } disabled:opacity-60`}
+              >
+                {isLineConnected
+                  ? 'LINE連携済み'
+                  : isLineConnecting
+                  ? 'LINE連携中...'
+                  : 'LINEと連携する'}
+              </button>
+            </div>
+          )}
 
           {/* 保存ボタン */}
           <div className="w-full md:w-2/3">

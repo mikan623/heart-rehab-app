@@ -1465,7 +1465,8 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                {/* 主食・主菜・副菜をスマホでも横並びにする */}
+                <div className="grid grid-cols-3 gap-4 md:gap-6 mb-6">
                   {/* 主食 */}
                   <div>
                     <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
