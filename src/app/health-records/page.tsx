@@ -608,6 +608,38 @@ export default function Home() {
         return;
       }
 
+      // 数値バリデーション
+      const systolic = Number(healthRecord.bloodPressure.systolic);
+      const diastolic = Number(healthRecord.bloodPressure.diastolic);
+      const pulse = Number(healthRecord.pulse);
+
+      // ① 収縮期血圧(上): 300以上は制限
+      if (isNaN(systolic) || systolic <= 0 || systolic >= 300) {
+        alert('収縮期血圧(上)は 1〜299 mmHg の範囲で入力してください');
+        return;
+      }
+
+      // ② 拡張期血圧(下): 20以下は制限（＝21以上を許可）
+      if (isNaN(diastolic) || diastolic <= 20) {
+        alert('拡張期血圧(下)は 21 mmHg 以上の値を入力してください');
+        return;
+      }
+
+      // ③ 脈拍: 20以下 / 200以上は制限（＝21〜199のみ許可）
+      if (isNaN(pulse) || pulse <= 20 || pulse >= 200) {
+        alert('脈拍は 21〜199 回/分 の範囲で入力してください');
+        return;
+      }
+
+      // ④ 体重: 入力されている場合のみ 0〜200kg に制限
+      if (healthRecord.weight) {
+        const weight = Number(healthRecord.weight);
+        if (isNaN(weight) || weight < 0 || weight > 200) {
+          alert('体重は 0〜200 kg の範囲で入力してください');
+          return;
+        }
+      }
+
       // 日時から日付と時間を分離
       const dateTime = new Date(selectedDateTime);
       const dateKey = `${dateTime.getFullYear()}-${String(dateTime.getMonth() + 1).padStart(2, '0')}-${String(dateTime.getDate()).padStart(2, '0')}`;
