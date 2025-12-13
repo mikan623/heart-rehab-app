@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       if (!exists) linkCode = candidate;
       tries += 1;
     }
-
+    
     // 家族メンバーを作成
     const savedFamilyMember = await prisma.familyMember.create({
       data: {

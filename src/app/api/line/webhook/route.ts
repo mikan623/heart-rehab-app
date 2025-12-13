@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         if (text.includes('健康記録')) {
           const replyMessage =
             '✅ 健康記録を受け取りました！\n\n今日も記録をありがとうございます。\n心臓ちゃんが応援しています💖';
-
+          
           try {
             const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
               method: 'POST',
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
                 message: replyMessage,
               }),
             });
-
+            
             if (replyResponse.ok) {
               console.log('✅ Webhook 返信送信成功');
             } else {

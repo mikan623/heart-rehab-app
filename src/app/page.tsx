@@ -110,7 +110,7 @@ export default function LandingPage() {
             if (isNewProfile) {
               router.push('/profile');
             } else {
-              router.push('/health-records');
+            router.push('/health-records');
             }
             return;
           } else {
@@ -132,7 +132,7 @@ export default function LandingPage() {
     if (liff && !isLoggedIn) {
       try {
         // LINE ログイン画面に遷移
-        window.liff.login();
+      window.liff.login();
         
         // ページリロード後、LIFF 初期化時にユーザーデータが保存される
       } catch (error) {

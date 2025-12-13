@@ -1035,35 +1035,34 @@ export default function Home() {
       >
         {/* 健康記録（横幅full） */}
         <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-3 mb-1 md:mb-2 w-full">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2 pb-4 md:pb-2 border-b md:border-b-0 border-gray-200">
-              <h2 className="text-2xl md:text-4xl font-bold md:font-bold text-gray-800">
-                健康記録
-              </h2>
-              
-              {/* 日付と時間を統合 */}
-              <div className="w-full md:w-auto">
-                <label className="block text-sm md:text-base font-medium text-gray-700 mb-3">
-                  記録日時 <span className="text-xs md:text-sm text-gray-500">（現在の日時が自動入力されています）</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={selectedDateTime}
-                  onChange={(e) => setSelectedDateTime(e.target.value)}
-                  className={`w-full px-2 md:px-4 py-4 md:py-3 text-lg md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold ${
-                    isLineApp ? 'line-input' : ''
-                  }`}
-                  style={{
-                    fontSize: 'clamp(16px, 2vw, 18px)',
-                    minHeight: 'auto',
-                    ...(isLineApp ? { fontSize: '16px' } : {})
-                  }}
-                />
-              </div>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2 pb-4 md:pb-2 border-b md:border-b-0 border-gray-200">
+            <h2 className="text-2xl md:text-4xl font-bold md:font-bold text-gray-800">
+              健康記録
+            </h2>
+            
+            {/* 日付と時間を統合 */}
+            <div className="w-full md:w-auto">
+              <label className="block text-sm md:text-base font-medium text-gray-700 mb-3">
+                記録日時 <span className="text-xs md:text-sm text-gray-500">（現在の日時が自動入力されています）</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={selectedDateTime}
+                onChange={(e) => setSelectedDateTime(e.target.value)}
+                className={`w-full px-2 md:px-4 py-4 md:py-3 text-lg md:text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold ${
+                  isLineApp ? 'line-input' : ''
+                }`}
+                style={{
+                  fontSize: 'clamp(16px, 2vw, 18px)',
+                  minHeight: 'auto',
+                  ...(isLineApp ? { fontSize: '16px' } : {})
+                }}
+              />
             </div>
+          </div>
 
-            {/* 入力フォーム - セクション分けされたカード型（モーダル起動ボタン） */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* 入力フォーム - セクション分けされたカード型（モーダル起動ボタン） */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <button
               type="button"
               onClick={() => setActiveSection('bloodPressure')}
@@ -1752,7 +1751,6 @@ export default function Home() {
               })()}
             </button>
             </div>
-          </div>
         </section>
 
       </main>

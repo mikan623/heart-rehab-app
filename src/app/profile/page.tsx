@@ -682,14 +682,14 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* 保存ボタン */}
+        {/* 保存ボタン */}
           <div className="w-full md:w-2/3">
-            <button
-              onClick={handleSave}
+          <button
+            onClick={handleSave}
               className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all"
-            >
-              保存する
-            </button>
+          >
+            保存する
+          </button>
           </div>
         </div>
       </main>

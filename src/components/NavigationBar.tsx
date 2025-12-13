@@ -30,7 +30,7 @@ export default function NavigationBar() {
       const storedName = localStorage.getItem('userName') || '';
       if (storedId) {
         setUser({ userId: storedId, displayName: storedName });
-      }
+        }
     } catch (e) {
       console.log('⚠️ NavigationBar: ユーザー情報読み込みエラー（無視）', e);
     }
@@ -93,19 +93,19 @@ export default function NavigationBar() {
             console.log('✅ NavigationBar: localStorage の userId を使用:', userId);
           } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             // 本番環境のみ LIFF からuserId取得
-            try {
+          try {
               if (window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-                const liffProfile = await window.liff.getProfile();
-                userId = liffProfile.userId;
-                liffDisplayName = liffProfile.displayName;
-                console.log('✅ LIFFユーザーIDを取得:', userId);
-              }
-            } catch (error) {
-              console.log('⚠️ LIFFユーザーID取得エラー、デフォルトを使用:', error);
-              userId = 'user-1';
+              const liffProfile = await window.liff.getProfile();
+              userId = liffProfile.userId;
+              liffDisplayName = liffProfile.displayName;
+              console.log('✅ LIFFユーザーIDを取得:', userId);
             }
-          } else {
-            console.log('🏠 ローカル環境: デフォルトユーザーIDを使用');
+          } catch (error) {
+            console.log('⚠️ LIFFユーザーID取得エラー、デフォルトを使用:', error);
+            userId = 'user-1';
+          }
+        } else {
+          console.log('🏠 ローカル環境: デフォルトユーザーIDを使用');
           }
         }
   
@@ -436,7 +436,7 @@ export default function NavigationBar() {
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 利用規約
               </button>
-              <button
+              <button 
                 onClick={() => {
                   window.location.href = '/privacy';
                   setShowSettingsMenu(false);

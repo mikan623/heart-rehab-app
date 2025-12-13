@@ -178,7 +178,7 @@ export default function FamilyPage() {
           } catch (error) {
             console.error('家族メンバー取得エラー(メールログイン):', error);
           } finally {
-            setIsLoading(false);
+          setIsLoading(false);
           }
           return;
         }
@@ -666,13 +666,13 @@ export default function FamilyPage() {
               <p className="text-xs text-gray-500 text-center break-all">
                 「📱 家族用QRコードを表示」ボタンを押すと、ここに招待用QRコードが表示されます。
               </p>
-              <button
+            <button
                 onClick={generateFamilyInviteQr}
                 disabled={generatingInvite || !currentUserId}
                 className="mt-1 py-2 px-4 rounded-lg font-semibold text-sm md:text-base border border-orange-400 text-orange-700 bg-white hover:bg-orange-50 disabled:opacity-60"
-              >
+            >
                 {generatingInvite ? 'QRコード生成中...' : '📱 家族用QRコードを表示'}
-              </button>
+            </button>
             </div>
 
             <div className="flex flex-col items-center gap-2">
