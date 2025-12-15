@@ -118,6 +118,9 @@ export default function CalendarPage() {
   // 記録データを保存する状態を追加
   const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: any}}>({});
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 保存状態を管理
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // 詳細表示用の状態を追加
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -392,6 +395,9 @@ export default function CalendarPage() {
     if (!editingRecord) return;
     
     try {
+      // 保存開始
+      setSaveStatus('saving');
+      
       const { date, time } = editingRecord;
       
       // ローカルステートを更新（UIの即座な反映のため）
@@ -446,10 +452,19 @@ export default function CalendarPage() {
         // データベースから最新のデータを再取得してUIを更新
         await fetchHealthRecords(currentUserId);
         alert('記録を更新しました！');
+        
+        // 保存完了状態に更新
+        setSaveStatus('saved');
+        
+        // 3秒後にアイドル状態に戻す
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 3000);
       } else {
         const errorData = await response.json();
         console.error('❌ カレンダー: データベース保存失敗:', errorData);
         alert(`保存に失敗しました: ${errorData.details || errorData.error}`);
+        setSaveStatus('idle');
       }
 
       setEditingRecord(null);
@@ -457,6 +472,7 @@ export default function CalendarPage() {
     } catch (error) {
       console.error('❌ カレンダー: 編集保存エラー:', error);
       alert('保存に失敗しました。');
+      setSaveStatus('idle');
     }
   };
 
@@ -1169,13 +1185,20 @@ export default function CalendarPage() {
                     <div className="flex gap-3 mt-6 pb-4">
                       <button
                         onClick={saveEdit}
-                        className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 px-4 rounded-lg hover:from-orange-600 hover:to-pink-600 font-bold text-xl"
+                        disabled={saveStatus === 'saving'}
+                        className={`flex-1 text-white py-4 px-4 rounded-lg font-bold text-xl transition-all ${
+                          saveStatus === 'saved'
+                            ? 'save-saved'
+                            : saveStatus === 'saving'
+                            ? 'save-saving'
+                            : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600'
+                        }`}
                       >
-                        💾 保存
+                        {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '保存済' : '💾 保存'}
                       </button>
                       <button
                         onClick={cancelEditing}
-                        className="flex-1 bg-gray-400 text-white py-4 px-4 rounded-lg hover:bg-gray-500 font-bold text-xl"
+                        className="flex-1 bg-gray-400 text-white py-4 px-4 rounded-lg hover:bg-gray-500 font-bold text-xl transition-all"
                       >
                         キャンセル
                       </button>
