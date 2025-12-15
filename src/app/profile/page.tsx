@@ -62,6 +62,9 @@ export default function ProfilePage() {
   // 🆕 LINE連携関連の状態
   const [isLineConnecting, setIsLineConnecting] = useState(false);
   const [isLineConnected, setIsLineConnected] = useState(false);
+  
+  // 保存状態を管理
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const getStorageKey = (baseKey: string) => {
     if (profile?.userId) {
@@ -402,6 +405,9 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
+      // 保存開始
+      setSaveStatus('saving');
+      
       // ローカルストレージに保存（バックアップ）
       const storageKey = profile.userId ? `profile_${profile.userId}` : 'profile_local';
       localStorage.setItem(storageKey, JSON.stringify(profile));
@@ -423,16 +429,25 @@ export default function ProfilePage() {
         const result = await response.json();
         console.log('✅ データベース保存成功:', result);
         alert('プロフィールを保存しました！');
+        
+        // 保存完了状態に更新
+        setSaveStatus('saved');
+        
+        // 3秒後にアイドル状態に戻す
+        setTimeout(() => {
+          setSaveStatus('idle');
+          router.push('/');
+        }, 3000);
       } else {
         const error = await response.json();
         console.error('❌ データベース保存失敗:', error);
         alert('保存に失敗しました（localStorageには保存されています）');
+        setSaveStatus('idle');
       }
-      
-      router.push('/');
     } catch (error) {
       console.error('プロフィール保存エラー:', error);
       alert('保存に失敗しました（localStorageには保存されています）');
+      setSaveStatus('idle');
     }
   };
 
@@ -686,9 +701,16 @@ export default function ProfilePage() {
           <div className="w-full md:w-2/3">
           <button
             onClick={handleSave}
-              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all"
+            disabled={saveStatus === 'saving'}
+            className={`w-full text-white py-4 md:py-5 px-6 rounded-2xl font-bold text-2xl md:text-3xl shadow-lg transition-all ${
+              saveStatus === 'saved'
+                ? 'save-saved'
+                : saveStatus === 'saving'
+                ? 'save-saving'
+                : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600'
+            }`}
           >
-            保存する
+            {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '保存済' : '保存する'}
           </button>
           </div>
         </div>

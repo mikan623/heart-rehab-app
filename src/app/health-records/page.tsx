@@ -76,6 +76,9 @@ export default function Home() {
   // 入力フィールドの再レンダリングを防ぐためのキー
   const [inputKey, setInputKey] = useState(0);
   
+  // 保存状態を管理
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
   // 認証チェック
   useEffect(() => {
     const session = getSession();
@@ -602,9 +605,13 @@ export default function Home() {
   //localStorage保存処理
   const handleSaveHealthRecord = async () => {
     try {
+      // 保存開始
+      setSaveStatus('saving');
+      
       // バリデーション
       if (!healthRecord.bloodPressure.systolic || !healthRecord.bloodPressure.diastolic || !healthRecord.pulse) {
         alert('血圧と脈拍は必須項目です');
+        setSaveStatus('idle');
         return;
       }
 
@@ -616,18 +623,21 @@ export default function Home() {
       // ① 収縮期血圧(上): 300以上は制限
       if (isNaN(systolic) || systolic <= 0 || systolic >= 300) {
         alert('収縮期血圧(上)は 1〜299 mmHg の範囲で入力してください');
+        setSaveStatus('idle');
         return;
       }
 
       // ② 拡張期血圧(下): 20以下は制限（＝21以上を許可）
       if (isNaN(diastolic) || diastolic <= 20) {
         alert('拡張期血圧(下)は 21 mmHg 以上の値を入力してください');
+        setSaveStatus('idle');
         return;
       }
 
       // ③ 脈拍: 20以下 / 200以上は制限（＝21〜199のみ許可）
       if (isNaN(pulse) || pulse <= 20 || pulse >= 200) {
         alert('脈拍は 21〜199 回/分 の範囲で入力してください');
+        setSaveStatus('idle');
         return;
       }
 
@@ -636,6 +646,7 @@ export default function Home() {
         const weight = Number(healthRecord.weight);
         if (isNaN(weight) || weight < 0 || weight > 200) {
           alert('体重は 0〜200 kg の範囲で入力してください');
+          setSaveStatus('idle');
           return;
         }
       }
@@ -675,6 +686,14 @@ export default function Home() {
       if (response.ok) {
         const result = await response.json();
         alert(`${timeKey}の健康記録を保存しました！`);
+        
+        // 保存完了状態に更新
+        setSaveStatus('saved');
+        
+        // 3秒後にアイドル状態に戻す
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 3000);
         
         // カレンダーページ用に直近の記録情報を保存（スタンプ演出用）
         if (typeof window !== 'undefined') {
@@ -801,10 +820,12 @@ export default function Home() {
       } else {
         const error = await response.json();
         alert(`保存に失敗しました: ${error.error}`);
+        setSaveStatus('idle');
       }
     } catch (error) {
       console.error('Save error:', error);
       alert('保存中にエラーが発生しました');
+      setSaveStatus('idle');
     }
   };
 
@@ -1725,29 +1746,37 @@ export default function Home() {
           <div className="mt-8 mb-6 flex justify-center">
             <button 
               onClick={handleSaveHealthRecord}
-              disabled={!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse}
+              disabled={!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse || saveStatus === 'saving'}
               className={`w-full md:w-2/3 text-white py-4 px-8 rounded-2xl font-bold text-2xl transition-all ${
                 (!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse)
                   ? 'bg-gray-400 cursor-not-allowed' 
+                  : saveStatus === 'saved'
+                  ? 'save-saved'
+                  : saveStatus === 'saving'
+                  ? 'save-saving'
                   : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-lg'
               }`}
             >
               {(() => {
-                const getButtonText = () => {
-                  if (!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse) {
-                    return '健康記録を入力してください';
-                  }
-                  
-                  if (selectedDateTime) {
-                    const dateTime = new Date(selectedDateTime);
-                    const timeKey = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
-                    return `${timeKey}の健康記録を保存`;
-                  }
-                  
-                  return '健康記録を保存';
-                };
+                if (saveStatus === 'saving') {
+                  return '保存中...';
+                }
                 
-                return getButtonText();
+                if (saveStatus === 'saved') {
+                  return '保存済';
+                }
+                
+                if (!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse) {
+                  return '健康記録を入力してください';
+                }
+                
+                if (selectedDateTime) {
+                  const dateTime = new Date(selectedDateTime);
+                  const timeKey = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
+                  return `${timeKey}の健康記録を保存`;
+                }
+                
+                return '健康記録を保存';
               })()}
             </button>
             </div>

@@ -8,6 +8,7 @@ import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, Set
 export default function NavigationBar() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [activeButton, setActiveButton] = useState<string | null>(null);
 
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
@@ -381,32 +382,47 @@ export default function NavigationBar() {
       {/* 左側：ナビゲーションボタン（スクロール可能） */}
       <div className="flex gap-0.5 overflow-x-auto pb-1 flex-1">
         <button 
-          onClick={() => window.location.href = '/health-records'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          onClick={() => {
+            setActiveButton('health-records');
+            setTimeout(() => window.location.href = '/health-records', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'health-records' ? 'click-animate' : ''}`}>
           <HealthRecordIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">健康記録</span>
         </button>
         <button 
-          onClick={() => window.location.href = '/calendar'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          onClick={() => {
+            setActiveButton('calendar');
+            setTimeout(() => window.location.href = '/calendar', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'calendar' ? 'click-animate' : ''}`}>
           <CalendarIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">カレンダー</span>
         </button>
         <button 
-          onClick={() => window.location.href = '/profile'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          onClick={() => {
+            setActiveButton('profile');
+            setTimeout(() => window.location.href = '/profile', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'profile' ? 'click-animate' : ''}`}>
           <ProfileIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">プロフィール</span>
         </button>
         <button 
-          onClick={() => window.location.href = '/graph'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          onClick={() => {
+            setActiveButton('graph');
+            setTimeout(() => window.location.href = '/graph', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'graph' ? 'click-animate' : ''}`}>
           <GraphIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">グラフ</span>
         </button>
         <button 
-          onClick={() => window.location.href = '/family'}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          onClick={() => {
+            setActiveButton('family');
+            setTimeout(() => window.location.href = '/family', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'family' ? 'click-animate' : ''}`}>
           <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
@@ -416,11 +432,13 @@ export default function NavigationBar() {
       <div className="relative">
         <button 
           onClick={() => {
+            setActiveButton('menu');
+            setTimeout(() => setActiveButton(null), 300);
             console.log('メニューボタンがクリックされました');
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
-          className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px]">
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'menu' ? 'click-animate' : ''}`}>
           <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">メニュー</span>
         </button>
@@ -430,40 +448,58 @@ export default function NavigationBar() {
             <div className="py-1">
               <button
                 onClick={() => {
-                  window.location.href = '/terms';
-                  setShowSettingsMenu(false);
+                  setActiveButton('terms');
+                  setTimeout(() => {
+                    window.location.href = '/terms';
+                    setShowSettingsMenu(false);
+                  }, 150);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'terms' ? 'click-animate' : ''}`}>
                 利用規約
               </button>
               <button 
                 onClick={() => {
-                  window.location.href = '/privacy';
-                  setShowSettingsMenu(false);
+                  setActiveButton('privacy');
+                  setTimeout(() => {
+                    window.location.href = '/privacy';
+                    setShowSettingsMenu(false);
+                  }, 150);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'privacy' ? 'click-animate' : ''}`}>
                 プライバシーポリシー
               </button>
               <button
                 onClick={() => {
-                  window.location.href = '/contact';
-                  setShowSettingsMenu(false);
+                  setActiveButton('contact');
+                  setTimeout(() => {
+                    window.location.href = '/contact';
+                    setShowSettingsMenu(false);
+                  }, 150);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'contact' ? 'click-animate' : ''}`}>
                 お問い合わせ
               </button>
               <button
                 onClick={() => {
-                  exportToPDF();
-                  setShowSettingsMenu(false);
+                  setActiveButton('pdf');
+                  setTimeout(() => {
+                    exportToPDF();
+                    setShowSettingsMenu(false);
+                    setActiveButton(null);
+                  }, 150);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'pdf' ? 'click-animate' : ''}`}>
                 PDF印刷
               </button>
               <hr className="my-1" />
               <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">
+                onClick={() => {
+                  setActiveButton('logout');
+                  setTimeout(() => {
+                    handleLogout();
+                  }, 150);
+                }}
+                className={`w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium transition-all ${activeButton === 'logout' ? 'click-animate' : ''}`}>
                 🚪 ログアウト
               </button>
             </div>
