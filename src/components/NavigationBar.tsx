@@ -5,6 +5,13 @@ import html2canvas from 'html2canvas';
 import { clearSession } from "@/lib/auth";
 import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon } from './NavIcons';
 
+// 学ぶアイコン
+const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2L2 7V12C2 16.55 3.84 20.74 6.78 23.9C7.94 25.08 9.23 26.01 10.58 26.72C11.04 26.97 11.51 27.19 12 27.38C12.49 27.19 12.96 26.97 13.42 26.72C14.77 26.01 16.06 25.08 17.22 23.9C20.16 20.74 22 16.55 22 12V7L12 2M12 4.18L20 7.5V12C20 16.88 18.72 21.24 16.54 24.8C15.84 25.56 15.09 26.25 14.3 26.87C13.41 26.47 12.56 25.97 11.76 25.38C10.97 24.8 10.25 24.12 9.59 23.4C7.78 21.08 6.54 18.16 6.05 15H12V13H6.05V12C6.05 9.85 6.58 7.82 7.51 6.06C8.45 4.29 9.74 2.84 11.25 1.84V4.18H12Z" />
+  </svg>
+);
+
 export default function NavigationBar() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -401,12 +408,12 @@ export default function NavigationBar() {
         </button>
         <button 
           onClick={() => {
-            setActiveButton('profile');
-            setTimeout(() => window.location.href = '/profile', 150);
+            setActiveButton('learn');
+            setTimeout(() => window.location.href = '/learn', 150);
           }}
-          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'profile' ? 'click-animate' : ''}`}>
-          <ProfileIcon className="w-5 h-5 md:w-6 md:h-6" />
-          <span className="text-[10px] md:text-xs">プロフィール</span>
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'learn' ? 'click-animate' : ''}`}>
+          <LearnIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <span className="text-[10px] md:text-xs">学ぶ</span>
         </button>
         <button 
           onClick={() => {
@@ -444,8 +451,20 @@ export default function NavigationBar() {
         </button>
   
         {showSettingsMenu && (
-          <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+          <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
             <div className="py-1">
+              <button
+                onClick={() => {
+                  setActiveButton('profile');
+                  setTimeout(() => {
+                    window.location.href = '/profile';
+                    setShowSettingsMenu(false);
+                  }, 150);
+                }}
+                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'profile' ? 'click-animate' : ''}`}>
+                👤 プロフィール
+              </button>
+              <hr className="my-1" />
               <button
                 onClick={() => {
                   setActiveButton('terms');
@@ -455,7 +474,7 @@ export default function NavigationBar() {
                   }, 150);
                 }}
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'terms' ? 'click-animate' : ''}`}>
-                利用規約
+                📋 利用規約
               </button>
               <button 
                 onClick={() => {
@@ -466,7 +485,7 @@ export default function NavigationBar() {
                   }, 150);
                 }}
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'privacy' ? 'click-animate' : ''}`}>
-                プライバシーポリシー
+                🔒 プライバシーポリシー
               </button>
               <button
                 onClick={() => {
@@ -477,7 +496,7 @@ export default function NavigationBar() {
                   }, 150);
                 }}
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'contact' ? 'click-animate' : ''}`}>
-                お問い合わせ
+                ✉️ お問い合わせ
               </button>
               <button
                 onClick={() => {
@@ -489,7 +508,7 @@ export default function NavigationBar() {
                   }, 150);
                 }}
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'pdf' ? 'click-animate' : ''}`}>
-                PDF印刷
+                📄 PDF印刷
               </button>
               <hr className="my-1" />
               <button
