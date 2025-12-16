@@ -1062,7 +1062,7 @@ export default function Home() {
             </h2>
             
             {/* 日付と時間を統合 */}
-            <div className="w-full md:w-auto">
+            <div className="w-full md:w-auto hidden md:block">
               <label className="block text-sm md:text-base font-medium text-gray-700 mb-3">
                 記録日時 <span className="text-xs md:text-sm text-gray-500">（現在の日時が自動入力されています）</span>
               </label>
@@ -1783,6 +1783,25 @@ export default function Home() {
         </section>
 
       </main>
+
+      {/* スマホ版フッター：日時変更フォーム */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-orange-300 shadow-lg p-4 z-40">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          📅 記録日時を変更
+        </label>
+        <input
+          type="datetime-local"
+          value={selectedDateTime}
+          onChange={(e) => setSelectedDateTime(e.target.value)}
+          className="w-full px-3 py-2 text-sm border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+          style={{
+            fontSize: '16px'
+          }}
+        />
+      </div>
+
+      {/* メインコンテンツの下部パディング（フッター対応） */}
+      <div className="md:hidden h-28"></div>
 
       {/* 心臓リハビリ説明モーダル */}
       {showHeartRehabInfo && (

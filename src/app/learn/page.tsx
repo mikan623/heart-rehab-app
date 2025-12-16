@@ -14,6 +14,37 @@ declare global {
 const learningContent = [
   {
     id: 1,
+    title: "心疾患の種類",
+    icon: "🏥",
+    content: "主な心臓病の種類と特徴を理解する",
+    details: [
+      "🔹 心筋梗塞：冠状動脈が詰まり、心臓の筋肉に血液が流れなくなる病気。突然の胸痛が特徴です。",
+      "🔹 狭心症：冠状動脈が狭くなり、心臓に血液が十分に流れない状態。胸に違和感や痛みを感じます。",
+      "🔹 心不全：心臓が十分に機能せず、体に血液を送り出せなくなる状態。息切れやむくみが見られます。",
+      "🔹 高血圧：血圧が常に高い状態が続く病気。多くの場合、自覚症状がないため『沈黙の殺し屋』と呼ばれます。",
+      "🔹 不整脈：心臓の鼓動が不規則になる病気。動悸や疲労感を感じることがあります。",
+      "🔹 弁膜症：心臓の弁の機能が低下する病気。息切れや疲労感が症状です。"
+    ]
+  },
+  {
+    id: 2,
+    title: "心疾患になる原因",
+    icon: "⚠️",
+    content: "心臓病の危険因子とリスク要因を知る",
+    details: [
+      "🚭 喫煙：タバコの有害物質は血管を傷つけ、動脈硬化を進行させます。",
+      "🧈 高コレステロール血症：悪玉コレステロール（LDL）が増えると、血管に沈着して動脈硬化が進みます。",
+      "🍟 高塩分・高脂肪食：塩分過多は血圧上昇、高脂肪食はコレステロール増加につながります。",
+      "⚖️ 肥満：太りすぎは心臓に負担をかけ、血圧上昇や糖尿病のリスクを高めます。",
+      "🧬 遺伝：家族に心臓病患者がいると、リスクが高くなります。定期的な検査が大切です。",
+      "🏃 運動不足：適度な運動は心臓や血管を強くします。毎日の活動が予防につながります。",
+      "😰 ストレス：長期的なストレスは血圧上昇や不整脈の原因になります。",
+      "🩺 糖尿病：血糖値が高いと血管が傷みやすく、心疾患のリスクが高まります。",
+      "⌛ 加齢：年を重ねると血管が硬くなり、心疾患のリスクが増加します。"
+    ]
+  },
+  {
+    id: 3,
     title: "心臓リハビリとは",
     icon: "❤️",
     content: "心臓疾患の予防・改善のための運動・食事・日常生活指導",
@@ -24,7 +55,7 @@ const learningContent = [
     ]
   },
   {
-    id: 2,
+    id: 4,
     title: "血圧管理について",
     icon: "📊",
     content: "正常な血圧値とセルフチェック方法を学ぶ",
@@ -36,7 +67,7 @@ const learningContent = [
     ]
   },
   {
-    id: 3,
+    id: 5,
     title: "運動療法",
     icon: "🏃‍♀️",
     content: "安全で効果的な運動の種類と実践方法",
@@ -48,7 +79,7 @@ const learningContent = [
     ]
   },
   {
-    id: 4,
+    id: 6,
     title: "食事療法",
     icon: "🍽️",
     content: "心臓に優しい食事のポイント",
@@ -60,7 +91,7 @@ const learningContent = [
     ]
   },
   {
-    id: 5,
+    id: 7,
     title: "ストレス管理",
     icon: "🧘",
     content: "心と身体のリラックス方法",
@@ -72,7 +103,7 @@ const learningContent = [
     ]
   },
   {
-    id: 6,
+    id: 8,
     title: "日常生活のポイント",
     icon: "✨",
     content: "心臓病予防の日常的な工夫",
@@ -128,15 +159,17 @@ export default function LearnPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* ヘッダー */}
       <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            📚 心臓リハビリを学ぶ
+          </h1>
+        </div>
         <NavigationBar />
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* ページタイトル */}
+        {/* ページサブタイトル */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-3">
-            📚 心臓リハビリを学ぶ
-          </h1>
           <p className="text-lg text-gray-600">
             心臓の健康を守るための知識を身につけましょう
           </p>
