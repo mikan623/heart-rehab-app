@@ -75,7 +75,16 @@ export default function LandingPage() {
               setLineLogin(profile.userId, profile.displayName);
               
               // 🆕 Supabase にユーザー情報を保存（users テーブル）
-              await setLineLoggedInDB(profile.userId, true, profile.userId);
+              // メールアドレスを users テーブルに保存する
+              await fetch('/api/auth/line-user-setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: profile.userId,
+                  displayName: profile.displayName,
+                  email: lineEmail || undefined  // LINE メールアドレスがあればそれを使用
+                })
+              });
               console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
 
               // 🆕 プロフィール情報を Supabase(profiles) に初回保存
