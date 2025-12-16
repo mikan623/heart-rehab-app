@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    // Prisma接続を確保
+    await ensurePrismaConnection();
+
     const { email } = await request.json();
 
     if (!email) {
@@ -10,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ユーザーがメールアドレスで登録されているか確認
-    const user = await prisma.user.findUnique({
+    const user = await prisma?.user.findUnique({
       where: { email }
     });
 

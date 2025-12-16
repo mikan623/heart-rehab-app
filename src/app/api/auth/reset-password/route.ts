@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
+    // Prisma接続を確保
+    await ensurePrismaConnection();
+
     const { email, securityAnswer, newPassword } = await request.json();
 
     // バリデーション
@@ -22,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ユーザーを検索
-    const user = await prisma.user.findUnique({
+    const user = await prisma?.user.findUnique({
       where: { email }
     });
 
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
     // ⚠️ 注意：本来はセキュリティ質問の答えをハッシュ化して保存・比較する必要があります
     // ここではシンプルな実装のため、部分一致で確認しています
     // セキュリティ質問の答えがプロフィールに保存されていると仮定します
-    const profile = await prisma.profile.findFirst({
+    const profile = await prisma?.profile.findFirst({
       where: { userId: user.id }
     });
 
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // パスワードを更新
-    await prisma.user.update({
+    await prisma?.user.update({
       where: { email },
       data: {
         password: hashedPassword,
