@@ -36,12 +36,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (user.authType !== 'email') {
-      return NextResponse.json(
-        { error: 'This account is not registered with email login' },
-        { status: 400 }
-      );
-    }
+    // authType に関係なく、メールアドレスで登録されているユーザーならパスワード変更可能にする
+    // (LINE連携後に authType が変わる場合も考慮)
 
     // ⚠️ 注意：本来はセキュリティ質問の答えをハッシュ化して保存・比較する必要があります
     // ここではシンプルな実装のため、部分一致で確認しています

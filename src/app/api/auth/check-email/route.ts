@@ -21,10 +21,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'このメールアドレスは登録されていません' }, { status: 404 });
     }
 
-    if (user.authType !== 'email') {
-      return NextResponse.json({ error: 'このメールアドレスはメールログインで登録されていません' }, { status: 400 });
-    }
-
+    // authType に関係なく、メールアドレスで登録されているユーザーはパスワード変更可能にする
+    // (LINE連携後に authType が変わる場合も考慮)
     return NextResponse.json({ message: 'Email verified' }, { status: 200 });
 
   } catch (error) {
