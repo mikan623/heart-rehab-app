@@ -159,12 +159,19 @@ export default function LearnPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* ヘッダー */}
       <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <div className="flex items-center justify-between gap-4 mb-2">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
             📚 心臓リハビリを学ぶ
           </h1>
+          {/* デスクトップ版のナビゲーション */}
+          <div className="hidden md:block">
+            <NavigationBar />
+          </div>
         </div>
-        <NavigationBar />
+        {/* スマホ版のナビゲーション */}
+        <div className="md:hidden">
+          <NavigationBar />
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">

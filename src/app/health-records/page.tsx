@@ -1826,19 +1826,21 @@ export default function Home() {
       </main>
 
       {/* スマホ版フッター：日時変更フォーム */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-orange-300 shadow-lg p-4 z-40">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          📅 記録日時を変更
-        </label>
-        <input
-          type="datetime-local"
-          value={selectedDateTime}
-          onChange={(e) => setSelectedDateTime(e.target.value)}
-          className="w-full px-3 py-2 text-sm border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
-          style={{
-            fontSize: '16px'
-          }}
-        />
+      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-orange-300 shadow-lg z-40">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            📅 記録日時を変更
+          </label>
+          <input
+            type="datetime-local"
+            value={selectedDateTime}
+            onChange={(e) => setSelectedDateTime(e.target.value)}
+            className="w-full px-3 py-2 text-sm border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+            style={{
+              fontSize: '16px'
+            }}
+          />
+        </div>
       </div>
 
       {/* メインコンテンツの下部パディング（フッター対応） */}
