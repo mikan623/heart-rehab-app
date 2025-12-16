@@ -163,12 +163,59 @@ export default function ProfilePage() {
         // メールログインの場合
         if (session) {
           console.log('📧 メールログインユーザー: プロフィール初期化');
-          setProfile(prev => ({
-            ...prev,
-            userId: session.userId,
-            displayName: session.userName,
-            email: session.userId, // メールアドレスを ID として使用
-          }));
+          
+          // 🆕 メールログインユーザーのプロフィールをデータベースから取得
+          try {
+            const response = await fetch(`/api/profiles?userId=${session.userId}`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              
+              if (data.profile) {
+                // データベースにプロフィールがある場合
+                console.log('✅ メールログインユーザーのプロフィールをデータベースから取得');
+                setProfile({
+                  userId: session.userId,
+                  displayName: data.profile.displayName || session.userName,
+                  email: session.userId,
+                  age: data.profile.age?.toString() || '',
+                  gender: data.profile.gender || '',
+                  height: data.profile.height?.toString() || '',
+                  targetWeight: data.profile.targetWeight?.toString() || '',
+                  diseases: data.profile.diseases || [],
+                  riskFactors: data.profile.riskFactors || [],
+                  medications: data.profile.medications || '',
+                  physicalFunction: data.profile.physicalFunction || '',
+                  emergencyContact: data.profile.emergencyContact || '',
+                });
+              } else {
+                // データベースにない場合は、基本情報のみセット
+                console.log('📝 メールログインユーザーのプロフィール未登録、基本情報から初期化');
+                setProfile(prev => ({
+                  ...prev,
+                  userId: session.userId,
+                  displayName: session.userName,
+                  email: session.userId,
+                }));
+              }
+            } else {
+              console.log('⚠️ プロフィール取得失敗、基本情報から初期化');
+              setProfile(prev => ({
+                ...prev,
+                userId: session.userId,
+                displayName: session.userName,
+                email: session.userId,
+              }));
+            }
+          } catch (error) {
+            console.log('⚠️ プロフィール取得エラー:', error);
+            setProfile(prev => ({
+              ...prev,
+              userId: session.userId,
+              displayName: session.userName,
+              email: session.userId,
+            }));
+          }
           
           // 🆕 メールログインユーザーでもLIFF初期化を試みる（LINE連携用）
           if (typeof window !== 'undefined' && window.liff) {
