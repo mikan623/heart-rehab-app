@@ -374,7 +374,7 @@ export default function LandingPage() {
                 </button>
               </form>
 
-              <div className="mt-4 text-center">
+              <div className="mt-4 text-center space-y-2">
                 {isSignUp ? (
                   <p className="text-gray-600">
                     アカウントをお持ちですか？{' '}
@@ -386,15 +386,26 @@ export default function LandingPage() {
                     </button>
                   </p>
                 ) : (
-                  <p className="text-gray-600">
-                    アカウントをお持ちでないですか？{' '}
-                    <button
-                      onClick={() => handleFormSwitch(true)}
-                      className="text-orange-600 font-bold hover:underline"
-                    >
-                      新規登録
-                    </button>
-                  </p>
+                  <>
+                    <p className="text-gray-600">
+                      アカウントをお持ちでないですか？{' '}
+                      <button
+                        onClick={() => handleFormSwitch(true)}
+                        className="text-orange-600 font-bold hover:underline"
+                      >
+                        新規登録
+                      </button>
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      パスワードをお忘れですか？{' '}
+                      <a
+                        href="/reset-password"
+                        className="text-orange-600 font-bold hover:underline"
+                      >
+                        こちら
+                      </a>
+                    </p>
+                  </>
                 )}
               </div>
 
