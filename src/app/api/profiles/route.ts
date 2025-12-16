@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
       });
     } else if (profile.email || profile.displayName) {
       // 既存ユーザーの場合も、メールや名前が渡ってきたら更新
+      // ⚠️ authType は変更しない（LINE連携時に authType を保持する）
       user = await prisma.user.update({
         where: { id: userId },
         data: {

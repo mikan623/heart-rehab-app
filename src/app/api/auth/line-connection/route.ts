@@ -97,13 +97,15 @@ export async function POST(request: NextRequest) {
     }
     
     // LINE 連携状態を更新
+    // ⚠️ authType は更新しない（既存の authType を保持して、LINE連携後もメールログイン可能にする）
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         lineConnected: lineConnected || false,
-        lineUserId: lineUserId || null
+        lineUserId: lineUserId || null,
+        // authType は変更しない
       },
-      select: { id: true, lineConnected: true, lineUserId: true }
+      select: { id: true, lineConnected: true, lineUserId: true, authType: true }
     });
     
     console.log('✅ LINE 連携状態を更新成功:', updatedUser);
