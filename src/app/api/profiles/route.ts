@@ -30,10 +30,16 @@ export async function GET(request: NextRequest) {
     });
     
     if (!profile) {
+      console.log('❌ Profile not found for userId:', userId);
+      // デバッグ用：この userId に関連するすべてのプロフィールを取得
+      const allProfiles = await prisma.profile.findMany({
+        where: { userId },
+      });
+      console.log('📋 All profiles for this userId:', allProfiles.length, allProfiles);
       return NextResponse.json({ profile: null, message: 'Profile not found' });
     }
     
-    console.log('📊 Profile found:', profile.id);
+    console.log('📊 Profile found:', profile.id, profile);
     
     return NextResponse.json({ profile });
     

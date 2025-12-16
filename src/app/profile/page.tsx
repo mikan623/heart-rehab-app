@@ -162,18 +162,21 @@ export default function ProfilePage() {
         
         // メールログインの場合
         if (session) {
-          console.log('📧 メールログインユーザー: プロフィール初期化');
+          console.log('📧 メールログインユーザー: プロフィール初期化', { userId: session.userId, userName: session.userName });
           
           // 🆕 メールログインユーザーのプロフィールをデータベースから取得
           try {
-            const response = await fetch(`/api/profiles?userId=${session.userId}`);
+            const url = `/api/profiles?userId=${encodeURIComponent(session.userId)}`;
+            console.log('🔍 APIをリクエスト:', url);
+            const response = await fetch(url);
             
             if (response.ok) {
               const data = await response.json();
+              console.log('📊 APIレスポンス:', data);
               
               if (data.profile) {
                 // データベースにプロフィールがある場合
-                console.log('✅ メールログインユーザーのプロフィールをデータベースから取得');
+                console.log('✅ メールログインユーザーのプロフィールをデータベースから取得', data.profile);
                 setProfile({
                   userId: session.userId,
                   displayName: data.profile.displayName || session.userName,
@@ -199,7 +202,8 @@ export default function ProfilePage() {
                 }));
               }
             } else {
-              console.log('⚠️ プロフィール取得失敗、基本情報から初期化');
+              const errorData = await response.json();
+              console.log('⚠️ プロフィール取得失敗（ステータス:', response.status, '）:', errorData);
               setProfile(prev => ({
                 ...prev,
                 userId: session.userId,
