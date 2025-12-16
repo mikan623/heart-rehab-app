@@ -1192,7 +1192,7 @@ export default function Home() {
               className="w-full bg-white border-2 border-purple-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between md:col-span-2"
             >
               <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                ✏️ 自由記載
+                💭 自覚症状やその他
               </span>
               <span className="text-base md:text-xl font-semibold text-gray-700">
                 {healthRecord.dailyLife ? '入力済み' : '未入力'}
@@ -1685,9 +1685,9 @@ export default function Home() {
                 className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-3xl border-2 border-purple-300 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    ✏️ 自由記載
+                    💭 自覚症状やその他
                   </h3>
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1696,21 +1696,62 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  気分、体調の変化、気になったこと
-                </label>
-                <textarea
-                  value={healthRecord?.dailyLife || ''}
-                  onChange={(e) =>
-                    setHealthRecord({
-                      ...healthRecord,
-                      dailyLife: e.target.value
-                    })
-                  }
-                  placeholder="自由にお書きください"
-                  rows={6}
-                  className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
-                />
+
+                {/* 自覚症状チェックボックス */}
+                <div className="mb-6">
+                  <label className="block text-lg font-semibold text-gray-700 mb-3">
+                    自覚症状をチェック
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {['浮腫', '動悸', '息切れ'].map((symptom) => (
+                      <label key={symptom} className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(healthRecord?.dailyLife || '').includes(symptom)}
+                          onChange={(e) => {
+                            const current = healthRecord?.dailyLife || '';
+                            let updated = current;
+                            if (e.target.checked) {
+                              // チェックが入った場合、症状を追加（重複を避ける）
+                              if (!updated.includes(symptom)) {
+                                updated = updated ? `${updated}、${symptom}` : symptom;
+                              }
+                            } else {
+                              // チェックが外れた場合、症状を削除
+                              updated = updated.replace(`、${symptom}`, '').replace(symptom, '').replace(/^、/, '');
+                            }
+                            setHealthRecord({
+                              ...healthRecord,
+                              dailyLife: updated
+                            });
+                          }}
+                          className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                        <span className="text-lg font-medium text-gray-700">{symptom}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 自由記載 */}
+                <div>
+                  <label className="block text-lg font-semibold text-gray-700 mb-3">
+                    その他の気になったことや体調の変化
+                  </label>
+                  <textarea
+                    value={healthRecord?.dailyLife || ''}
+                    onChange={(e) =>
+                      setHealthRecord({
+                        ...healthRecord,
+                        dailyLife: e.target.value
+                      })
+                    }
+                    placeholder="自由にお書きください"
+                    rows={6}
+                    className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+                  />
+                </div>
+
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
