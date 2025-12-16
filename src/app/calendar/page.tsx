@@ -1208,18 +1208,77 @@ export default function CalendarPage() {
                 </div>
               )}
 
+        {/* 選択した日付の健康記録表示セクション */}
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-4 border-2 border-orange-200">
+          <h3 className="text-lg md:text-2xl font-bold text-gray-800 mb-4">
+            📋 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月{currentMonth.getDate()}日 の記録
+          </h3>
+          
+          {(() => {
+            const dateKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(currentMonth.getDate()).padStart(2, '0')}`;
+            const dayRecords = savedRecords[dateKey] || {};
+            const recordTimes = Object.keys(dayRecords).sort();
+            
+            if (recordTimes.length === 0) {
+              return (
+                <div className="text-center py-6 text-gray-500">
+                  <p className="text-base md:text-lg">この日付には記録がありません</p>
+                </div>
+              );
+            }
+            
+            return (
+              <div className="space-y-4">
+                {recordTimes.map((time) => {
+                  const record = dayRecords[time];
+                  const timeLabel = getTimeLabel(time);
+                  
+                  return (
+                    <div key={time} className={`rounded-lg p-4 border-2 ${getTimeColorModal(time)}`}>
+                      <h4 className="font-bold text-lg mb-3">
+                        {timeLabel} {time}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <p><strong>血圧:</strong> {record.bloodPressure?.systolic}/{record.bloodPressure?.diastolic} mmHg</p>
+                        <p><strong>脈拍:</strong> {record.pulse || '-'} 回/分</p>
+                        <p><strong>体重:</strong> {record.weight || '-'} kg</p>
+                        {record.exercise?.type && (
+                          <p><strong>運動:</strong> {record.exercise.type} ({record.exercise.duration}分)</p>
+                        )}
+                        {record.dailyLife && (
+                          <p className="col-span-full"><strong>症状など:</strong> {record.dailyLife}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
         {/* スマホ版フッター：日付選択フォーム */}
         <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-orange-300 shadow-lg z-40">
           <div className="max-w-6xl mx-auto px-4 py-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              📅 日付を選択
-            </label>
-            <input
-              type="date"
-              value={currentMonth.toISOString().split('T')[0]}
-              onChange={(e) => setCurrentMonth(new Date(e.target.value))}
-              className="w-full px-3 py-2 text-sm border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-semibold text-gray-700">📅 日付を選択</span>
+            </div>
+            <div className="relative">
+              <input
+                type="date"
+                value={currentMonth.toISOString().split('T')[0]}
+                onChange={(e) => setCurrentMonth(new Date(e.target.value))}
+                className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold appearance-none bg-white cursor-pointer"
+                style={{
+                  fontSize: '16px',
+                  paddingRight: '45px'
+                }}
+              />
+              <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-2xl pointer-events-none text-gray-600">
+                📅
+              </span>
+            </div>
           </div>
         </div>
 
