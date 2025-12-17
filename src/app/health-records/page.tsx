@@ -222,7 +222,18 @@ export default function Home() {
       `運動: ${healthRecord.exercise.type || '-'} / ${healthRecord.exercise.duration || '-'} 分`,
       `食事: 主食 ${healthRecord.meal.staple.join(', ') || '-'} / 主菜 ${healthRecord.meal.mainDish.join(', ') || '-'} / 副菜 ${healthRecord.meal.sideDish.join(', ') || '-'} / その他 ${healthRecord.meal.other || '-'}`,
       `服薬: ${healthRecord.medicationTaken ? '飲んだ' : '未入力'}`,
-      healthRecord.dailyLife ? `メモ: ${healthRecord.dailyLife}` : '',
+      (() => {
+        if (!healthRecord.dailyLife) return '';
+        const symptomsMatch = healthRecord.dailyLife.match(/【症状】([^【]*)/);
+        const memoMatch = healthRecord.dailyLife.match(/【メモ】(.*)/);
+        const symptoms = symptomsMatch ? symptomsMatch[1].trim() : '';
+        const memo = memoMatch ? memoMatch[1].trim() : '';
+        
+        const parts = [];
+        if (symptoms) parts.push(`自覚症状: ${symptoms}`);
+        if (memo) parts.push(`その他: ${memo}`);
+        return parts.join('\n');
+      })(),
     ].join('\n');
   };
 
@@ -1703,33 +1714,58 @@ export default function Home() {
                     自覚症状をチェック
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {['浮腫', '動悸', '息切れ'].map((symptom) => (
-                      <label key={symptom} className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(healthRecord?.dailyLife || '').includes(symptom)}
-                          onChange={(e) => {
-                            const current = healthRecord?.dailyLife || '';
-                            let updated = current;
-                            if (e.target.checked) {
-                              // チェックが入った場合、症状を追加（重複を避ける）
-                              if (!updated.includes(symptom)) {
-                                updated = updated ? `${updated}、${symptom}` : symptom;
+                    {['浮腫', '動悸', '息切れ'].map((symptom) => {
+                      // 【症状】セクションから症状を抽出
+                      const symptomsMatch = (healthRecord?.dailyLife || '').match(/【症状】([^【]*)/);
+                      const symptomsStr = symptomsMatch ? symptomsMatch[1].trim() : '';
+                      const isChecked = symptomsStr.includes(symptom);
+                      
+                      return (
+                        <label key={symptom} className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const current = healthRecord?.dailyLife || '';
+                              
+                              // 【症状】と【メモ】を分離
+                              const symptomsMatch = current.match(/【症状】([^【]*)/);
+                              const memoMatch = current.match(/【メモ】(.*)/);
+                              
+                              let symptomsStr = symptomsMatch ? symptomsMatch[1].trim() : '';
+                              const memoStr = memoMatch ? memoMatch[1].trim() : '';
+                              
+                              // 症状を追加・削除
+                              if (e.target.checked) {
+                                if (!symptomsStr.includes(symptom)) {
+                                  symptomsStr = symptomsStr ? `${symptomsStr}、${symptom}` : symptom;
+                                }
+                              } else {
+                                symptomsStr = symptomsStr.replace(`、${symptom}`, '').replace(symptom, '').replace(/^、/, '');
                               }
-                            } else {
-                              // チェックが外れた場合、症状を削除
-                              updated = updated.replace(`、${symptom}`, '').replace(symptom, '').replace(/^、/, '');
-                            }
-                            setHealthRecord({
-                              ...healthRecord,
-                              dailyLife: updated
-                            });
-                          }}
-                          className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
-                        />
-                        <span className="text-lg font-medium text-gray-700">{symptom}</span>
-                      </label>
-                    ))}
+                              
+                              // 【症状】【メモ】形式で再構成
+                              let updated = `【症状】${symptomsStr}`;
+                              if (memoStr) {
+                                updated += ` 【メモ】${memoStr}`;
+                              }
+                              
+                              // 【症状】が空の場合は【メモ】だけ
+                              if (!symptomsStr && memoStr) {
+                                updated = `【メモ】${memoStr}`;
+                              }
+                              
+                              setHealthRecord({
+                                ...healthRecord,
+                                dailyLife: updated.trim()
+                              });
+                            }}
+                            className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
+                          />
+                          <span className="text-lg font-medium text-gray-700">{symptom}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1739,13 +1775,36 @@ export default function Home() {
                     その他の気になったことや体調の変化
                   </label>
                   <textarea
-                    value={healthRecord?.dailyLife || ''}
-                    onChange={(e) =>
+                    value={(() => {
+                      // 【メモ】セクションのみを抽出して表示
+                      const memoMatch = (healthRecord?.dailyLife || '').match(/【メモ】(.*)/);
+                      return memoMatch ? memoMatch[1].trim() : '';
+                    })()}
+                    onChange={(e) => {
+                      const current = healthRecord?.dailyLife || '';
+                      
+                      // 【症状】セクションを保持
+                      const symptomsMatch = current.match(/【症状】([^【]*)/);
+                      const symptomsStr = symptomsMatch ? symptomsMatch[1].trim() : '';
+                      
+                      // 新しいテキストを【メモ】として追加
+                      let updated = '';
+                      if (symptomsStr) {
+                        updated = `【症状】${symptomsStr}`;
+                        if (e.target.value.trim()) {
+                          updated += ` 【メモ】${e.target.value}`;
+                        }
+                      } else {
+                        if (e.target.value.trim()) {
+                          updated = `【メモ】${e.target.value}`;
+                        }
+                      }
+                      
                       setHealthRecord({
                         ...healthRecord,
-                        dailyLife: e.target.value
-                      })
-                    }
+                        dailyLife: updated.trim()
+                      });
+                    }}
                     placeholder="自由にお書きください"
                     rows={6}
                     className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"

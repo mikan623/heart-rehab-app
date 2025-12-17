@@ -260,9 +260,27 @@ const MedicalPage: React.FC = () => {
                       </p>
                     )}
                     {record.dailyLife && (
-                      <p className="text-gray-800">
-                        📝 メモ: {record.dailyLife}
-                      </p>
+                      (() => {
+                        const symptomsMatch = record.dailyLife.match(/【症状】([^【]*)/);
+                        const memoMatch = record.dailyLife.match(/【メモ】(.*)/);
+                        const symptoms = symptomsMatch ? symptomsMatch[1].trim() : '';
+                        const memo = memoMatch ? memoMatch[1].trim() : '';
+                        
+                        return (
+                          <>
+                            {symptoms && (
+                              <p className="text-gray-800">
+                                💭 自覚症状: {symptoms}
+                              </p>
+                            )}
+                            {memo && (
+                              <p className="text-gray-800">
+                                📝 その他: {memo}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()
                     )}
                   </div>
                 ))}

@@ -868,8 +868,30 @@ export default function CalendarPage() {
                               )}
                               {(record as HealthRecord).dailyLife && (
                                 <div className="mt-1">
-                                  <p className="font-semibold text-gray-800 mb-1">日常生活のこと：</p>
-                                  <p className="pl-2 text-gray-700">{(record as HealthRecord).dailyLife}</p>
+                                  {(() => {
+                                    const dailyLife = (record as HealthRecord).dailyLife || '';
+                                    const symptomsMatch = dailyLife.match(/【症状】([^【]*)/);
+                                    const memoMatch = dailyLife.match(/【メモ】(.*)/);
+                                    const symptoms = symptomsMatch ? symptomsMatch[1].trim() : '';
+                                    const memo = memoMatch ? memoMatch[1].trim() : '';
+                                    
+                                    return (
+                                      <>
+                                        {symptoms && (
+                                          <div className="mb-2">
+                                            <p className="font-semibold text-gray-800 mb-1">💭 自覚症状：</p>
+                                            <p className="pl-2 text-gray-700">{symptoms}</p>
+                                          </div>
+                                        )}
+                                        {memo && (
+                                          <div>
+                                            <p className="font-semibold text-gray-800 mb-1">📝 その他：</p>
+                                            <p className="pl-2 text-gray-700">{memo}</p>
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </div>
