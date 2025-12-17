@@ -39,28 +39,44 @@ export async function POST(request: NextRequest) {
     // authType に関係なく、メールアドレスで登録されているユーザーならパスワード変更可能にする
     // (LINE連携後に authType が変わる場合も考慮)
 
-    // ⚠️ 注意：本来はセキュリティ質問の答えをハッシュ化して保存・比較する必要があります
-    // ここではシンプルな実装のため、部分一致で確認しています
-    // セキュリティ質問の答えがプロフィールに保存されていると仮定します
+    // プロフィール取得
     const profile = await prisma?.profile.findFirst({
       where: { userId: user.id }
     });
 
-    // セキュリティ質問の検証（簡易版）
-    // 実装：emergencyContactフィールドを流用してセキュリティ質問の答えを保存
+    // 初回パスワード変更（セキュリティ質問未設定）と2回目以降（セキュリティ質問設定済み）を区別
     if (!profile || !profile.emergencyContact) {
-      return NextResponse.json(
-        { error: 'セキュリティ質問の答えが設定されていません。プロフィールを確認してください' },
-        { status: 400 }
-      );
-    }
-
-    // セキュリティ質問の答えを確認（大文字小文字を区別しない）
-    if (profile.emergencyContact.toLowerCase() !== securityAnswer.toLowerCase()) {
-      return NextResponse.json(
-        { error: 'セキュリティ質問の答えが正しくありません' },
-        { status: 401 }
-      );
+      // ✅ **初回パスワード変更**：セキュリティ質問の回答を保存して進行
+      console.log('📝 初回パスワード変更: セキュリティ質問の回答を保存します');
+      
+      // プロフィールが存在しない場合は作成
+      if (!profile) {
+        await prisma?.profile.create({
+          data: {
+            userId: user.id,
+            emergencyContact: securityAnswer // セキュリティ質問の答えを保存
+          }
+        });
+      } else {
+        // プロフィールは存在するが emergencyContact が未設定の場合は更新
+        await prisma?.profile.update({
+          where: { id: profile.id },
+          data: {
+            emergencyContact: securityAnswer // セキュリティ質問の答えを保存
+          }
+        });
+      }
+    } else {
+      // ✅ **2回目以降のパスワード変更**：保存された回答で検証
+      console.log('🔐 2回目以降のパスワード変更: 保存された回答で検証します');
+      
+      // セキュリティ質問の答えを確認（大文字小文字を区別しない）
+      if (profile.emergencyContact.toLowerCase() !== securityAnswer.toLowerCase()) {
+        return NextResponse.json(
+          { error: 'セキュリティ質問の答えが正しくありません' },
+          { status: 401 }
+        );
+      }
     }
 
     // パスワードをハッシュ化

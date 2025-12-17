@@ -161,7 +161,10 @@ export default function ResetPasswordPage() {
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">登録時に入力した答えを入力してください</p>
+              <p className="text-xs text-gray-500 mt-1">
+                初回の場合は、今後の本人確認に使う出身地を入力してください。<br />
+                2回目以降は、前回入力した答えを入力してください。
+              </p>
             </div>
 
             <div className="mb-4">
