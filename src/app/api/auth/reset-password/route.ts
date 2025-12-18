@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 初回パスワード変更（セキュリティ質問未設定）と2回目以降（セキュリティ質問設定済み）を区別
-    if (!profile || !profile.emergencyContact) {
+    if (!profile || !profile.securityQuestionAnswer) {
       // ✅ **初回パスワード変更**：セキュリティ質問の回答を保存して進行
       console.log('📝 初回パスワード変更: セキュリティ質問の回答を保存します');
       
@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
         await prisma?.profile.create({
           data: {
             userId: user.id,
-            emergencyContact: securityAnswer // セキュリティ質問の答えを保存
+            securityQuestionAnswer: securityAnswer // セキュリティ質問の答えを保存
           }
         });
       } else {
-        // プロフィールは存在するが emergencyContact が未設定の場合は更新
+        // プロフィールは存在するが securityQuestionAnswer が未設定の場合は更新
         await prisma?.profile.update({
           where: { id: profile.id },
           data: {
-            emergencyContact: securityAnswer // セキュリティ質問の答えを保存
+            securityQuestionAnswer: securityAnswer // セキュリティ質問の答えを保存
           }
         });
       }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       console.log('🔐 2回目以降のパスワード変更: 保存された回答で検証します');
       
       // セキュリティ質問の答えを確認（大文字小文字を区別しない）
-      if (profile.emergencyContact.toLowerCase() !== securityAnswer.toLowerCase()) {
+      if (profile.securityQuestionAnswer.toLowerCase() !== securityAnswer.toLowerCase()) {
         return NextResponse.json(
           { error: 'セキュリティ質問の答えが正しくありません' },
           { status: 401 }

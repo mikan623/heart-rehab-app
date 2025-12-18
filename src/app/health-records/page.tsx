@@ -39,6 +39,26 @@ declare global {
   }
 }
 
+// 食事ガイドデータ
+const MEAL_GUIDE = [
+  { name: 'ハンバーガー', calories: '303Kcal', carbs: '31.2g', protein: '15.7g', salt: '1.7g' },
+  { name: 'フライドポテト', calories: '420Kcal', carbs: '49.4g', protein: '4.2g', salt: '0.4g' },
+  { name: '鶏のから揚げ', calories: '425Kcal', carbs: '21.9g', protein: '20.1g', salt: '3.0g' },
+  { name: '餃子（タレなし）', calories: '287Kcal', carbs: '23.8g', protein: '13.5g', salt: '2.8g' },
+  { name: '醤油ラーメン', calories: '443Kcal', carbs: '73.6g', protein: '15.2g', salt: '6.0g' },
+  { name: 'スパゲティ・ミートソース', calories: '597Kcal', carbs: '78.0g', protein: '18.3g', salt: '2.7g' },
+  { name: '天ぷらそば', calories: '459Kcal', carbs: '67.8g', protein: '10.5g', salt: '4.9g' },
+  { name: 'きつねうどん', calories: '413Kcal', carbs: '68.6g', protein: '9.2g', salt: '4.0g' },
+  { name: 'カレーライス', calories: '761Kcal', carbs: '124.7g', protein: '16.8g', salt: '3.3g' },
+  { name: '牛丼（並）', calories: '660Kcal', carbs: '90.0g', protein: '22.3g', salt: '2.0g' },
+  { name: 'チャーハン', calories: '896Kcal', carbs: '116.2g', protein: '18.1g', salt: '5.5g' },
+  { name: 'うな重', calories: '754Kcal', carbs: '106.3g', protein: '24.7g', salt: '3.6g' },
+  { name: '握り寿司（醤油なし）', calories: '518Kcal', carbs: '80.6g', protein: '14.8g', salt: '2.6g' },
+  { name: 'とんかつ定食', calories: '1244Kcal', carbs: '128.6g', protein: '48.2g', salt: '8.0g' },
+  { name: '焼き魚定食', calories: '480Kcal', carbs: '76.2g', protein: '26.3g', salt: '5.1g' },
+  { name: 'ハンバーガーセット', calories: '712Kcal', carbs: '56.2g', protein: '27.4g', salt: '8.5g' },
+];
+
 export default function Home() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -311,6 +331,7 @@ export default function Home() {
 
   // 各項目編集用モーダルの状態
   const [activeSection, setActiveSection] = useState<EditSection>(null);
+  const [showMealGuide, setShowMealGuide] = useState(false);
 
   // LIFF関連の状態を追加
   const [liff, setLiff] = useState<any>(null);
@@ -1609,9 +1630,18 @@ export default function Home() {
 
                 {/* その他 */}
                 <div>
-                  <label className="block text-lg font-semibold text-gray-700 mb-3">
-                    その他
-                  </label>
+                  <div className="flex items-center gap-2 mb-3">
+                    <label className="block text-lg font-semibold text-gray-700">
+                      その他
+                    </label>
+                    <button
+                      onClick={() => setShowMealGuide(true)}
+                      className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white rounded-full font-bold text-sm hover:bg-blue-600 cursor-help click-press"
+                      title="食事の栄養情報例を見る"
+                    >
+                      ?
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={healthRecord?.meal?.other || ''}
@@ -2159,6 +2189,58 @@ export default function Home() {
           </tbody>
         </table>
       </div>
+
+      {/* 食事ガイドモーダル */}
+      {showMealGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            {/* モーダルヘッダー */}
+            <div className="sticky top-0 bg-white border-b-2 border-orange-300 p-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-orange-800">🍽️ 外食の栄養情報</h2>
+              <button
+                onClick={() => setShowMealGuide(false)}
+                className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* モーダルコンテンツ */}
+            <div className="p-4 md:p-6">
+              <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-3 mb-6">
+                <p className="text-sm font-semibold text-orange-800 mb-2">外食の特徴をつかもう！</p>
+                <ul className="text-sm text-orange-900 space-y-1">
+                  <li>• 主食（ごはんや麺など）が多い</li>
+                  <li>• 肉や魚、あぶらの使用が多く、野菜類が少ない</li>
+                  <li>• 味付けが濃く、塩分や砂糖が多い</li>
+                  <li>• 一般的にエネルギーが高い</li>
+                </ul>
+              </div>
+
+              {/* グリッドで食事例を表示 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {MEAL_GUIDE.map((meal, idx) => (
+                  <div key={idx} className="border-2 border-gray-300 rounded-lg p-4">
+                    <h3 className="font-bold text-lg text-gray-800 mb-2">{meal.name}</h3>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-orange-600 font-semibold">1食分 : <span className="text-lg">{meal.calories}</span></p>
+                      <p className="text-gray-700">炭水化物 : {meal.carbs}</p>
+                      <p className="text-gray-700">タンパク質 : {meal.protein}</p>
+                      <p className="text-gray-700">塩分 : {meal.salt}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  ※ここに示すものは、あくまでも目安です。味付けや材料によって異なります。目安として参考下さい。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   ) : (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">

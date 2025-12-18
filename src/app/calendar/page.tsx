@@ -476,66 +476,6 @@ export default function CalendarPage() {
     }
   };
 
-  // 記録削除
-  const deleteRecord = async (date: string, time: string) => {
-    if (!confirm('この記録を削除しますか？')) {
-      return;
-    }
-    
-    try {
-      const currentUserId = user?.userId || 'user-1';
-      
-      console.log('🗑️ カレンダー: 記録を削除中...', { userId: currentUserId, date, time });
-      
-      // データベースから削除
-      const deleteUrl = `/api/health-records?userId=${currentUserId}&date=${date}&time=${time}`;
-      console.log('🗑️ DELETE URL:', deleteUrl);
-      
-      const response = await fetch(deleteUrl, {
-        method: 'DELETE'
-      });
-      
-      console.log('🗑️ DELETE Response status:', response.status);
-      console.log('🗑️ DELETE Response ok:', response.ok);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ カレンダー: データベース削除成功:', result);
-        
-        // ローカルステートからも削除
-        setSavedRecords(prev => {
-          const newRecords = { ...prev };
-          console.log('🗑️ Before delete - savedRecords:', newRecords);
-          
-          if (newRecords[date] && newRecords[date][time]) {
-            delete newRecords[date][time];
-            // その日の記録が空になった場合は日付キーも削除
-            if (Object.keys(newRecords[date]).length === 0) {
-              delete newRecords[date];
-            }
-          }
-          
-          console.log('🗑️ After delete - savedRecords:', newRecords);
-          return newRecords;
-        });
-        
-        // 詳細モーダルを閉じる
-        setShowDetail(false);
-        setSelectedDate('');
-        setSelectedTime('');
-        
-        alert('記録を削除しました！');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ カレンダー: データベース削除失敗:', response.status, errorText);
-        alert(`削除に失敗しました: ${response.status} ${errorText}`);
-      }
-      
-    } catch (error) {
-      console.error('❌ カレンダー: 削除エラー:', error);
-      alert('削除に失敗しました。');
-    }
-  };
 
   const handleDateClick = (date: Date) => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -571,7 +511,7 @@ export default function CalendarPage() {
   `;
 
   return isAuthenticated ? (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
         {/* LINEアプリ用スタイル & スタンプアニメーション */}
         {typeof window !== 'undefined' && (
           <style
@@ -819,15 +759,9 @@ export default function CalendarPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => startEditing(selectedDate, time, record)}
-                              className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
+                              className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 click-press"
                             >
                               編集
-                            </button>
-                            <button
-                              onClick={() => deleteRecord(selectedDate, time)}
-                              className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600"
-                            >
-                              削除
                             </button>
                           </div>
                         </div>
@@ -881,14 +815,14 @@ export default function CalendarPage() {
                                           <div className="mb-2">
                                             <p className="font-semibold text-gray-800 mb-1">💭 自覚症状：</p>
                                             <p className="pl-2 text-gray-700">{symptoms}</p>
-                                          </div>
-                                        )}
+                                </div>
+                              )}
                                         {memo && (
                                           <div>
                                             <p className="font-semibold text-gray-800 mb-1">📝 その他：</p>
                                             <p className="pl-2 text-gray-700">{memo}</p>
-                                          </div>
-                                        )}
+                            </div>
+                          )}
                                       </>
                                     );
                                   })()}
@@ -1289,17 +1223,28 @@ export default function CalendarPage() {
             <div className="relative">
               <input
                 type="date"
-                value={currentMonth.toISOString().split('T')[0]}
-                onChange={(e) => setCurrentMonth(new Date(e.target.value))}
-                className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold appearance-none bg-white cursor-pointer"
+                value={
+                  currentMonth && !isNaN(currentMonth.getTime())
+                    ? currentMonth.toISOString().split('T')[0]
+                    : new Date().toISOString().split('T')[0]
+                }
+                onChange={(e) => {
+                  // 値が空の場合（削除ボタン押下時）は何もしない
+                  if (!e.target.value) {
+                    console.log('削除ボタンが押されましたが、無視します');
+                    return;
+                  }
+                  
+                  // 日付文字列をパース（タイムゾーン対応）
+                  const [year, month, day] = e.target.value.split('-').map(Number);
+                  const newDate = new Date(year, month - 1, day);
+                  setCurrentMonth(newDate);
+                }}
+                className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold bg-white cursor-pointer"
                 style={{
-                  fontSize: '16px',
-                  paddingRight: '45px'
+                  fontSize: '16px'
                 }}
               />
-              <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-2xl pointer-events-none text-gray-600">
-                📅
-              </span>
             </div>
           </div>
         </div>
