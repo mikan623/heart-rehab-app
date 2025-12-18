@@ -32,6 +32,7 @@ model User {
   healthRecords HealthRecord[]
   familyMembers FamilyMember[]
   familyInvites FamilyInvite[]
+  bloodData     BloodData[]
   
   @@map("users")
 }
@@ -120,5 +121,51 @@ model FamilyInvite {
   patient   User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@map("family_invites")
+}
+
+model BloodData {
+  id                    String   @id @default(cuid())
+  userId                String
+  testDate              String   // 検査日
+  hbA1c                 Float?   // HbA1c
+  randomBloodSugar      Float?   // 随時血糖
+  totalCholesterol      Float?   // 総コレステロール
+  triglycerides         Float?   // 中性脂肪
+  hdlCholesterol        Float?   // HDLコレステロール
+  ldlCholesterol        Float?   // LDLコレステロール
+  bun                   Float?   // BUN
+  creatinine            Float?   // Cr（クレアチニン）
+  uricAcid              Float?   // 尿酸
+  hemoglobin            Float?   // ヘモグロビン
+  bnp                   Float?   // BNP
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cpxTests          CardiopulmonaryExerciseTest[]
+
+  @@map("blood_data")
+}
+
+model CardiopulmonaryExerciseTest {
+  id                       String   @id @default(cuid())
+  bloodDataId              String
+  testDate                 String   // 検査日
+  cpxRound                 Int      // 何回目か（1、2など）
+  atOneMinBefore           Float?   // AT1分前
+  atDuring                 Float?   // AT中
+  maxLoad                  Float?   // 最大負荷時
+  loadWeight               Float?   // 負荷量(W)
+  vo2                      Float?   // VO2(ml/min/kg)
+  mets                     Float?   // Mets
+  heartRate                Float?   // 心拍数(bpm)
+  systolicBloodPressure    Float?   // 収縮期血圧(mmHg)
+  findings                 String?  // 所見
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  bloodData BloodData @relation(fields: [bloodDataId], references: [id], onDelete: Cascade)
+
+  @@map("cardiopulmonary_exercise_tests")
 }
 

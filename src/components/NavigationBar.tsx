@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { clearSession } from "@/lib/auth";
-import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon } from './NavIcons';
+import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
 
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -414,6 +414,15 @@ export default function NavigationBar() {
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'learn' ? 'click-animate' : ''}`}>
           <LearnIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">学ぶ</span>
+        </button>
+        <button 
+          onClick={() => {
+            setActiveButton('test');
+            setTimeout(() => window.location.href = '/blood-data', 150);
+          }}
+          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'test' ? 'click-animate' : ''}`}>
+          <TestIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <span className="text-[10px] md:text-xs">検査</span>
         </button>
         <button 
           onClick={() => {

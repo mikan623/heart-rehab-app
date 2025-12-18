@@ -36,3 +36,9 @@ export const SettingsIcon = ({ className = "w-6 h-6" }) => (
   </svg>
 );
 
+export const TestIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-2.16-2.66c-.2-.24-.58-.24-.77 0-.19.23-.19.61 0 .85l2.55 3.12c.19.23.56.23.75 0l3.12-4.04c.21-.23.21-.61.02-.84-.19-.23-.57-.23-.76 0z"/>
+  </svg>
+);
+
