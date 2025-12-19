@@ -122,7 +122,7 @@ export default function LandingPage() {
             router.push('/health-records');
             }
             return;
-          } else {
+            } else {
             // ログインしていない場合のみウェルカムページを表示
             setIsLoggedIn(false);
           }
@@ -248,15 +248,15 @@ export default function LandingPage() {
       {/* ナビゲーションヘッダー */}
       <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10">
-              <img 
-                src="/heart-animation.gif" 
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10">
+            <img 
+              src="/heart-animation.gif" 
                 alt="心臓ちゃん" 
-                className="w-full h-full object-contain"
+              className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               心臓リハビリ手帳
             </h1>
           </div>
@@ -290,16 +290,16 @@ export default function LandingPage() {
           {/* ログイン/登録ボタン */}
           {!showLoginForm ? (
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {/* LINE ログインボタン */}
-              <button
-                onClick={handleLineLogin}
-                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
-                </svg>
-                LINE でログイン
-              </button>
+          {/* LINE ログインボタン */}
+          <button
+            onClick={handleLineLogin}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
+            </svg>
+            LINE でログイン
+          </button>
 
               {/* メール/パスワードログインボタン */}
               <button
@@ -467,9 +467,9 @@ export default function LandingPage() {
                 <div className="text-5xl mb-4">{feature.icon}</div>
                 <h4 className="text-xl font-bold text-gray-800 mb-3">{feature.title}</h4>
                 <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+                </div>
+                    ))}
+                  </div>
         </section>
 
         {/* よくある質問セクション */}
@@ -506,8 +506,8 @@ export default function LandingPage() {
                 </summary>
                 <p className="text-gray-600 mt-4 leading-relaxed">{faq.a}</p>
               </details>
-            ))}
-          </div>
+                    ))}
+                  </div>
         </section>
 
         {/* サポート情報セクション */}
@@ -521,18 +521,18 @@ export default function LandingPage() {
               <div className="text-5xl mb-4">💬</div>
               <h4 className="font-bold text-gray-800 mb-2">チャットサポート</h4>
               <p className="text-gray-600">24時間以内にお返事します</p>
-            </div>
+                  </div>
             <div>
               <div className="text-5xl mb-4">📧</div>
               <h4 className="font-bold text-gray-800 mb-2">メールサポート</h4>
               <p className="text-gray-600">info@heart-rehab.jp</p>
-            </div>
+                    </div>
             <div>
               <div className="text-5xl mb-4">📚</div>
               <h4 className="font-bold text-gray-800 mb-2">ヘルプセンター</h4>
               <p className="text-gray-600">よくある質問と回答集</p>
-            </div>
-          </div>
+                </div>
+                </div>
         </section>
 
         {/* CTA セクション */}
@@ -542,15 +542,15 @@ export default function LandingPage() {
           </h3>
           {!showLoginForm && (
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
-                onClick={handleLineLogin}
-                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
-                </svg>
-                LINE でログイン
-              </button>
+            <button 
+            onClick={handleLineLogin}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
+            </svg>
+            LINE でログイン
+            </button>
               <button 
                 onClick={() => {
                   setShowLoginForm(true);
@@ -576,8 +576,8 @@ export default function LandingPage() {
             <a href="/terms" className="hover:text-orange-600 transition">利用規約</a>
             <a href="/privacy" className="hover:text-orange-600 transition">プライバシーポリシー</a>
             <a href="/contact" className="hover:text-orange-600 transition">お問い合わせ</a>
-          </div>
-        </div>
+            </div>
+              </div>
       </footer>
     </div>
   );

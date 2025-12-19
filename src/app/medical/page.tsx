@@ -274,9 +274,9 @@ const MedicalPage: React.FC = () => {
                               </p>
                             )}
                             {memo && (
-                              <p className="text-gray-800">
+                      <p className="text-gray-800">
                                 📝 その他: {memo}
-                              </p>
+                      </p>
                             )}
                           </>
                         );

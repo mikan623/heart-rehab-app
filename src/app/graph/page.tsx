@@ -60,12 +60,64 @@ export default function GraphPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [savedRecords, setSavedRecords] = useState<{ [key: string]: { [key: string]: HealthRecord } }>({});
   const [user, setUser] = useState<any>(null);
+  const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight'>('bloodPressure');
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
   const [weekOffset, setWeekOffset] = useState(0); // 0 = 現在週、-1 = 先週
   const [weekData, setWeekData] = useState<WeekData | null>(null);
-  const [averages, setAverages] = useState<{ systolic: number; diastolic: number; pulse: number; weight: number } | null>(null);
+  // 7日間平均表示は不要になったため削除
+
+  // ローカルタイムでYYYY-MM-DDを生成（UTCずれ防止）
+  const formatDateLocal = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // APIからのdate文字列をグラフ用キーに正規化
+  const normalizeDateKey = (raw: string | undefined) => {
+    if (!raw) return '';
+    // ISO形式なら T で分割
+    if (raw.includes('T')) return raw.split('T')[0];
+    // スラッシュ区切りをハイフンに
+    return raw.replace(/\//g, '-');
+  };
+
+  const localStorageKey = (baseKey: string, overrideUserId?: string) => {
+    const resolvedUserId = overrideUserId || user?.userId;
+    if (resolvedUserId) {
+      return `${baseKey}_${resolvedUserId}`;
+    }
+    return `${baseKey}_local`;
+  };
+
+  const loadLocalRecords = (overrideUserId?: string) => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem(localStorageKey('healthRecords', overrideUserId));
+      if (!raw) return {};
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  };
+
+  const loadLocalProfileTargetWeight = (overrideUserId?: string): number | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(localStorageKey('profile', overrideUserId));
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      const tw = p?.targetWeight;
+      if (tw === null || tw === undefined || tw === '') return null;
+      const n = typeof tw === 'number' ? tw : Number(tw);
+      return Number.isFinite(n) ? n : null;
+    } catch {
+      return null;
+    }
+  };
 
   // 認証チェック
   useEffect(() => {
@@ -103,7 +155,64 @@ export default function GraphPage() {
         const res = await fetch(`/api/health-records?userId=${userId}`);
         if (res.ok) {
           const data = await res.json();
-          setSavedRecords(data.records || {});
+          const records = Array.isArray(data.records) ? data.records : [];
+
+          // 日付→時刻→記録 のマップに整形
+          const grouped: { [date: string]: { [time: string]: HealthRecord } } = {};
+          records.forEach((r: any) => {
+            const date = normalizeDateKey(r.date);
+            const time = r.time || '08:00';
+            if (!grouped[date]) grouped[date] = {};
+            grouped[date][time] = {
+              bloodPressure: r.bloodPressure || { systolic: '', diastolic: '' },
+              pulse: r.pulse?.toString?.() || '',
+              weight: r.weight?.toString?.() || '',
+              medicationTaken: r.medicationTaken ?? false,
+              dailyLife: r.dailyLife || '',
+            };
+          });
+
+          // ローカルストレージのバックアップもマージ
+          const localSaved = loadLocalRecords(session?.userId);
+          Object.entries(localSaved).forEach(([dateKey, times]: any) => {
+            const normalizedDate = normalizeDateKey(dateKey);
+            if (!normalizedDate) return;
+            if (!grouped[normalizedDate]) grouped[normalizedDate] = {};
+            Object.entries(times).forEach(([timeKey, entry]: any) => {
+              grouped[normalizedDate][timeKey] = {
+                bloodPressure: entry.bloodPressure || { systolic: '', diastolic: '' },
+                pulse: entry.pulse?.toString?.() || '',
+                weight: entry.weight?.toString?.() || '',
+                medicationTaken: entry.medicationTaken ?? false,
+                dailyLife: entry.dailyLife || '',
+              };
+            });
+          });
+
+          setSavedRecords(grouped);
+        }
+
+        // プロフィール（目標体重）を取得
+        try {
+          const profileRes = await fetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const twRaw = profileData?.profile?.targetWeight;
+            const tw =
+              twRaw === null || twRaw === undefined || twRaw === ''
+                ? null
+                : (typeof twRaw === 'number' ? twRaw : Number(twRaw));
+            if (tw !== null && Number.isFinite(tw)) {
+              setTargetWeight(tw);
+            } else {
+              // APIに無い場合はローカルストレージも見る
+              setTargetWeight(loadLocalProfileTargetWeight(userId));
+            }
+          } else {
+            setTargetWeight(loadLocalProfileTargetWeight(userId));
+          }
+        } catch {
+          setTargetWeight(loadLocalProfileTargetWeight(userId));
         }
       } catch (error) {
         console.error('Failed to fetch records:', error);
@@ -140,13 +249,13 @@ export default function GraphPage() {
       dates,
     };
 
-    let totalSystolic = 0, totalDiastolic = 0, totalPulse = 0, totalWeight = 0, count = 0;
+    // 平均値計算（表示削除済みのため不要）
 
     // 7日間のデータを取得
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(date); // ローカル日付文字列
       const displayDate = `${date.getMonth() + 1}/${date.getDate()}`;
 
       dates.push(dateStr);
@@ -170,9 +279,6 @@ export default function GraphPage() {
         const diastolic = parseInt(morningRecord.bloodPressure.diastolic) || 0;
         data.bloodPressureSystolic.push(systolic);
         data.bloodPressureDiastolic.push(diastolic);
-        totalSystolic += systolic;
-        totalDiastolic += diastolic;
-        count++;
       } else {
         data.bloodPressureSystolic.push(0);
         data.bloodPressureDiastolic.push(0);
@@ -182,7 +288,6 @@ export default function GraphPage() {
       if (morningRecord?.pulse) {
         const pulse = parseInt(morningRecord.pulse) || 0;
         data.pulse.push(pulse);
-        totalPulse += pulse;
       } else {
         data.pulse.push(0);
       }
@@ -191,23 +296,12 @@ export default function GraphPage() {
       if (morningRecord?.weight) {
         const weight = parseFloat(morningRecord.weight) || 0;
         data.weight.push(weight);
-        totalWeight += weight;
       } else {
         data.weight.push(0);
       }
     }
 
     setWeekData(data);
-
-    // 7日間平均値を計算
-    if (count > 0) {
-      setAverages({
-        systolic: Math.round(totalSystolic / count),
-        diastolic: Math.round(totalDiastolic / count),
-        pulse: Math.round(totalPulse / 7),
-        weight: Math.round((totalWeight / 7) * 10) / 10,
-      });
-    }
   }, [savedRecords, weekOffset]);
 
   if (isLoading) {
@@ -265,6 +359,18 @@ export default function GraphPage() {
         pointBackgroundColor: 'rgb(168, 85, 247)',
         borderWidth: 2,
       },
+      ...(targetWeight !== null
+        ? [{
+            label: '目標体重',
+            data: weekData.labels.map(() => targetWeight),
+            borderColor: 'rgba(99, 102, 241, 0.9)', // indigo
+            backgroundColor: 'rgba(99, 102, 241, 0)',
+            borderDash: [6, 6],
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 2,
+          }]
+        : [])
     ]
   } : null;
 
@@ -278,7 +384,19 @@ export default function GraphPage() {
     },
     scales: {
       y: {
+        // ユーザー要望：体重も含めて常に 0 始まり
         beginAtZero: true,
+        ...(activeMetric === 'weight' && weekData
+          ? (() => {
+              const vals = weekData.weight.filter((v) => typeof v === 'number' && v > 0);
+              const maxV = vals.length ? Math.max(...vals) : null;
+              const t = targetWeight;
+              const maxAll = [maxV, t].filter((x): x is number => typeof x === 'number');
+              if (!maxAll.length) return { suggestedMin: 0 };
+              const max = Math.ceil(Math.max(...maxAll) + 2);
+              return { suggestedMin: 0, suggestedMax: max };
+            })()
+          : {}),
       },
     },
   };
@@ -419,25 +537,42 @@ export default function GraphPage() {
 
         {/* 週選択 */}
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
-          <button className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press">⬅ 先月</button>
+          <button
+            onClick={() => setWeekOffset((prev) => prev - 1)}
+            className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
+          >
+            ⬅ 先週
+          </button>
           <div className="text-center text-base font-bold text-gray-800 flex-1">{weekLabel}</div>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press">↻ 最新</button>
+          <button
+            onClick={() => setWeekOffset(0)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press"
+          >
+            ↻ 最新
+          </button>
         </div>
       </div>
 
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto p-4 pb-28">
-        {/* 正常範囲表示 */}
+        {/* 上部表示 */}
         <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg p-4 mb-4 shadow-md border-2 border-orange-300">
-          <p className="text-sm font-semibold text-gray-700 mb-2">正常範囲：</p>
           {activeMetric === 'bloodPressure' && (
-            <p className="text-lg font-bold text-red-600">120/80 mmHg</p>
+            <>
+              <p className="text-sm font-semibold text-gray-700 mb-2">正常範囲：</p>
+              <p className="text-lg font-bold text-red-600">120/80 mmHg</p>
+            </>
           )}
           {activeMetric === 'pulse' && (
-            <p className="text-lg font-bold text-blue-600">60-100 回/分</p>
+            <>
+              <p className="text-sm font-semibold text-gray-700 mb-2">正常範囲：</p>
+              <p className="text-lg font-bold text-blue-600">60-100 回/分</p>
+            </>
           )}
           {activeMetric === 'weight' && (
-            <p className="text-lg font-bold text-purple-600">目標体重との比較</p>
+            <p className="text-lg font-bold text-purple-600">
+              目標体重：{targetWeight !== null ? `${targetWeight} kg` : '未設定'}
+            </p>
           )}
         </div>
 
@@ -450,31 +585,10 @@ export default function GraphPage() {
           </div>
         )}
 
-        {/* 7日間平均値 */}
-        {averages && (
-          <div className="bg-white rounded-lg p-4 mb-4 shadow-md">
-            <div className="text-center">
-              <p className="text-gray-600 text-sm font-semibold">7日間平均</p>
-              {activeMetric === 'bloodPressure' && (
-                <p className="text-3xl font-bold text-pink-600">
-                  {averages.systolic} / {averages.diastolic}
-                </p>
-              )}
-              {activeMetric === 'pulse' && (
-                <p className="text-3xl font-bold text-blue-600">{averages.pulse}</p>
-              )}
-              {activeMetric === 'weight' && (
-                <p className="text-3xl font-bold text-purple-600">{averages.weight}</p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* 健康記録一覧 */}
         <div className="bg-white rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-800">記録一覧</h3>
-            <button className="text-blue-500 font-bold">➕ 追加</button>
           </div>
 
           {weekData?.dates.map((date, idx) => {
