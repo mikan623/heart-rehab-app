@@ -195,3 +195,48 @@ export function isLineLoggedIn(): boolean {
   return false;
 }
 
+/**
+ * LINE ログイン状態（userId/displayName）を取得
+ * - メモリ -> sessionStorage の順で復元
+ */
+export function getLineSession(): { userId: string; displayName: string } | null {
+  if (lineLoginState.isLoggedIn && lineLoginState.userId) {
+    return { userId: lineLoginState.userId, displayName: lineLoginState.displayName };
+  }
+
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem('lineLoginState');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state?.isLoggedIn && state?.userId) {
+          lineLoginState = state;
+          return { userId: state.userId, displayName: state.displayName || '' };
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 現在のユーザーIDを取得（メールセッション優先 → LINEセッション → localStorage fallback）
+ */
+export function getCurrentUserId(): string | null {
+  const session = getSession();
+  if (session?.userId) return session.userId;
+
+  const line = getLineSession();
+  if (line?.userId) return line.userId;
+
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('userId');
+    if (stored) return stored;
+  }
+
+  return null;
+}
+

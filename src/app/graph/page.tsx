@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { HealthRecordIcon, CalendarIcon, GraphIcon, FamilyIcon, TestIcon, SettingsIcon } from "@/components/NavIcons";
 
 // 学ぶアイコン
@@ -149,10 +149,10 @@ export default function GraphPage() {
     // ヘルスレコード取得
     const fetchRecords = async () => {
       try {
-        const userId = session?.userId || localStorage.getItem('userId');
+        const userId = getCurrentUserId();
         if (!userId) return;
 
-        const res = await fetch(`/api/health-records?userId=${userId}`);
+        const res = await fetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
           const data = await res.json();
           const records = Array.isArray(data.records) ? data.records : [];
@@ -173,7 +173,7 @@ export default function GraphPage() {
           });
 
           // ローカルストレージのバックアップもマージ
-          const localSaved = loadLocalRecords(session?.userId);
+          const localSaved = loadLocalRecords(userId);
           Object.entries(localSaved).forEach(([dateKey, times]: any) => {
             const normalizedDate = normalizeDateKey(dateKey);
             if (!normalizedDate) return;
