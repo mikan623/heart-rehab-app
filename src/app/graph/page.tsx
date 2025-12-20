@@ -19,7 +19,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler,
+  Filler, 
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
@@ -44,14 +44,16 @@ interface HealthRecord {
 }
 
 interface WeekData {
-  labels: string[]; // 日付ラベル ('9/24', '9/25'...)
-  bloodPressureSystolic: number[]; // 朝の血圧
-  bloodPressureDiastolic: number[];
-  bloodPressureNightSystolic: number[]; // 夜の血圧（あれば）
-  bloodPressureNightDiastolic: number[];
-  pulse: number[];
-  weight: number[];
-  dates: string[]; // 完全な日付 ('2025-09-24')
+  labels: string[]; // X軸ラベル ('12/20 09:00', '12/20 10:00'...)
+  bloodPressureSystolic: Array<number | null>;
+  bloodPressureDiastolic: Array<number | null>;
+  bloodPressureNightSystolic: Array<number | null>;
+  bloodPressureNightDiastolic: Array<number | null>;
+  pulse: Array<number | null>;
+  weight: Array<number | null>;
+  points: Array<{ date: string; timeKey: string; displayTime: string }>;
+  weekStart: string; // 'YYYY-MM-DD'
+  weekEnd: string;   // 'YYYY-MM-DD'
 }
 
 export default function GraphPage() {
@@ -76,6 +78,13 @@ export default function GraphPage() {
     return `${y}-${m}-${d}`;
   };
 
+  const parseYmd = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map((v) => Number(v));
+    if (!y || !m || !d) return null;
+    const dt = new Date(y, m - 1, d);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  };
+
   // APIからのdate文字列をグラフ用キーに正規化
   const normalizeDateKey = (raw: string | undefined) => {
     if (!raw) return '';
@@ -83,6 +92,36 @@ export default function GraphPage() {
     if (raw.includes('T')) return raw.split('T')[0];
     // スラッシュ区切りをハイフンに
     return raw.replace(/\//g, '-');
+  };
+
+  // 正常範囲の薄塗り（血圧・脈拍）
+  const normalRangePlugin = {
+    id: 'normalRange',
+    beforeDraw: (chart: any) => {
+      if (!chart?.scales?.y || !chart?.chartArea) return;
+      if (activeMetric !== 'bloodPressure' && activeMetric !== 'pulse') return;
+
+      const yScale = chart.scales.y;
+      const { left, right, top, bottom } = chart.chartArea;
+      const ctx = chart.ctx;
+
+      // 体重は対象外（要望が来たら追加）
+      const ranges =
+        activeMetric === 'bloodPressure'
+          ? [{ min: 70, max: 140, color: 'rgba(239, 68, 68, 0.10)' }] // 70〜140 を薄赤
+          : [{ min: 60, max: 100, color: 'rgba(59, 130, 246, 0.10)' }]; // 60〜100 を薄青
+
+      ctx.save();
+      for (const r of ranges) {
+        const yTop = yScale.getPixelForValue(r.max);
+        const yBottom = yScale.getPixelForValue(r.min);
+        const yy = Math.min(yTop, yBottom);
+        const hh = Math.abs(yBottom - yTop);
+        ctx.fillStyle = r.color;
+        ctx.fillRect(left, yy, right - left, hh);
+      }
+      ctx.restore();
+    },
   };
 
   const localStorageKey = (baseKey: string, overrideUserId?: string) => {
@@ -216,7 +255,7 @@ export default function GraphPage() {
         }
       } catch (error) {
         console.error('Failed to fetch records:', error);
-      } finally {
+    } finally {
         setIsLoading(false);
       }
     };
@@ -226,8 +265,6 @@ export default function GraphPage() {
 
   // 1週間分のデータを取得・集計
   useEffect(() => {
-    if (Object.keys(savedRecords).length === 0) return;
-
     // 現在日時から週を計算
     const today = new Date();
     const startDate = new Date(today);
@@ -235,8 +272,8 @@ export default function GraphPage() {
     startDate.setHours(0, 0, 0, 0);
 
     const weekStart = new Date(startDate);
-    const dates: string[] = [];
     const labels: string[] = [];
+    const points: Array<{ date: string; timeKey: string; displayTime: string }> = [];
 
     const data: WeekData = {
       labels,
@@ -246,58 +283,50 @@ export default function GraphPage() {
       bloodPressureNightDiastolic: [],
       pulse: [],
       weight: [],
-      dates,
+      points,
+      weekStart: formatDateLocal(weekStart),
+      weekEnd: formatDateLocal(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6)),
     };
 
-    // 平均値計算（表示削除済みのため不要）
-
-    // 7日間のデータを取得
+    // 週内の全記録（同日複数回も含む）を時刻順で点にする
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
       const dateStr = formatDateLocal(date); // ローカル日付文字列
       const displayDate = `${date.getMonth() + 1}/${date.getDate()}`;
 
-      dates.push(dateStr);
-      labels.push(displayDate);
-
       const dayRecords = savedRecords[dateStr];
-      if (!dayRecords) {
-        data.bloodPressureSystolic.push(0);
-        data.bloodPressureDiastolic.push(0);
-        data.bloodPressureNightSystolic.push(0);
-        data.bloodPressureNightDiastolic.push(0);
-        data.pulse.push(0);
-        data.weight.push(0);
-        continue;
-      }
+      if (!dayRecords) continue;
 
-      // 朝のデータを取得（morning または 最初のエントリ）
-      const morningRecord = dayRecords.morning || dayRecords['08:00'] || Object.values(dayRecords)[0];
-      if (morningRecord?.bloodPressure) {
-        const systolic = parseInt(morningRecord.bloodPressure.systolic) || 0;
-        const diastolic = parseInt(morningRecord.bloodPressure.diastolic) || 0;
-        data.bloodPressureSystolic.push(systolic);
-        data.bloodPressureDiastolic.push(diastolic);
-      } else {
-        data.bloodPressureSystolic.push(0);
-        data.bloodPressureDiastolic.push(0);
-      }
+      const timeKeys = Object.keys(dayRecords)
+        .filter((k) => !!(dayRecords as any)[k])
+        .sort((a, b) => String(a).localeCompare(String(b)));
 
-      // 脈拍（最初のエントリから）
-      if (morningRecord?.pulse) {
-        const pulse = parseInt(morningRecord.pulse) || 0;
-        data.pulse.push(pulse);
-      } else {
-        data.pulse.push(0);
-      }
+      for (const timeKey of timeKeys) {
+        const record: any = (dayRecords as any)[timeKey];
+        if (!record) continue;
 
-      // 体重（最初のエントリから）
-      if (morningRecord?.weight) {
-        const weight = parseFloat(morningRecord.weight) || 0;
-        data.weight.push(weight);
-      } else {
-        data.weight.push(0);
+        const displayTime = timeKey === 'morning' ? '08:00' : timeKey;
+        labels.push(`${displayDate} ${displayTime}`);
+        points.push({ date: dateStr, timeKey, displayTime });
+
+        const sys = record?.bloodPressure?.systolic ? parseInt(record.bloodPressure.systolic) : null;
+        const dia = record?.bloodPressure?.diastolic ? parseInt(record.bloodPressure.diastolic) : null;
+        data.bloodPressureSystolic.push(Number.isFinite(sys) ? sys : null);
+        data.bloodPressureDiastolic.push(Number.isFinite(dia) ? dia : null);
+
+        const pRaw = record?.pulse;
+        const p = pRaw === null || pRaw === undefined || pRaw === '' ? null : Number.parseInt(String(pRaw), 10);
+        data.pulse.push(p !== null && Number.isFinite(p) && p >= 0 && p <= 300 ? p : null);
+
+        const wRaw = record?.weight;
+        const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
+        // 体重は現実的な範囲のみ採用（異常値は軸が壊れるので無視）
+        data.weight.push(w !== null && Number.isFinite(w) && w >= 0 && w <= 300 ? w : null);
+
+        // 夜データは現状未実装のため null で埋める（将来拡張用）
+        data.bloodPressureNightSystolic.push(null);
+        data.bloodPressureNightDiastolic.push(null);
       }
     }
 
@@ -324,54 +353,152 @@ export default function GraphPage() {
   }
 
   // グラフデータの生成
-  const chartData = weekData ? {
+  const hasPoints = !!weekData && (weekData.labels?.length ?? 0) > 0;
+
+  const emptyWeekLabels = (() => {
+    if (!weekData?.weekStart) return [];
+    const start = parseYmd(weekData.weekStart);
+    if (!start) return [];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    });
+  })();
+
+  const lineChartData = hasPoints && weekData ? {
     labels: weekData.labels,
-    datasets: activeMetric === 'bloodPressure' ? [
-      {
-        label: '血圧（朝）(mmHg)',
-        data: weekData.bloodPressureSystolic,
-        borderColor: 'rgb(236, 72, 153)', // ピンク
-        backgroundColor: 'rgba(236, 72, 153, 0.1)',
-        tension: 0.3,
-        pointRadius: 5,
-        pointBackgroundColor: 'rgb(236, 72, 153)',
-        borderWidth: 2,
-      },
-    ] : activeMetric === 'pulse' ? [
-      {
-        label: '脈拍 (回/分)',
-        data: weekData.pulse,
-        borderColor: 'rgb(59, 130, 246)', // 青
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.3,
-        pointRadius: 5,
-        pointBackgroundColor: 'rgb(59, 130, 246)',
-        borderWidth: 2,
-      },
-    ] : [
-      {
-        label: '体重 (kg)',
-        data: weekData.weight,
-        borderColor: 'rgb(168, 85, 247)', // 紫
-        backgroundColor: 'rgba(168, 85, 247, 0.1)',
-        tension: 0.3,
-        pointRadius: 5,
-        pointBackgroundColor: 'rgb(168, 85, 247)',
-        borderWidth: 2,
-      },
-      ...(targetWeight !== null
-        ? [{
-            label: '目標体重',
-            data: weekData.labels.map(() => targetWeight),
-            borderColor: 'rgba(99, 102, 241, 0.9)', // indigo
-            backgroundColor: 'rgba(99, 102, 241, 0)',
-            borderDash: [6, 6],
-            tension: 0,
-            pointRadius: 0,
+    datasets: activeMetric === 'bloodPressure'
+      ? [
+          {
+            label: '収縮期 (mmHg)',
+            data: weekData.bloodPressureSystolic,
+            borderColor: 'rgb(239, 68, 68)', // red
+            backgroundColor: 'rgba(239, 68, 68, 0.08)',
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: 'rgb(239, 68, 68)',
             borderWidth: 2,
-          }]
-        : [])
-    ]
+            spanGaps: true,
+          },
+          {
+            label: '拡張期 (mmHg)',
+            data: weekData.bloodPressureDiastolic,
+            borderColor: 'rgb(236, 72, 153)', // pink
+            backgroundColor: 'rgba(236, 72, 153, 0.08)',
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: 'rgb(236, 72, 153)',
+            borderWidth: 2,
+            spanGaps: true,
+          },
+        ]
+      : activeMetric === 'pulse'
+      ? [
+          {
+            label: '脈拍 (回/分)',
+            data: weekData.pulse,
+            borderColor: 'rgb(59, 130, 246)', // 青
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: 'rgb(59, 130, 246)',
+            borderWidth: 2,
+            spanGaps: true,
+          },
+        ]
+      : [
+          {
+            label: '体重 (kg)',
+            data: weekData.weight,
+            borderColor: 'rgb(168, 85, 247)', // 紫
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: 'rgb(168, 85, 247)',
+            borderWidth: 2,
+            spanGaps: true,
+          },
+          ...(targetWeight !== null
+            ? [{
+                label: '目標体重',
+                data: weekData.labels.map(() => targetWeight),
+                borderColor: 'rgba(99, 102, 241, 0.9)', // indigo
+                backgroundColor: 'rgba(99, 102, 241, 0)',
+                borderDash: [6, 6],
+                tension: 0,
+                pointRadius: 0,
+                borderWidth: 2,
+              }]
+            : [])
+        ]
+  } : null;
+
+  const emptyLineData = !hasPoints && weekData ? {
+    labels: emptyWeekLabels,
+    datasets:
+      activeMetric === 'bloodPressure'
+        ? [
+            {
+              label: '収縮期 (mmHg)',
+              data: emptyWeekLabels.map(() => 0),
+              borderColor: 'rgb(239, 68, 68)',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              tension: 0.25,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(239, 68, 68)',
+              borderWidth: 2,
+            },
+            {
+              label: '拡張期 (mmHg)',
+              data: emptyWeekLabels.map(() => 0),
+              borderColor: 'rgb(236, 72, 153)',
+              backgroundColor: 'rgba(236, 72, 153, 0.08)',
+              tension: 0.25,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(236, 72, 153)',
+              borderWidth: 2,
+            },
+          ]
+        : activeMetric === 'pulse'
+        ? [
+            {
+              label: '脈拍 (回/分)',
+              data: emptyWeekLabels.map(() => 0),
+              borderColor: 'rgb(59, 130, 246)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.3,
+              pointRadius: 5,
+              pointBackgroundColor: 'rgb(59, 130, 246)',
+              borderWidth: 2,
+            },
+          ]
+        : [
+            {
+              label: '体重 (kg)',
+              data: emptyWeekLabels.map(() => 0),
+              borderColor: 'rgb(168, 85, 247)',
+              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+              tension: 0.3,
+              pointRadius: 5,
+              pointBackgroundColor: 'rgb(168, 85, 247)',
+              borderWidth: 2,
+            },
+            ...(targetWeight !== null
+              ? [
+                  {
+                    label: '目標体重',
+                    data: emptyWeekLabels.map(() => targetWeight),
+                    borderColor: 'rgba(99, 102, 241, 0.9)',
+                    backgroundColor: 'rgba(99, 102, 241, 0)',
+                    borderDash: [6, 6],
+                    tension: 0,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                  },
+                ]
+              : []),
+          ],
   } : null;
 
   const chartOptions = {
@@ -381,28 +508,69 @@ export default function GraphPage() {
       legend: {
         display: false,
       },
+      tooltip: {
+        callbacks: {
+          title: (items: any[]) => {
+            if (!items?.length) return '';
+            return items[0].label || '';
+          },
+          label: (ctx: any) => {
+            if (!weekData) return '';
+            const idx = ctx.dataIndex;
+            if (activeMetric === 'bloodPressure') {
+              // 棒グラフなので dataset ごとに表示
+              const v = ctx?.parsed?.y;
+              const name = ctx?.dataset?.label || '血圧';
+              return `${name}: ${Number.isFinite(v) ? v : '-'} mmHg`;
+            }
+            if (activeMetric === 'pulse') {
+              const p = weekData.pulse[idx];
+              return `脈拍: ${p ?? '-'} 回/分`;
+            }
+            const w = weekData.weight[idx];
+            return `体重: ${w ?? '-'} kg`;
+          },
+        },
+      },
     },
     scales: {
       y: {
         // ユーザー要望：体重も含めて常に 0 始まり
         beginAtZero: true,
-        ...(activeMetric === 'weight' && weekData
-          ? (() => {
-              const vals = weekData.weight.filter((v) => typeof v === 'number' && v > 0);
-              const maxV = vals.length ? Math.max(...vals) : null;
-              const t = targetWeight;
-              const maxAll = [maxV, t].filter((x): x is number => typeof x === 'number');
-              if (!maxAll.length) return { suggestedMin: 0 };
-              const max = Math.ceil(Math.max(...maxAll) + 2);
-              return { suggestedMin: 0, suggestedMax: max };
-            })()
+        ...(activeMetric === 'bloodPressure'
+          ? {
+              min: 0,
+              max: 200,
+              ticks: { stepSize: 20 },
+            }
           : {}),
+        ...(activeMetric === 'pulse'
+          ? {
+              min: 0,
+              max: 150,
+              ticks: { stepSize: 10 },
+            }
+          : {}),
+        ...(activeMetric === 'weight'
+          ? {
+              min: 0,
+              max: 150,
+              ticks: { stepSize: 10 },
+            }
+          : {}),
+      },
+      x: {
+        ticks: {
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 8,
+        },
       },
     },
   };
 
-  const weekStartDate = weekData?.dates[0];
-  const weekEndDate = weekData?.dates[6];
+  const weekStartDate = weekData?.weekStart;
+  const weekEndDate = weekData?.weekEnd;
   const weekLabel = weekStartDate && weekEndDate 
     ? `${weekStartDate.split('-')[1]}月${weekStartDate.split('-')[2]}日～${weekEndDate.split('-')[2]}日`
     : '';
@@ -464,7 +632,7 @@ export default function GraphPage() {
             </button>
             </nav>
           </div>
-        </div>
+          </div>
 
         {/* スマホ版ナビゲーション（MD未満） */}
         <nav className="md:hidden flex gap-1 pb-3 overflow-x-auto whitespace-nowrap">
@@ -533,26 +701,36 @@ export default function GraphPage() {
               {metric.icon} {metric.label}
             </button>
           ))}
-        </div>
+              </div>
 
         {/* 週選択 */}
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
-          <button
+              <button
             onClick={() => setWeekOffset((prev) => prev - 1)}
             className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
-          >
+              >
             ⬅ 先週
-          </button>
+              </button>
           <div className="text-center text-base font-bold text-gray-800 flex-1">{weekLabel}</div>
-          <button
-            onClick={() => setWeekOffset(0)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press"
-          >
-            ↻ 最新
-          </button>
-        </div>
-      </div>
-
+          <div className="flex items-center gap-2">
+            {weekOffset < 0 && (
+                <button
+                onClick={() => setWeekOffset((prev) => Math.min(prev + 1, 0))}
+                className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
+              >
+                次週 ➡
+                </button>
+              )}
+            <button
+              onClick={() => setWeekOffset(0)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press"
+            >
+              ↻ 最新
+            </button>
+          </div>
+            </div>
+          </div>
+          
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto p-4 pb-28">
         {/* 上部表示 */}
@@ -574,39 +752,43 @@ export default function GraphPage() {
               目標体重：{targetWeight !== null ? `${targetWeight} kg` : '未設定'}
             </p>
           )}
-        </div>
+                    </div>
 
         {/* グラフ */}
-        {chartData && (
+        {(lineChartData || emptyLineData) && (
           <div className="bg-white rounded-lg p-4 mb-4 shadow-md">
             <div className="h-64">
-              <Line data={chartData} options={chartOptions} />
-            </div>
-          </div>
+              <Line
+                key={`chart-${activeMetric}`}
+                data={(lineChartData || emptyLineData) as any}
+                options={chartOptions as any}
+                plugins={[normalRangePlugin as any]}
+              />
+                  </div>
+                </div>
         )}
 
         {/* 健康記録一覧 */}
         <div className="bg-white rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-800">記録一覧</h3>
-          </div>
+              </div>
 
-          {weekData?.dates.map((date, idx) => {
-            const dayRecord = savedRecords[date];
-            const displayDate = weekData.labels[idx];
+          {(weekData?.points ?? []).map((p, idx) => {
+            const dayRecord = savedRecords[p.date];
             
             if (!dayRecord) return null;
 
-            const record = Object.values(dayRecord)[0];
+            const record = (dayRecord as any)[p.timeKey] || Object.values(dayRecord)[0];
             if (!record) return null;
 
             return (
-              <div key={date} className="border-t pt-3 pb-3">
+              <div key={`${p.date}_${p.timeKey}_${idx}`} className="border-t pt-3 pb-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-bold text-gray-800">{date}</p>
-                    <p className="text-sm text-gray-600">朝</p>
-                  </div>
+                    <p className="font-bold text-gray-800">{p.date}</p>
+                    <p className="text-sm text-gray-600">{p.displayTime}</p>
+            </div>
                   {activeMetric === 'bloodPressure' && record.bloodPressure && (
                     <p className="text-xl font-bold text-pink-600">
                       {record.bloodPressure.systolic} / {record.bloodPressure.diastolic} mmHg
