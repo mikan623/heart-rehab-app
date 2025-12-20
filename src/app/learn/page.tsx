@@ -121,6 +121,29 @@ export default function LearnPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedContent, setSelectedContent] = useState<typeof learningContent[0] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 画面幅判定（md未満＝スマホ）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = () => setIsMobile(mql.matches);
+    handler();
+    mql.addEventListener?.('change', handler);
+    return () => mql.removeEventListener?.('change', handler);
+  }, []);
+
+  // モーダル表示中は背景スクロールを抑止
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!isModalOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isModalOpen]);
 
   // 認証チェック
   useEffect(() => {
@@ -191,7 +214,10 @@ export default function LearnPage() {
               {learningContent.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setSelectedContent(item)}
+                  onClick={() => {
+                    setSelectedContent(item);
+                    if (isMobile) setIsModalOpen(true);
+                  }}
                   className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                     selectedContent?.id === item.id
                       ? 'border-orange-500 bg-orange-50'
@@ -210,8 +236,8 @@ export default function LearnPage() {
             </div>
           </div>
 
-          {/* 右側：詳細内容 */}
-          <div>
+          {/* 右側：詳細内容（PCのみ表示。スマホはモーダルで表示） */}
+          <div className="hidden md:block">
             {selectedContent ? (
               <div className="bg-white rounded-lg border-2 border-orange-200 p-6 sticky top-24">
                 <div className="flex items-center gap-3 mb-6">
@@ -250,6 +276,78 @@ export default function LearnPage() {
             )}
           </div>
         </div>
+
+        {/* スマホ用：テーマ詳細モーダル */}
+        {isModalOpen && selectedContent && (
+          <div
+            className="fixed inset-0 z-[100] bg-transparent flex items-center justify-center p-3"
+            role="dialog"
+            aria-modal="true"
+            aria-label="学習テーマ詳細"
+            onClick={() => setIsModalOpen(false)}
+          >
+            <div
+              className="w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl border-2 border-orange-200 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* ヘッダー（大きい戻る・×） */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-orange-100">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-lg font-bold px-4 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700"
+                >
+                  ← 戻る
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-3xl leading-none font-bold px-4 py-2 rounded-xl bg-gray-100 border border-gray-200 text-gray-700"
+                  aria-label="閉じる"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* 本文 */}
+              <div className="p-5 overflow-y-auto max-h-[calc(90vh-70px)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-5xl">{selectedContent.icon}</span>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedContent.title}</h2>
+                </div>
+
+                <p className="text-base text-gray-700 mb-4 font-semibold">
+                  {selectedContent.content}
+                </p>
+
+                <div className="space-y-4">
+                  {selectedContent.details.map((detail, index) => (
+                    <div key={index} className="flex gap-4 items-start">
+                      <div className="min-w-8 w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-base font-bold mt-0.5">
+                        {index + 1}
+                      </div>
+                      <p className="text-gray-700 pt-1">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <p className="text-sm text-gray-600">
+                    💡 <strong>ポイント：</strong> わからないことや不安なことは、医師や看護師に相談してください。
+                  </p>
+                </div>
+
+                {/* フッター（大きい戻る） */}
+                <div className="mt-6">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="w-full text-lg font-bold py-3 rounded-2xl bg-orange-500 text-white shadow-md"
+                  >
+                    戻る
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 推奨事項セクション */}
         <div className="mt-16 grid md:grid-cols-3 gap-6">
