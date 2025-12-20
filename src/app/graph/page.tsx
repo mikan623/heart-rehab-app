@@ -416,7 +416,7 @@ export default function GraphPage() {
             tension: 0.3,
             pointRadius: 5,
             pointBackgroundColor: 'rgb(168, 85, 247)',
-            borderWidth: 2,
+        borderWidth: 2,
             spanGaps: true,
           },
           ...(targetWeight !== null
@@ -447,7 +447,7 @@ export default function GraphPage() {
               tension: 0.25,
               pointRadius: 4,
               pointBackgroundColor: 'rgb(239, 68, 68)',
-              borderWidth: 2,
+        borderWidth: 2,
             },
             {
               label: '拡張期 (mmHg)',
@@ -466,11 +466,11 @@ export default function GraphPage() {
               label: '脈拍 (回/分)',
               data: emptyWeekLabels.map(() => 0),
               borderColor: 'rgb(59, 130, 246)',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
               tension: 0.3,
               pointRadius: 5,
               pointBackgroundColor: 'rgb(59, 130, 246)',
-              borderWidth: 2,
+        borderWidth: 2,
             },
           ]
         : [
@@ -487,14 +487,14 @@ export default function GraphPage() {
             ...(targetWeight !== null
               ? [
                   {
-                    label: '目標体重',
+        label: '目標体重',
                     data: emptyWeekLabels.map(() => targetWeight),
                     borderColor: 'rgba(99, 102, 241, 0.9)',
                     backgroundColor: 'rgba(99, 102, 241, 0)',
                     borderDash: [6, 6],
                     tension: 0,
-                    pointRadius: 0,
-                    borderWidth: 2,
+        pointRadius: 0,
+        borderWidth: 2,
                   },
                 ]
               : []),

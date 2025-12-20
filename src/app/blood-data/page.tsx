@@ -71,6 +71,7 @@ export default function BloodDataPage() {
 
   // ページモード: 'list' | 'new' | 'edit'
   const [pageMode, setPageMode] = useState<'list' | 'new' | 'edit'>('list');
+  const [recordType, setRecordType] = useState<'blood' | 'cpx' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // 入力フォーム
@@ -103,6 +104,57 @@ export default function BloodDataPage() {
       findings: null,
     }
   ]);
+
+  // CPX記録モードでは、上の検査日を各CPXに自動適用（下の検査日入力は不要）
+  useEffect(() => {
+    if (!testDate) return;
+    if (recordType !== 'cpx') return;
+    setCpxTests((prev) =>
+      prev.map((t) => ({
+        ...t,
+        testDate,
+      }))
+    );
+  }, [testDate, recordType]);
+
+  const hasAnyBloodValue = (item: BloodData) => {
+    return (
+      item.hbA1c !== null ||
+      item.randomBloodSugar !== null ||
+      item.totalCholesterol !== null ||
+      item.triglycerides !== null ||
+      item.hdlCholesterol !== null ||
+      item.ldlCholesterol !== null ||
+      item.bun !== null ||
+      item.creatinine !== null ||
+      item.uricAcid !== null ||
+      item.hemoglobin !== null ||
+      item.bnp !== null
+    );
+  };
+
+  type CPXCardItem = CPXTest & { bloodDataId: string; parentCreatedAt: string };
+
+  const bloodCards = bloodDataList.filter(hasAnyBloodValue);
+  const cpxCards: CPXCardItem[] = bloodDataList
+    .flatMap((bd) =>
+      (bd.cpxTests || []).map((cpx) => ({
+        ...cpx,
+        bloodDataId: bd.id,
+        parentCreatedAt: bd.createdAt,
+      }))
+    )
+    .sort((a, b) => {
+      const da = a.testDate || '';
+      const db = b.testDate || '';
+      if (da !== db) return db.localeCompare(da); // testDate desc
+      return (b.cpxRound ?? 0) - (a.cpxRound ?? 0);
+    });
+
+  const openCpxEditByBloodDataId = (bloodDataId: string) => {
+    const parent = bloodDataList.find((b) => b.id === bloodDataId);
+    if (parent) handleEditCPX(parent);
+  };
 
   // 認証チェック
   useEffect(() => {
@@ -195,10 +247,12 @@ export default function BloodDataPage() {
     setSaveStatus('saving');
     try {
       const payload = {
+        mode: recordType || 'blood',
         userId,
         testDate,
-        bloodValues,
-        cpxTests: cpxTests.filter(t => t.testDate), // 検査日が入力されているもののみ
+        ...(recordType === 'cpx'
+          ? { cpxTests: cpxTests.filter(t => t.testDate) } // CPXのみ
+          : { bloodValues, cpxTests: cpxTests.filter(t => t.testDate) }), // 互換: blood側でもCPX送信は許可
       };
 
       const method = pageMode === 'edit' ? 'PUT' : 'POST';
@@ -230,6 +284,8 @@ export default function BloodDataPage() {
   const handleEdit = (bloodData: BloodData) => {
     setEditingId(bloodData.id);
     setTestDate(bloodData.testDate);
+    // 編集は従来通り「血液データ（＋CPX）」編集として扱う（必要なら後で分割導線も追加）
+    setRecordType('blood');
     setBloodValues({
       hbA1c: bloodData.hbA1c,
       randomBloodSugar: bloodData.randomBloodSugar,
@@ -257,6 +313,71 @@ export default function BloodDataPage() {
       findings: null,
     }]);
     setPageMode('edit');
+  };
+
+  // 運動負荷試験（CPX）の編集として開く
+  const handleEditCPX = (bloodData: BloodData) => {
+    setEditingId(bloodData.id);
+    setTestDate(bloodData.testDate);
+    setRecordType('cpx');
+    // 血液値は保持（画面では非表示だが将来の切替用）
+    setBloodValues({
+      hbA1c: bloodData.hbA1c,
+      randomBloodSugar: bloodData.randomBloodSugar,
+      totalCholesterol: bloodData.totalCholesterol,
+      triglycerides: bloodData.triglycerides,
+      hdlCholesterol: bloodData.hdlCholesterol,
+      ldlCholesterol: bloodData.ldlCholesterol,
+      bun: bloodData.bun,
+      creatinine: bloodData.creatinine,
+      uricAcid: bloodData.uricAcid,
+      hemoglobin: bloodData.hemoglobin,
+      bnp: bloodData.bnp,
+    });
+    setCpxTests(
+      bloodData.cpxTests && bloodData.cpxTests.length > 0
+        ? bloodData.cpxTests
+        : [
+            {
+              testDate: bloodData.testDate,
+              cpxRound: 1,
+              atOneMinBefore: null,
+              atDuring: null,
+              maxLoad: null,
+              loadWeight: null,
+              vo2: null,
+              mets: null,
+              heartRate: null,
+              systolicBloodPressure: null,
+              findings: null,
+            },
+          ]
+    );
+    setPageMode('edit');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('この検査データを削除しますか？（運動負荷試験も一緒に削除されます）')) return;
+    try {
+      const res = await fetch(`/api/blood-data?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete failed');
+      await fetchBloodDataList();
+    } catch (e) {
+      console.error('削除エラー:', e);
+      alert('削除に失敗しました');
+    }
+  };
+
+  const handleDeleteCPX = async (cpxId: string) => {
+    if (!confirm('この運動負荷試験（CPX）を削除しますか？')) return;
+    try {
+      const res = await fetch(`/api/blood-data?cpxId=${encodeURIComponent(cpxId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete failed');
+      await fetchBloodDataList();
+    } catch (e) {
+      console.error('CPX削除エラー:', e);
+      alert('削除に失敗しました');
+    }
   };
 
   const handleAddCPXRow = () => {
@@ -411,72 +532,150 @@ export default function BloodDataPage() {
         {/* リスト表示 */}
         {pageMode === 'list' && (
           <>
-            <button
-              onClick={() => {
-                resetForm();
-                setPageMode('new');
-              }}
-              className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white font-bold py-3 px-4 rounded-lg hover:from-orange-500 hover:to-pink-500 transition-all duration-200 mb-6 click-animate"
-            >
-              ➕ 新規登録
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              <button
+                onClick={() => {
+                  resetForm();
+                  setRecordType('blood');
+                  setPageMode('new');
+                }}
+                className="w-full bg-gradient-to-r from-orange-400 to-pink-400 text-white font-bold py-3 px-4 rounded-lg hover:from-orange-500 hover:to-pink-500 transition-all duration-200 click-animate"
+              >
+                🩸 血液検査データを記録する
+              </button>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setRecordType('cpx');
+                  setPageMode('new');
+                }}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 click-animate"
+              >
+                🏃 運動負荷試験のデータを記録する
+              </button>
+            </div>
 
             <div className="space-y-4">
-              {bloodDataList.length === 0 ? (
-                <div className="bg-white rounded-lg p-6 text-center text-gray-500">
-                  データがまだ登録されていません
-                </div>
-              ) : (
-                bloodDataList.map((item) => (
-                  <div key={item.id} className="bg-white rounded-lg p-6 shadow-md">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-800">
-                          {new Date(item.testDate).toLocaleDateString('ja-JP')}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          登録日時: {new Date(item.createdAt).toLocaleString('ja-JP')}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-200 click-animate"
-                      >
-                        編集
-                      </button>
-                    </div>
-
-                    {/* 血液データの概要 */}
-                    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                      {item.hbA1c !== null && (
-                        <div>
-                          <span className="text-gray-600">HbA1c:</span>
-                          <span className="font-bold ml-2">{item.hbA1c}%</span>
-                        </div>
-                      )}
-                      {item.totalCholesterol !== null && (
-                        <div>
-                          <span className="text-gray-600">総コレステロール:</span>
-                          <span className="font-bold ml-2">{item.totalCholesterol}mg/dL</span>
-                        </div>
-                      )}
-                      {item.bnp !== null && (
-                        <div>
-                          <span className="text-gray-600">BNP:</span>
-                          <span className="font-bold ml-2">{item.bnp}pg/mL</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* CPX検査の情報 */}
-                    {item.cpxTests && item.cpxTests.length > 0 && (
-                      <div className="text-sm text-gray-600">
-                        <span className="font-bold">運動負荷試験:</span> {item.cpxTests.length}件
-                      </div>
-                    )}
+              {/* 血液検査データ */}
+              <div className="bg-white/60 rounded-lg p-4 border border-orange-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">🩸 血液検査データ</h3>
+                {bloodCards.length === 0 ? (
+                  <div className="bg-white rounded-lg p-6 text-center text-gray-500">
+                    血液検査データがまだ登録されていません
                   </div>
-                ))
-              )}
+                ) : (
+                  <div className="space-y-4">
+                    {bloodCards.map((item) => (
+                      <div key={`blood_${item.id}`} className="bg-white rounded-lg p-6 shadow-md">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-800">
+                              {new Date(item.testDate).toLocaleDateString('ja-JP')}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              登録日時: {new Date(item.createdAt).toLocaleString('ja-JP')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-all duration-200 click-animate text-sm"
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all duration-200 click-animate text-sm"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 代表値サマリ */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          {item.hbA1c !== null && (
+                            <div>
+                              <span className="text-gray-600">HbA1c:</span>
+                              <span className="font-bold ml-2">{item.hbA1c}%</span>
+                            </div>
+                          )}
+                          {item.randomBloodSugar !== null && (
+                            <div>
+                              <span className="text-gray-600">随時血糖:</span>
+                              <span className="font-bold ml-2">{item.randomBloodSugar}mg/dL</span>
+                            </div>
+                          )}
+                          {item.totalCholesterol !== null && (
+                            <div>
+                              <span className="text-gray-600">総コレステロール:</span>
+                              <span className="font-bold ml-2">{item.totalCholesterol}mg/dL</span>
+                            </div>
+                          )}
+                          {item.bnp !== null && (
+                            <div>
+                              <span className="text-gray-600">BNP:</span>
+                              <span className="font-bold ml-2">{item.bnp}pg/mL</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 運動負荷試験（CPX）データ */}
+              <div className="bg-white/60 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">🏃 運動負荷試験データ</h3>
+                {cpxCards.length === 0 ? (
+                  <div className="bg-white rounded-lg p-6 text-center text-gray-500">
+                    運動負荷試験データがまだ登録されていません
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cpxCards.map((cpx, idx) => (
+                      <div
+                        key={`cpx_${cpx.id || `${cpx.bloodDataId}_${cpx.cpxRound}_${idx}`}`}
+                        className="bg-white rounded-lg p-6 shadow-md"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-800">
+                              {cpx.testDate ? new Date(cpx.testDate).toLocaleDateString('ja-JP') : '日付未設定'} / CPX #{cpx.cpxRound}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              登録日時: {new Date(cpx.parentCreatedAt).toLocaleString('ja-JP')}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => openCpxEditByBloodDataId(cpx.bloodDataId)}
+                            className="bg-indigo-500 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-600 transition-all duration-200 click-animate text-sm"
+                          >
+                            編集
+                          </button>
+                          {cpx.id && (
+                            <button
+                              onClick={() => handleDeleteCPX(cpx.id!)}
+                              className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all duration-200 click-animate text-sm"
+                            >
+                              削除
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                          {cpx.loadWeight !== null && <div><span className="text-gray-600">負荷:</span><span className="font-bold ml-2">{cpx.loadWeight}W</span></div>}
+                          {cpx.vo2 !== null && <div><span className="text-gray-600">VO2:</span><span className="font-bold ml-2">{cpx.vo2}</span></div>}
+                          {cpx.mets !== null && <div><span className="text-gray-600">Mets:</span><span className="font-bold ml-2">{cpx.mets}</span></div>}
+                          {cpx.heartRate !== null && <div><span className="text-gray-600">心拍:</span><span className="font-bold ml-2">{cpx.heartRate}bpm</span></div>}
+                          {cpx.systolicBloodPressure !== null && <div><span className="text-gray-600">収縮期血圧:</span><span className="font-bold ml-2">{cpx.systolicBloodPressure}mmHg</span></div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -484,9 +683,38 @@ export default function BloodDataPage() {
         {/* 入力・編集フォーム */}
         {(pageMode === 'new' || pageMode === 'edit') && (
           <div className="bg-white rounded-lg p-6 shadow-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              {pageMode === 'new' ? '血液データ新規登録' : '血液データ編集'}
-            </h2>
+            <div className="flex items-start justify-between gap-3 mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">
+                {pageMode === 'new'
+                  ? ((recordType || 'blood') === 'cpx' ? '運動負荷試験データ新規登録' : '血液検査データ新規登録')
+                  : '血液データ編集'}
+              </h2>
+              <div className="flex items-center gap-2">
+                {pageMode === 'edit' && editingId && (
+                  <button
+                    onClick={() => {
+                      handleDelete(editingId);
+                      resetForm();
+                      setRecordType(null);
+                      setPageMode('list');
+                    }}
+                    className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all duration-200 click-animate text-sm"
+                  >
+                    削除
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    resetForm();
+                    setRecordType(null);
+                    setPageMode('list');
+                  }}
+                  className="text-gray-500 hover:text-gray-700 font-bold"
+                >
+                  ✕ キャンセル
+                </button>
+              </div>
+            </div>
 
             {/* 検査日 */}
             <div className="mb-6">
@@ -500,6 +728,7 @@ export default function BloodDataPage() {
             </div>
 
             {/* 血液検査結果 */}
+            {(recordType || 'blood') !== 'cpx' && (
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">検査結果</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -647,17 +876,13 @@ export default function BloodDataPage() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* 運動負荷試験データ */}
+            {(recordType || 'blood') !== 'blood' && (
             <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-800">運動負荷試験と運動処方の記録</h3>
-                <button
-                  onClick={handleAddCPXRow}
-                  className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition-all duration-200 click-animate text-sm"
-                >
-                  ➕ 追加
-                </button>
               </div>
 
               <div className="space-y-4">
@@ -676,19 +901,11 @@ export default function BloodDataPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {/* 検査日 */}
-                      <div>
-                        <label className="block text-gray-600 text-sm mb-1">検査日</label>
-                        <input
-                          type="date"
-                          value={cpx.testDate}
-                          onChange={(e) => {
-                            const newCpxTests = [...cpxTests];
-                            newCpxTests[index].testDate = e.target.value;
-                            setCpxTests(newCpxTests);
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                        />
+                      {/* 検査日は上の「検査日」を使用（ここは表示のみ） */}
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-gray-600">
+                          検査日: <span className="font-bold text-gray-800">{testDate ? new Date(testDate).toLocaleDateString('ja-JP') : '未入力'}</span>
+                        </p>
                       </div>
 
                       {/* AT1分前 */}
@@ -839,6 +1056,7 @@ export default function BloodDataPage() {
                 ))}
               </div>
             </div>
+            )}
 
             {/* 操作ボタン */}
             <div className="flex gap-3">
