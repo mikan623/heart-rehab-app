@@ -37,6 +37,15 @@ export default function CalendarPage() {
   const month = today.getMonth() + 1;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(''); // 選択された時間
+  const [desktopDateTime, setDesktopDateTime] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${hh}:${mm}`;
+  });
   const [healthRecord, setHealthRecord] = useState({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -97,6 +106,28 @@ export default function CalendarPage() {
     const n = Number(v);
     if (Number.isNaN(n)) return '';
     return n < 0 ? '0' : String(n);
+  };
+
+  const formatDateTimeLocal = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${hh}:${mm}`;
+  };
+
+  const applyDesktopDateTime = (value: string) => {
+    if (!value) return;
+    // datetime-local: YYYY-MM-DDTHH:mm
+    const [datePart, timePart] = value.split('T');
+    if (!datePart) return;
+    const [yy, mo, dd] = datePart.split('-').map(Number);
+    const [hh, mi] = (timePart || '00:00').split(':').map(Number);
+    const newDate = new Date(yy, (mo || 1) - 1, dd || 1, hh || 0, mi || 0);
+    if (Number.isNaN(newDate.getTime())) return;
+    setCurrentMonth(newDate);
+    setDesktopDateTime(value);
   };
 
   // localStorageキーをユーザーIDで個別化
@@ -561,7 +592,7 @@ export default function CalendarPage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold text-orange-800">
               カレンダー
             </h1>
           </div>
@@ -604,9 +635,33 @@ export default function CalendarPage() {
             >
               ←前月
             </button>
-            <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-              📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
-            </h2>
+            <div className="flex-1 flex items-center">
+              {/* 年月は中央寄せ */}
+              <div className="flex-1 flex justify-center">
+                <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                  📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
+                </h2>
+              </div>
+              {/* デスクトップ版：日時変更（右寄せ＝次月ボタン側に寄せる） */}
+              <div className="hidden md:block ml-2 mr-10">
+                <input
+                  type="datetime-local"
+                  value={(() => {
+                    // currentMonthの日付に合わせて、入力値の日付部分だけ同期
+                    try {
+                      const v = desktopDateTime || formatDateTimeLocal(new Date());
+                      const [_, t] = v.split('T');
+                      const d = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(currentMonth.getDate()).padStart(2, '0')}`;
+                      return `${d}T${t || '00:00'}`;
+                    } catch {
+                      return formatDateTimeLocal(new Date());
+                    }
+                  })()}
+                  onChange={(e) => applyDesktopDateTime(e.target.value)}
+                  className="w-[320px] px-6 py-3 text-xl font-bold border-2 border-gray-300 rounded-xl bg-white cursor-pointer"
+                />
+              </div>
+            </div>
             <button
               onClick={goToNextMonth}
               className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-3 md:px-6 rounded-lg font-bold text-base md:text-lg hover:from-orange-600 hover:to-orange-700"

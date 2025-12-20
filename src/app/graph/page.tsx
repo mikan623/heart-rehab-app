@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { HealthRecordIcon, CalendarIcon, GraphIcon, FamilyIcon, TestIcon, SettingsIcon } from "@/components/NavIcons";
+import NavigationBar from "@/components/NavigationBar";
 
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -578,15 +579,16 @@ export default function GraphPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-4 py-3">
-        {/* タイトル */}
-        <div className="max-w-6xl mx-auto mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">グラフ</h1>
-        </div>
-
-        {/* PC版ナビゲーション（右側）*/}
-        <div className="hidden md:block">
-          <div className="max-w-6xl mx-auto flex justify-end">
+      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
+        {/* PC版：横並び（タイトル左・ナビ右） */}
+        <div className="hidden md:flex justify-between items-center">
+          <div className="flex items-center gap-3 flex-1">
+            <h1 className="text-xl font-bold text-orange-800">
+              グラフ
+            </h1>
+          </div>
+          {/* 既存PCナビ */}
+          <div className="flex justify-end">
             <nav className="flex gap-2 pb-3 flex-wrap justify-end">
             <button 
               onClick={() => window.location.href = '/health-records'}
@@ -632,53 +634,19 @@ export default function GraphPage() {
             </button>
             </nav>
           </div>
-          </div>
+        </div>
 
-        {/* スマホ版ナビゲーション（MD未満） */}
-        <nav className="md:hidden flex gap-1 pb-3 overflow-x-auto whitespace-nowrap">
-          <button 
-            onClick={() => window.location.href = '/health-records'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <HealthRecordIcon className="w-5 h-5" />
-            <span className="text-[10px]">健康記録</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/calendar'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <CalendarIcon className="w-5 h-5" />
-            <span className="text-[10px]">カレンダー</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/learn'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <LearnIcon className="w-5 h-5" />
-            <span className="text-[10px]">学ぶ</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/blood-data'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <TestIcon className="w-5 h-5" />
-            <span className="text-[10px]">検査</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/graph'}
-            className="flex flex-col items-center gap-0.5 bg-orange-400 text-white border border-orange-400 py-1 px-2 rounded-lg font-medium text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <GraphIcon className="w-5 h-5" />
-            <span className="text-[10px]">グラフ</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/family'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <FamilyIcon className="w-5 h-5" />
-            <span className="text-[10px]">家族</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/'}
-            className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-            <SettingsIcon className="w-5 h-5" />
-            <span className="text-[10px]">メニュー</span>
-          </button>
-        </nav>
+        {/* スマホ版：縦並び（画像仕様） */}
+        <div className="md:hidden">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-lg font-bold text-orange-800">グラフ</h1>
+          </div>
+          <div className="flex justify-center">
+            <NavigationBar />
+          </div>
+        </div>
+
+        {/* スマホ版ナビは PageHeader 風に統一したため削除 */}
       </header>
 
       {/* 指標タブ - 大きくした */}

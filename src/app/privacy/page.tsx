@@ -8,7 +8,7 @@ export default function PrivacyPage() {
         {/* デスクトップ版：横並び */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold text-orange-800">
               プライバシーポリシー
             </h1>
           </div>

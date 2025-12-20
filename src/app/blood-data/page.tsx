@@ -420,15 +420,18 @@ export default function BloodDataPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm px-4 py-4">
-        {/* タイトル */}
-        <div className="max-w-6xl mx-auto mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">血液検査データ</h1>
-          <p className="text-sm text-gray-600">検査結果を記録・管理します</p>
-        </div>
-
-        {/* PC版ナビゲーション（右側）*/}
-        <div className="hidden md:block">
+      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
+        {/* PC版：横並び（タイトル左・ナビ右） */}
+        <div className="hidden md:flex justify-between items-center">
+          <div className="flex items-center gap-3 flex-1">
+            <div>
+              <h1 className="text-xl font-bold text-orange-800">
+                検査結果記録
+              </h1>
+              <p className="text-xs text-gray-600">血液検査・運動負荷試験を記録</p>
+            </div>
+          </div>
+          {/* 既存PCナビ */}
           <div className="max-w-6xl mx-auto flex justify-end">
             <nav className="flex gap-2 flex-wrap justify-end">
             <button 
@@ -477,51 +480,15 @@ export default function BloodDataPage() {
           </div>
         </div>
 
-        {/* スマホ版ナビゲーション（MD未満） */}
-        <nav className="md:hidden flex gap-1 overflow-x-auto whitespace-nowrap">
-            <button 
-              onClick={() => window.location.href = '/health-records'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <HealthRecordIcon className="w-5 h-5" />
-              <span className="text-[10px]">健康記録</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/calendar'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <CalendarIcon className="w-5 h-5" />
-              <span className="text-[10px]">カレンダー</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/learn'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <LearnIcon className="w-5 h-5" />
-              <span className="text-[10px]">学ぶ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/blood-data'}
-              className="flex flex-col items-center gap-0.5 bg-orange-400 text-white border border-orange-400 py-1 px-2 rounded-lg font-medium text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <TestIcon className="w-5 h-5" />
-              <span className="text-[10px]">検査</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/graph'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <GraphIcon className="w-5 h-5" />
-              <span className="text-[10px]">グラフ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/family'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px]">
-              <FamilyIcon className="w-5 h-5" />
-              <span className="text-[10px]">家族</span>
-            </button>
-            <button 
-              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-[10px] whitespace-nowrap flex-shrink-0 min-w-[44px] relative">
-              <SettingsIcon className="w-5 h-5" />
-              <span className="text-[10px]">メニュー</span>
-            </button>
-        </nav>
+        {/* スマホ版：縦並び（画像仕様） */}
+        <div className="md:hidden">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-lg font-bold text-orange-800">検査結果記録</h1>
+          </div>
+          <div className="flex justify-center">
+            <NavigationBar />
+          </div>
+        </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -648,20 +615,23 @@ export default function BloodDataPage() {
                               登録日時: {new Date(cpx.parentCreatedAt).toLocaleString('ja-JP')}
                             </p>
                           </div>
-                          <button
-                            onClick={() => openCpxEditByBloodDataId(cpx.bloodDataId)}
-                            className="bg-indigo-500 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-600 transition-all duration-200 click-animate text-sm"
-                          >
-                            編集
-                          </button>
-                          {cpx.id && (
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => handleDeleteCPX(cpx.id!)}
-                              className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all duration-200 click-animate text-sm"
+                              onClick={() => openCpxEditByBloodDataId(cpx.bloodDataId)}
+                              className="bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-all duration-200 click-animate text-sm"
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => cpx.id && handleDeleteCPX(cpx.id)}
+                              disabled={!cpx.id}
+                              className={`bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all duration-200 click-animate text-sm ${
+                                !cpx.id ? 'opacity-50 cursor-not-allowed hover:bg-red-500' : ''
+                              }`}
                             >
                               削除
                             </button>
-                          )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">

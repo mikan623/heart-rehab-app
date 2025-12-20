@@ -256,7 +256,7 @@ export default function LandingPage() {
               className="w-full h-full object-contain"
               />
             </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold text-orange-800">
               心臓リハビリ手帳
             </h1>
           </div>

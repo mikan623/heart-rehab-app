@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn } from "@/lib/auth";
+import PageHeader from "@/components/PageHeader";
 
 // LIFF型定義を追加
 declare global {
@@ -180,22 +181,10 @@ export default function LearnPage() {
 
   return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
-        <div className="flex items-center justify-between gap-4 mb-2">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            📚 心臓リハビリを学ぶ
-          </h1>
-          {/* デスクトップ版のナビゲーション */}
-          <div className="hidden md:block">
-            <NavigationBar />
-          </div>
-        </div>
-        {/* スマホ版のナビゲーション */}
-        <div className="md:hidden">
-          <NavigationBar />
-        </div>
-      </header>
+      <PageHeader
+        title="📚 心臓リハビリを学ぶ"
+        mobileTitleClassName="text-lg font-bold text-orange-800"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* ページサブタイトル */}
