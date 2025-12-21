@@ -75,6 +75,9 @@ const MedicalPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [inviteLoadingId, setInviteLoadingId] = useState<string | null>(null);
   const providerId = getCurrentUserId();
+  const [commentTarget, setCommentTarget] = useState<{ recordId: string; patientId: string; date: string; time: string } | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [commentSaving, setCommentSaving] = useState(false);
 
   const handleLogout = () => {
     try {
@@ -216,6 +219,46 @@ const MedicalPage: React.FC = () => {
     } finally {
       setLoadingRecords(false);
       setLoadingBloodData(false);
+    }
+  };
+
+  const openComment = (patientId: string, record: HealthRecord) => {
+    setCommentTarget({ recordId: record.id, patientId, date: record.date, time: record.time });
+    setCommentText('');
+  };
+
+  const submitComment = async () => {
+    if (!providerId || !commentTarget) return;
+    const content = commentText.trim();
+    if (!content) {
+      alert('コメントを入力してください');
+      return;
+    }
+    try {
+      setCommentSaving(true);
+      const res = await fetch('/api/medical/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId,
+          patientId: commentTarget.patientId,
+          healthRecordId: commentTarget.recordId,
+          content,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error || 'コメント送信に失敗しました');
+        return;
+      }
+      alert('コメントを送信しました（利用者のメッセージに届きます）');
+      setCommentTarget(null);
+      setCommentText('');
+    } catch (e) {
+      console.error(e);
+      alert('コメント送信に失敗しました');
+    } finally {
+      setCommentSaving(false);
     }
   };
 
@@ -392,6 +435,15 @@ const MedicalPage: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    <div className="mb-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => selectedPatient && openComment(selectedPatient.userId, record)}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+                      >
+                        コメントする
+                      </button>
+                    </div>
                     <p className="text-gray-800">
                       🩺 血圧: {record.bloodPressure?.systolic}/{record.bloodPressure?.diastolic} mmHg
                     </p>
@@ -539,6 +591,54 @@ const MedicalPage: React.FC = () => {
         </div>
       </div>
       </main>
+
+      {/* コメント投稿モーダル */}
+      {commentTarget && (
+        <div className="fixed inset-0 z-[100] bg-black/30 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-bold text-gray-900">コメントを送る</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  対象: {commentTarget.date} {commentTarget.time}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCommentTarget(null)}
+                className="text-gray-500 hover:text-gray-800 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="例）血圧が高めなので、塩分を少し控えてみましょう。体重は安定しています。"
+              className="mt-4 w-full min-h-[120px] rounded-xl border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCommentTarget(null)}
+                className="flex-1 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                disabled={commentSaving}
+                onClick={submitComment}
+                className="flex-1 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-60"
+              >
+                {commentSaving ? '送信中…' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

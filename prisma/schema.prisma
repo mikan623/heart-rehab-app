@@ -37,6 +37,9 @@ model User {
   // 医療従事者 ↔ 患者 招待（承認）
   providerInvites MedicalInvite[] @relation("ProviderInvites")
   patientInvites  MedicalInvite[] @relation("PatientInvites")
+  // 医療コメント（医療従事者→患者）
+  providerComments MedicalComment[] @relation("ProviderComments")
+  patientComments  MedicalComment[] @relation("PatientComments")
   
   @@map("users")
 }
@@ -95,8 +98,26 @@ model HealthRecord {
   updatedAt             DateTime @updatedAt      @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicalComments MedicalComment[]
   
   @@map("health_records")
+}
+
+model MedicalComment {
+  id            String   @id @default(cuid())
+  providerId    String
+  patientId     String
+  healthRecordId String
+  content       String   @db.Text
+  createdAt     DateTime @default(now())
+
+  provider    User        @relation("ProviderComments", fields: [providerId], references: [id], onDelete: Cascade)
+  patient     User        @relation("PatientComments", fields: [patientId], references: [id], onDelete: Cascade)
+  healthRecord HealthRecord @relation(fields: [healthRecordId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt])
+  @@index([providerId, createdAt])
+  @@map("medical_comments")
 }
 
 model FamilyMember {

@@ -20,41 +20,69 @@ interface InviteItem {
   };
 }
 
+interface CommentItem {
+  id: string;
+  content: string;
+  createdAt: string;
+  provider: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  healthRecord: {
+    id: string;
+    date: string;
+    time: string;
+  };
+}
+
 export default function MessagesPage() {
   const userId = useMemo(() => getCurrentUserId(), []);
   const [invites, setInvites] = useState<InviteItem[]>([]);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const fetchInvites = async () => {
+  const fetchAll = async () => {
     try {
       setError(null);
       setLoading(true);
       if (!userId) {
         setInvites([]);
+        setComments([]);
         setLoading(false);
         return;
       }
-      const res = await fetch(`/api/patient/invites?patientId=${encodeURIComponent(userId)}`);
-      const data = await res.json();
-      if (!res.ok) {
+      const [invRes, cRes] = await Promise.all([
+        fetch(`/api/patient/invites?patientId=${encodeURIComponent(userId)}`),
+        fetch(`/api/patient/comments?patientId=${encodeURIComponent(userId)}`),
+      ]);
+      const [invData, cData] = await Promise.all([invRes.json(), cRes.json()]);
+      if (!invRes.ok) {
         setInvites([]);
-        setError(data?.error || '招待の取得に失敗しました');
-        return;
+        setError(invData?.error || '招待の取得に失敗しました');
+      } else {
+        setInvites(invData?.invites || []);
       }
-      setInvites(data?.invites || []);
+      if (!cRes.ok) {
+        setComments([]);
+        setError((prev) => prev || cData?.error || 'コメント通知の取得に失敗しました');
+      } else {
+        setComments(cData?.comments || []);
+      }
     } catch (e) {
       console.error(e);
-      setError('招待の取得に失敗しました');
+      setError('メッセージの取得に失敗しました');
       setInvites([]);
+      setComments([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInvites();
+    fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -73,7 +101,7 @@ export default function MessagesPage() {
         setError(data?.error || '操作に失敗しました');
         return;
       }
-      await fetchInvites();
+      await fetchAll();
     } catch (e) {
       console.error(e);
       setError('操作に失敗しました');
@@ -90,6 +118,43 @@ export default function MessagesPage() {
       <PageHeader title="メッセージ" />
 
       <main className="max-w-3xl mx-auto p-4 pb-28">
+        {/* コメント通知 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-200 p-4 mb-4">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">医療従事者からのコメント</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            健康記録に対して医療従事者が記載したコメントが届きます。
+          </p>
+
+          {loading ? (
+            <div className="text-gray-600">読み込み中...</div>
+          ) : comments.length === 0 ? (
+            <div className="text-gray-600">コメントはありません。</div>
+          ) : (
+            <div className="space-y-3">
+              {comments.map((c) => (
+                <div key={c.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-gray-800 truncate">
+                        {c.provider?.name || c.provider?.email || '医療従事者'}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        対象: {c.healthRecord.date} {c.healthRecord.time} / 受信: {new Date(c.createdAt).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
+                      コメント
+                    </span>
+                  </div>
+                  <div className="mt-3 whitespace-pre-wrap text-sm text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                    {c.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="bg-white rounded-2xl shadow-sm border border-orange-200 p-4">
           <h2 className="text-lg font-bold text-gray-800 mb-1">医療従事者からの招待</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -107,7 +172,7 @@ export default function MessagesPage() {
           ) : (
             <>
               {pendingInvites.length === 0 && otherInvites.length === 0 && (
-                <div className="text-gray-600">メッセージはありません。</div>
+                <div className="text-gray-600">招待はありません。</div>
               )}
 
               {pendingInvites.length > 0 && (
