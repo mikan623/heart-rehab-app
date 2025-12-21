@@ -48,16 +48,27 @@ export async function POST(request: NextRequest) {
       // 既存ユーザーの場合は、メールアドレスを更新（authType は更新しない）
       console.log('🔄 既存ユーザー更新:', userId);
       
-      // メールアドレスが未設定の場合のみ更新（roleは変更しない）
-      if (!user.email || user.email.includes('@line.local') || user.email.includes('@example.com')) {
+      const shouldUpdateEmail =
+        !user.email || user.email.includes('@line.local') || user.email.includes('@example.com');
+      const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
+      const shouldUpdateRole =
+        !!requestedRole && ((user as any).role === 'medical' || (user as any).role === 'patient')
+          ? (user as any).role !== requestedRole
+          : !!requestedRole;
+
+      if (shouldUpdateEmail || shouldUpdateRole) {
         user = await prisma.user.update({
           where: { id: userId },
           data: {
-            email: email || user.email,
-            name: displayName || user.name,
+            ...(shouldUpdateEmail
+              ? {
+                  email: email || user.email,
+                  name: displayName || user.name,
+                }
+              : {}),
+            ...(shouldUpdateRole ? { role: requestedRole } : {}),
             // ⚠️ authType は変更しない（既存の認証タイプを保持）
-            // ⚠️ role も変更しない（既存のロールを保持）
-          }
+          },
         });
         console.log('✅ 既存ユーザーを更新:', user.id);
       }

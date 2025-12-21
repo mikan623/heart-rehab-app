@@ -57,17 +57,11 @@ export async function POST(request: NextRequest) {
     // ローカルストレージに保存するセッション情報
     const sessionToken = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
 
-    // ロールはDB側の値を優先（初回だけ選択ロールを反映）
-    // ※ role を使ってユーザーが勝手に医療従事者へ昇格できないようにするため
-    let effectiveRole = user.role || 'patient';
-    if ((effectiveRole === 'patient' || effectiveRole === 'medical') === false) {
-      effectiveRole = 'patient';
-    }
+    // ロールは「トップで選択した値」をSupabaseへ保存して永続化する
+    // （患者/医療の切り替えが要件のため、ログイン成功時にDBを更新する）
     const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
-    if (requestedRole && (!user.role || user.role === 'patient') && requestedRole === 'medical' && user.role !== 'medical') {
-      // 既にpatientのユーザーをmedicalに勝手に変更しない
-    } else if (requestedRole && !user.role) {
-      // roleカラム導入直後などで未設定の場合は初回だけ保存
+    let effectiveRole: 'patient' | 'medical' = user.role === 'medical' ? 'medical' : 'patient';
+    if (requestedRole && requestedRole !== effectiveRole) {
       await prisma.user.update({ where: { id: user.id }, data: { role: requestedRole } });
       effectiveRole = requestedRole;
     }
