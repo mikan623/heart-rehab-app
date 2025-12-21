@@ -83,6 +83,21 @@ export default function CalendarPage() {
     return [];
   };
 
+  const formatMealText = (meal: any) => {
+    if (!meal) return '';
+    const staple = convertStringToArray(meal.staple).filter(Boolean).join('、');
+    const mainDish = convertStringToArray(meal.mainDish).filter(Boolean).join('、');
+    const sideDish = convertStringToArray(meal.sideDish).filter(Boolean).join('、');
+    const other = typeof meal.other === 'string' ? meal.other.trim() : '';
+
+    const parts: string[] = [];
+    if (staple) parts.push(`主食: ${staple}`);
+    if (mainDish) parts.push(`主菜: ${mainDish}`);
+    if (sideDish) parts.push(`副菜: ${sideDish}`);
+    if (other) parts.push(`その他: ${other}`);
+    return parts.join(' / ');
+  };
+
   // 食事選択のハンドラー関数
   const handleMealChange = (category: 'staple' | 'mainDish' | 'sideDish', item: string, checked: boolean, record: any) => {
     const currentMeal = record.meal || { staple: [], mainDish: [], sideDish: [], other: '' };
@@ -507,6 +522,50 @@ export default function CalendarPage() {
     }
   };
 
+  // 記録削除（日付＋時間で1件削除）
+  const deleteRecordByDateTime = async (date: string, time: string) => {
+    const ok = window.confirm(`${date} ${formatTime24h(time)} の記録を削除しますか？`);
+    if (!ok) return;
+
+    try {
+      const currentUserId = user?.userId || 'user-1';
+
+      // UIを即時反映
+      setSavedRecords((prev) => {
+        const day = { ...(prev[date] || {}) };
+        delete day[time];
+        const next = { ...prev };
+        if (Object.keys(day).length === 0) {
+          delete next[date];
+        } else {
+          next[date] = day;
+        }
+        return next;
+      });
+
+      // DBから削除
+      const res = await fetch(
+        `/api/health-records?userId=${encodeURIComponent(currentUserId)}&date=${encodeURIComponent(
+          date
+        )}&time=${encodeURIComponent(time)}`,
+        { method: 'DELETE' }
+      );
+
+      if (res.ok) {
+        await fetchHealthRecords(currentUserId);
+        alert('記録を削除しました');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || '削除に失敗しました');
+      }
+
+      setEditingRecord(null);
+      setShowDetail(false);
+    } catch (e) {
+      console.error('❌ カレンダー: 削除エラー:', e);
+      alert('削除に失敗しました');
+    }
+  };
 
   const handleDateClick = (date: Date) => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -817,6 +876,12 @@ export default function CalendarPage() {
                               className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 click-press"
                             >
                               編集
+                            </button>
+                            <button
+                              onClick={() => deleteRecordByDateTime(selectedDate, time)}
+                              className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 click-press"
+                            >
+                              削除
                             </button>
                           </div>
                         </div>
@@ -1208,6 +1273,13 @@ export default function CalendarPage() {
                         {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '保存済' : '💾 保存'}
                       </button>
                       <button
+                        onClick={() => deleteRecordByDateTime(editingRecord.date, editingRecord.time)}
+                        disabled={saveStatus === 'saving'}
+                        className="flex-1 bg-red-500 text-white py-4 px-4 rounded-lg hover:bg-red-600 font-bold text-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        🗑️ 削除
+                      </button>
+                      <button
                         onClick={cancelEditing}
                         className="flex-1 bg-gray-400 text-white py-4 px-4 rounded-lg hover:bg-gray-500 font-bold text-xl transition-all"
                       >
@@ -1257,6 +1329,9 @@ export default function CalendarPage() {
                         {record.exercise?.type && (
                           <p><strong>運動:</strong> {record.exercise.type} ({record.exercise.duration}分)</p>
                         )}
+                        <p className="col-span-full">
+                          <strong>食事:</strong> {formatMealText(record.meal) || '-'}
+                        </p>
                         {record.dailyLife && (
                           <p className="col-span-full"><strong>症状など:</strong> {record.dailyLife}</p>
                         )}

@@ -4,14 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import NavigationBar from '@/components/NavigationBar';
 import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
-import { HealthRecordIcon, CalendarIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from '@/components/NavIcons';
+// （デスクトップナビは NavigationBar に統一）
 
-// 学ぶアイコン
-const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2L2 7V12C2 16.55 3.84 20.74 6.78 23.9C7.94 25.08 9.23 26.01 10.58 26.72C11.04 26.97 11.51 27.19 12 27.38C12.49 27.19 12.96 26.97 13.42 26.72C14.77 26.01 16.06 25.08 17.22 23.9C20.16 20.74 22 16.55 22 12V7L12 2M12 4.18L20 7.5V12C20 16.88 18.72 21.24 16.54 24.8C15.84 25.56 15.09 26.25 14.3 26.87C13.41 26.47 12.56 25.97 11.76 25.38C10.97 24.8 10.25 24.12 9.59 23.4C7.78 21.08 6.54 18.16 6.05 15H12V13H6.05V12C6.05 9.85 6.58 7.82 7.51 6.06C8.45 4.29 9.74 2.84 11.25 1.84V4.18H12Z" />
-  </svg>
-);
+// （デスクトップナビは NavigationBar に統一）
 
 interface BloodValues {
   hbA1c: number | null;
@@ -67,7 +62,6 @@ export default function BloodDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [bloodDataList, setBloodDataList] = useState<BloodData[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   // ページモード: 'list' | 'new' | 'edit'
   const [pageMode, setPageMode] = useState<'list' | 'new' | 'edit'>('list');
@@ -427,53 +421,7 @@ export default function BloodDataPage() {
               <p className="text-xs text-gray-600">血液検査・運動負荷試験を記録</p>
             </div>
           </div>
-          {/* 既存PCナビ */}
-          <div className="max-w-6xl mx-auto flex justify-end">
-            <nav className="flex gap-2 flex-wrap justify-end">
-            <button 
-              onClick={() => window.location.href = '/health-records'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <HealthRecordIcon className="w-5 h-5" />
-              <span className="text-[10px]">健康記録</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/calendar'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <CalendarIcon className="w-5 h-5" />
-              <span className="text-[10px]">カレンダー</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/learn'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <LearnIcon className="w-5 h-5" />
-              <span className="text-[10px]">学ぶ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/blood-data'}
-              className="flex flex-col items-center gap-0.5 bg-orange-400 text-white border border-orange-400 py-1 px-2 rounded-lg font-medium text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <TestIcon className="w-5 h-5" />
-              <span className="text-[10px]">検査</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/graph'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <GraphIcon className="w-5 h-5" />
-              <span className="text-[10px]">グラフ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/family'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <FamilyIcon className="w-5 h-5" />
-              <span className="text-[10px]">家族</span>
-            </button>
-            <button 
-              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px] relative">
-              <SettingsIcon className="w-5 h-5" />
-              <span className="text-[10px]">メニュー</span>
-            </button>
-            </nav>
-          </div>
+          <NavigationBar />
         </div>
 
         {/* スマホ版：縦並び（画像仕様） */}

@@ -2,15 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
-import { HealthRecordIcon, CalendarIcon, GraphIcon, FamilyIcon, TestIcon, SettingsIcon } from "@/components/NavIcons";
 import NavigationBar from "@/components/NavigationBar";
 
-// 学ぶアイコン
-const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2L2 7V12C2 16.55 3.84 20.74 6.78 23.9C7.94 25.08 9.23 26.01 10.58 26.72C11.04 26.97 11.51 27.19 12 27.38C12.49 27.19 12.96 26.97 13.42 26.72C14.77 26.01 16.06 25.08 17.22 23.9C20.16 20.74 22 16.55 22 12V7L12 2M12 4.18L20 7.5V12C20 16.88 18.72 21.24 16.54 24.8C15.84 25.56 15.09 26.25 14.3 26.87C13.41 26.47 12.56 25.97 11.76 25.38C10.97 24.8 10.25 24.12 9.59 23.4C7.78 21.08 6.54 18.16 6.05 15H12V13H6.05V12C6.05 9.85 6.58 7.82 7.51 6.06C8.45 4.29 9.74 2.84 11.25 1.84V4.18H12Z" />
-  </svg>
-);
+// （デスクトップナビは NavigationBar に統一）
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -585,55 +579,9 @@ export default function GraphPage() {
           <div className="flex items-center gap-3 flex-1">
             <h1 className="text-xl font-bold text-orange-800">
               グラフ
-            </h1>
+          </h1>
           </div>
-          {/* 既存PCナビ */}
-          <div className="flex justify-end">
-            <nav className="flex gap-2 pb-3 flex-wrap justify-end">
-            <button 
-              onClick={() => window.location.href = '/health-records'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <HealthRecordIcon className="w-5 h-5" />
-              <span className="text-[10px]">健康記録</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/calendar'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <CalendarIcon className="w-5 h-5" />
-              <span className="text-[10px]">カレンダー</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/learn'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <LearnIcon className="w-5 h-5" />
-              <span className="text-[10px]">学ぶ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/blood-data'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <TestIcon className="w-5 h-5" />
-              <span className="text-[10px]">検査</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/graph'}
-              className="flex flex-col items-center gap-0.5 bg-orange-400 text-white border border-orange-400 py-1 px-2 rounded-lg font-medium text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <GraphIcon className="w-5 h-5" />
-              <span className="text-[10px]">グラフ</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/family'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <FamilyIcon className="w-5 h-5" />
-              <span className="text-[10px]">家族</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[50px]">
-              <SettingsIcon className="w-5 h-5" />
-              <span className="text-[10px]">メニュー</span>
-            </button>
-            </nav>
-          </div>
+          <NavigationBar />
         </div>
 
         {/* スマホ版：縦並び（画像仕様） */}
@@ -699,14 +647,14 @@ export default function GraphPage() {
               >
                 ↻ 最新
               </button>
+              </div>
             </div>
-          </div>
 
           {/* スマホはボタンの下に週ラベル */}
           <div className="md:hidden mt-2 text-center text-lg font-bold text-gray-800">
             {weekLabel}
-          </div>
-        </div>
+              </div>
+            </div>
           </div>
           
       {/* メインコンテンツ */}
@@ -730,7 +678,7 @@ export default function GraphPage() {
               目標体重：{targetWeight !== null ? `${targetWeight} kg` : '未設定'}
             </p>
           )}
-                    </div>
+        </div>
 
         {/* グラフ */}
         {(lineChartData || emptyLineData) && (
@@ -741,16 +689,16 @@ export default function GraphPage() {
                 data={(lineChartData || emptyLineData) as any}
                 options={chartOptions as any}
                 plugins={[normalRangePlugin as any]}
-              />
-                  </div>
-                </div>
+                />
+              </div>
+            </div>
         )}
 
         {/* 健康記録一覧 */}
         <div className="bg-white rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-800">記録一覧</h3>
-              </div>
+                    </div>
 
           {(weekData?.points ?? []).map((p, idx) => {
             const dayRecord = savedRecords[p.date];
@@ -777,12 +725,12 @@ export default function GraphPage() {
                   )}
                   {activeMetric === 'weight' && (
                     <p className="text-xl font-bold text-purple-600">{record.weight} kg</p>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
             );
           })}
-        </div>
+              </div>
       </main>
     </div>
   );

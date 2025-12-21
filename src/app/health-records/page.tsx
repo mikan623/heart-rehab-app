@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"; 
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { getCurrentUserId, getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -31,6 +31,38 @@ interface HealthRecord {
   dailyLife: string;
   medicationTaken?: boolean;
 }
+
+type PrintBloodData = {
+  id: string;
+  testDate: string;
+  hbA1c: number | null;
+  randomBloodSugar: number | null;
+  totalCholesterol: number | null;
+  triglycerides: number | null;
+  hdlCholesterol: number | null;
+  ldlCholesterol: number | null;
+  bun: number | null;
+  creatinine: number | null;
+  uricAcid: number | null;
+  hemoglobin: number | null;
+  bnp: number | null;
+  cpxTests?: PrintCPXTest[];
+};
+
+type PrintCPXTest = {
+  id: string;
+  testDate: string;
+  cpxRound: number;
+  atOneMinBefore: number | null;
+  atDuring: number | null;
+  maxLoad: number | null;
+  loadWeight: number | null;
+  vo2: number | null;
+  mets: number | null;
+  heartRate: number | null;
+  systolicBloodPressure: number | null;
+  findings: string | null;
+};
 
 // LIFFの型定義を追加
 declare global {
@@ -78,6 +110,8 @@ export default function Home() {
   });
   const [printCreatedDate, setPrintCreatedDate] = useState('');
   const [printTableRows, setPrintTableRows] = useState<React.ReactNode[]>([]);
+  const [printBloodDataList, setPrintBloodDataList] = useState<PrintBloodData[]>([]);
+  const [printBloodDataStatus, setPrintBloodDataStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [healthRecord, setHealthRecord] = useState({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -123,7 +157,7 @@ export default function Home() {
 
     setIsAuthenticated(true);
   }, [router]);
-
+  
   // ハイドレーション対策: クライアント側で作成日とテーブルデータを設定
   useEffect(() => {
     setPrintCreatedDate(new Date().toLocaleString('ja-JP'));
@@ -155,6 +189,34 @@ export default function Home() {
       setPrintTableRows([<tr key="error"><td className="border border-gray-400 p-2" colSpan={9}>データ取得エラー</td></tr>]);
     }
   }, []);
+
+  // PDF印刷用：血液検査/CPXデータも取得
+  useEffect(() => {
+    const fetchBloodDataForPrint = async () => {
+      if (!isAuthenticated) return;
+      const userId = getCurrentUserId();
+      if (!userId) return;
+
+      try {
+        setPrintBloodDataStatus('loading');
+        const res = await fetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) {
+          setPrintBloodDataList([]);
+          setPrintBloodDataStatus('error');
+          return;
+        }
+        const data = await res.json();
+        setPrintBloodDataList(Array.isArray(data) ? data : []);
+        setPrintBloodDataStatus('loaded');
+      } catch (e) {
+        console.error('❌ PDF印刷: 血液検査データ取得エラー:', e);
+        setPrintBloodDataList([]);
+        setPrintBloodDataStatus('error');
+      }
+    };
+
+    fetchBloodDataForPrint();
+  }, [isAuthenticated]);
   
   // 健康記録の型定義を追加
   interface HealthRecord {
@@ -227,35 +289,7 @@ export default function Home() {
     return n < 0 ? '0' : String(n);
   };
 
-  // 現在入力中の記録をテキストにまとめる（AI用）
-  const buildRecordTextForAI = () => {
-    const [datePart, timePart] = selectedDateTime.split('T');
-    const timeDisplay = timePart ? timePart.slice(0, 5) : '';
-
-    return [
-      `日付: ${datePart || ''}`,
-      `時間: ${timeDisplay}`,
-      `収縮期血圧(上): ${healthRecord.bloodPressure.systolic || '-'} mmHg`,
-      `拡張期血圧(下): ${healthRecord.bloodPressure.diastolic || '-'} mmHg`,
-      `脈拍: ${healthRecord.pulse || '-'} 回/分`,
-      `体重: ${healthRecord.weight || '-'} kg`,
-      `運動: ${healthRecord.exercise.type || '-'} / ${healthRecord.exercise.duration || '-'} 分`,
-      `食事: 主食 ${healthRecord.meal.staple.join(', ') || '-'} / 主菜 ${healthRecord.meal.mainDish.join(', ') || '-'} / 副菜 ${healthRecord.meal.sideDish.join(', ') || '-'} / その他 ${healthRecord.meal.other || '-'}`,
-      `服薬: ${healthRecord.medicationTaken ? '飲んだ' : '未入力'}`,
-      (() => {
-        if (!healthRecord.dailyLife) return '';
-        const symptomsMatch = healthRecord.dailyLife.match(/【症状】([^【]*)/);
-        const memoMatch = healthRecord.dailyLife.match(/【メモ】(.*)/);
-        const symptoms = symptomsMatch ? symptomsMatch[1].trim() : '';
-        const memo = memoMatch ? memoMatch[1].trim() : '';
-        
-        const parts = [];
-        if (symptoms) parts.push(`自覚症状: ${symptoms}`);
-        if (memo) parts.push(`その他: ${memo}`);
-        return parts.join('\n');
-      })(),
-    ].join('\n');
-  };
+  // （AIアドバイス機能は廃止）
 
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
@@ -1004,6 +1038,15 @@ export default function Home() {
   }
   `;
 
+  // 食事内容が「何か1つでも」入力されているか（配列チェック or その他テキスト）
+  const hasMealInput = (() => {
+    const meal = (healthRecord as any)?.meal;
+    const hasArray = (v: any) => Array.isArray(v) && v.filter(Boolean).length > 0;
+    const other =
+      typeof meal?.other === 'string' ? meal.other.trim().length > 0 : Boolean(meal?.other);
+    return hasArray(meal?.staple) || hasArray(meal?.mainDish) || hasArray(meal?.sideDish) || other;
+  })();
+
   return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル追加 */}
@@ -1187,21 +1230,7 @@ export default function Home() {
                 🍽️ 食事内容
               </span>
               <span className="text-base md:text-xl font-semibold text-gray-700">
-                {Array.isArray((healthRecord as any)?.meal?.staple) &&
-                (healthRecord as any).meal.staple.length
-                  ? true
-                  : false ||
-                    (Array.isArray((healthRecord as any)?.meal?.mainDish) &&
-                      (healthRecord as any).meal.mainDish.length
-                      ? true
-                      : false) ||
-                    (Array.isArray((healthRecord as any)?.meal?.sideDish) &&
-                      (healthRecord as any).meal.sideDish.length
-                      ? true
-                      : false) ||
-                    (healthRecord as any)?.meal?.other
-                  ? '入力済み'
-                  : '未入力'}
+                {hasMealInput ? '記入済' : '未入力'}
               </span>
             </button>
 
@@ -1253,62 +1282,62 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-lg font-semibold text-gray-700 mb-3">
-                      収縮期（上）
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      onKeyDown={blockInvalidKeys}
-                      value={healthRecord?.bloodPressure?.systolic || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setHealthRecord({
-                            ...healthRecord,
-                            bloodPressure: {
-                              ...healthRecord?.bloodPressure,
-                              systolic: value
-                            }
-                          });
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  収縮期（上）
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidKeys}
+                  value={healthRecord?.bloodPressure?.systolic || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setHealthRecord({
+                        ...healthRecord,
+                        bloodPressure: {
+                          ...healthRecord?.bloodPressure,
+                          systolic: value
                         }
-                      }}
-                      placeholder="0"
-                      className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                      });
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
                       style={{ WebkitAppearance: 'textfield' as any }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-lg font-semibold text-gray-700 mb-3">
-                      拡張期（下）
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      onKeyDown={blockInvalidKeys}
-                      value={healthRecord?.bloodPressure?.diastolic || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setHealthRecord({
-                            ...healthRecord,
-                            bloodPressure: {
-                              ...healthRecord?.bloodPressure,
-                              diastolic: value
-                            }
-                          });
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  拡張期（下）
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidKeys}
+                  value={healthRecord?.bloodPressure?.diastolic || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setHealthRecord({
+                        ...healthRecord,
+                        bloodPressure: {
+                          ...healthRecord?.bloodPressure,
+                          diastolic: value
                         }
-                      }}
-                      placeholder="0"
-                      className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                      });
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
                       style={{ WebkitAppearance: 'textfield' as any }}
-                    />
-                  </div>
-                </div>
+                />
+              </div>
+            </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1316,7 +1345,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1341,33 +1370,33 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  脈拍数
-                </label>
-                <div className="flex items-end gap-4">
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    onKeyDown={blockInvalidKeys}
-                    value={healthRecord?.pulse || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                        setHealthRecord({
-                          ...healthRecord,
-                          pulse: value
-                        });
-                      }
-                    }}
-                    placeholder="0"
-                    className="w-full px-4 py-3 text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
+            <label className="block text-lg font-semibold text-gray-700 mb-3">
+              脈拍数
+            </label>
+            <div className="flex items-end gap-4">
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                onKeyDown={blockInvalidKeys}
+                value={healthRecord?.pulse || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    setHealthRecord({
+                      ...healthRecord,
+                      pulse: value
+                    });
+                  }
+                }}
+                placeholder="0"
+                className="w-full px-4 py-3 text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
                     style={{ WebkitAppearance: 'textfield' as any }}
-                  />
+              />
                   <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">
                     回/分
                   </span>
-                </div>
+            </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1375,7 +1404,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1400,33 +1429,33 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <label className="block text-lg font-semibold text-gray-700 mb-3">
-                  体重
-                </label>
-                <div className="flex items-end gap-4">
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      onKeyDown={blockInvalidKeys}
-                      value={healthRecord?.weight || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setHealthRecord({
-                            ...healthRecord,
-                            weight: value
-                          });
-                        }
-                      }}
-                      placeholder="0"
-                      className="w-full px-4 py-3 text-xl border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 placeholder:text-gray-400"
+            <label className="block text-lg font-semibold text-gray-700 mb-3">
+              体重
+            </label>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidKeys}
+                  value={healthRecord?.weight || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setHealthRecord({
+                        ...healthRecord,
+                        weight: value
+                      });
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full px-4 py-3 text-xl border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 placeholder:text-gray-400"
                       style={{ WebkitAppearance: 'textfield' as any }}
-                    />
-                  </div>
-                  <span className="text-xl text-gray-600 font-semibold">kg</span>
-                </div>
+                />
+              </div>
+              <span className="text-xl text-gray-600 font-semibold">kg</span>
+            </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1434,7 +1463,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1459,65 +1488,65 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-lg font-semibold text-gray-700 mb-3">
-                      運動の種類
-                    </label>
-                    <select
-                      value={healthRecord?.exercise?.type || ''}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  運動の種類
+                </label>
+                <select
+                  value={healthRecord?.exercise?.type || ''}
                       onChange={(e) =>
                         setHealthRecord({
-                          ...healthRecord,
-                          exercise: {
-                            ...healthRecord?.exercise,
-                            type: e.target.value
-                          }
+                    ...healthRecord,
+                    exercise: {
+                      ...healthRecord?.exercise,
+                      type: e.target.value
+                    }
                         })
                       }
-                      className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
-                    >
-                      <option value="">選択してください</option>
-                      <option value="歩行">歩行</option>
-                      <option value="ランニング">ランニング</option>
-                      <option value="自転車">自転車</option>
-                      <option value="筋トレ">筋トレ</option>
-                      <option value="その他">その他</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-lg font-semibold text-gray-700 mb-3">
-                      運動時間
-                    </label>
-                    <div className="flex items-end gap-4">
-                      <div className="flex-1">
-                        <input
-                          type="number"
-                          min={0}
-                          inputMode="numeric"
-                          onKeyDown={blockInvalidKeys}
-                          value={healthRecord?.exercise?.duration || ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                              setHealthRecord({
-                                ...healthRecord,
-                                exercise: {
-                                  ...healthRecord?.exercise,
-                                  duration: value
-                                }
-                              });
+                  className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
+                >
+                  <option value="">選択してください</option>
+                  <option value="歩行">歩行</option>
+                  <option value="ランニング">ランニング</option>
+                  <option value="自転車">自転車</option>
+                  <option value="筋トレ">筋トレ</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  運動時間
+                </label>
+                <div className="flex items-end gap-4">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      onKeyDown={blockInvalidKeys}
+                      value={healthRecord?.exercise?.duration || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                          setHealthRecord({
+                            ...healthRecord,
+                            exercise: {
+                              ...healthRecord?.exercise,
+                              duration: value
                             }
-                          }}
-                          placeholder="0"
-                          className="w-full px-4 py-3 text-xl border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 placeholder:text-gray-400"
+                          });
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-full px-4 py-3 text-xl border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 placeholder:text-gray-400"
                           style={{ WebkitAppearance: 'textfield' as any }}
-                        />
-                      </div>
-                      <span className="text-xl text-gray-600 font-semibold">分</span>
-                    </div>
+                    />
                   </div>
+                  <span className="text-xl text-gray-600 font-semibold">分</span>
                 </div>
+              </div>
+            </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1525,7 +1554,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1552,84 +1581,84 @@ export default function Home() {
                 </div>
                 {/* 主食・主菜・副菜をスマホでも横並びにする */}
                 <div className="grid grid-cols-3 gap-4 md:gap-6 mb-6">
-                  {/* 主食 */}
-                  <div>
+              {/* 主食 */}
+              <div>
                     <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
                       主食
                     </label>
-                    <div className="space-y-1 md:space-y-4">
+                <div className="space-y-1 md:space-y-4">
                       {['ごはん', 'パン', 'めん', 'いも類'].map((item) => (
                         <label
                           key={item}
                           className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
+                      <input
+                        type="checkbox"
                             checked={convertStringToArray(healthRecord?.meal?.staple).includes(
                               item
                             )}
-                            onChange={(e) => handleMealChange('staple', item, e.target.checked)}
-                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                          />
-                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                        onChange={(e) => handleMealChange('staple', item, e.target.checked)}
+                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-                  {/* 主菜 */}
-                  <div>
+              {/* 主菜 */}
+              <div>
                     <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
                       主菜
                     </label>
-                    <div className="space-y-1 md:space-y-4">
+                <div className="space-y-1 md:space-y-4">
                       {['魚', '肉', '卵'].map((item) => (
                         <label
                           key={item}
                           className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
+                      <input
+                        type="checkbox"
                             checked={convertStringToArray(healthRecord?.meal?.mainDish).includes(
                               item
                             )}
-                            onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
-                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                          />
-                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                        onChange={(e) => handleMealChange('mainDish', item, e.target.checked)}
+                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-                  {/* 副菜 */}
-                  <div>
+              {/* 副菜 */}
+              <div>
                     <label className="block text-xl md:text-2xl font-semibold text-gray-700 mb-2 md:mb-4">
                       副菜
                     </label>
-                    <div className="space-y-1 md:space-y-4">
+                <div className="space-y-1 md:space-y-4">
                       {['野菜', '海藻', 'きのこ', '汁物', '漬物'].map((item) => (
                         <label
                           key={item}
                           className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
+                      <input
+                        type="checkbox"
                             checked={convertStringToArray(healthRecord?.meal?.sideDish).includes(
                               item
                             )}
-                            onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
-                            className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                          />
-                          <span className="text-xl md:text-xl text-gray-700">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                        onChange={(e) => handleMealChange('sideDish', item, e.target.checked)}
+                        className="w-4 h-4 md:w-7 md:h-7 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-xl md:text-xl text-gray-700">{item}</span>
+                    </label>
+                  ))}
                 </div>
+              </div>
+            </div>
 
-                {/* その他 */}
-                <div>
+            {/* その他 */}
+            <div>
                   <div className="flex items-center gap-2 mb-3">
                     <label className="block text-lg font-semibold text-gray-700">
                       その他
@@ -1642,22 +1671,22 @@ export default function Home() {
                       ?
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    value={healthRecord?.meal?.other || ''}
+              <input
+                type="text"
+                value={healthRecord?.meal?.other || ''}
                     onChange={(e) =>
                       setHealthRecord({
-                        ...healthRecord,
-                        meal: {
-                          ...healthRecord.meal,
-                          other: e.target.value
-                        }
+                  ...healthRecord,
+                  meal: {
+                    ...healthRecord.meal,
+                    other: e.target.value
+                  }
                       })
                     }
-                    placeholder="果物、乳製品など"
-                    className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500 placeholder:text-gray-400"
-                  />
-                </div>
+                placeholder="果物、乳製品など"
+                className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500 placeholder:text-gray-400"
+              />
+            </div>
 
                 <div className="mt-6 flex justify-end">
                   <button
@@ -1666,7 +1695,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1691,20 +1720,20 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-                <label className="flex items-center space-x-4 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50">
-                  <input
-                    type="checkbox"
-                    checked={healthRecord?.medicationTaken || false}
+            <label className="flex items-center space-x-4 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50">
+              <input
+                type="checkbox"
+                checked={healthRecord?.medicationTaken || false}
                     onChange={(e) =>
                       setHealthRecord({
-                        ...healthRecord,
-                        medicationTaken: e.target.checked
+                  ...healthRecord,
+                  medicationTaken: e.target.checked
                       })
                     }
-                    className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span className="text-xl text-gray-700">今、薬飲みました</span>
-                </label>
+                className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+              />
+              <span className="text-xl text-gray-700">今、薬飲みました</span>
+            </label>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}
@@ -1712,7 +1741,7 @@ export default function Home() {
                   >
                     閉じる
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -1740,9 +1769,9 @@ export default function Home() {
 
                 {/* 自覚症状チェックボックス */}
                 <div className="mb-6">
-                  <label className="block text-lg font-semibold text-gray-700 mb-3">
+            <label className="block text-lg font-semibold text-gray-700 mb-3">
                     自覚症状をチェック
-                  </label>
+            </label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {['浮腫', '動悸', '息切れ'].map((symptom) => {
                       // 【症状】セクションから症状を抽出
@@ -1786,7 +1815,7 @@ export default function Home() {
                               }
                               
                               setHealthRecord({
-                                ...healthRecord,
+                ...healthRecord,
                                 dailyLife: updated.trim()
                               });
                             }}
@@ -1835,11 +1864,11 @@ export default function Home() {
                         dailyLife: updated.trim()
                       });
                     }}
-                    placeholder="自由にお書きください"
-                    rows={6}
-                    className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
-                  />
-                </div>
+              placeholder="自由にお書きください"
+              rows={6}
+              className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+            />
+          </div>
 
                 <div className="mt-6 flex justify-end">
                   <button
@@ -1896,20 +1925,20 @@ export default function Home() {
                   return '保存済';
                 }
                 
-                if (!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse) {
-                  return '健康記録を入力してください';
-                }
-                
-                if (selectedDateTime) {
-                  const dateTime = new Date(selectedDateTime);
-                  const timeKey = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
-                  return `${timeKey}の健康記録を保存`;
-                }
-                
-                return '健康記録を保存';
+                  if (!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse) {
+                    return '健康記録を入力してください';
+                  }
+                  
+                  if (selectedDateTime) {
+                    const dateTime = new Date(selectedDateTime);
+                    const timeKey = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
+                    return `${timeKey}の健康記録を保存`;
+                  }
+                  
+                  return '健康記録を保存';
               })()}
             </button>
-            </div>
+          </div>
         </section>
 
       </main>
@@ -2014,7 +2043,6 @@ export default function Home() {
                 <ul className="text-xs md:text-sm leading-relaxed">
                   <li>• 毎日の健康データを記録</li>
                   <li>• グラフで推移を確認</li>
-                  <li>• AIアドバイスで健康管理をサポート</li>
                   <li>• 家族と情報を共有</li>
                   <li>• 同じ経験を持つ仲間と交流</li>
                 </ul>
@@ -2052,121 +2080,157 @@ export default function Home() {
         <p className="text-center text-gray-600 mb-1">健康記録サマリー</p>
         <p className="text-center text-sm text-gray-500 mb-6">作成日: {printCreatedDate}</p>
 
-        {/* 基本情報 */}
-        <h2 className="text-xl font-bold text-red-600 mb-4">【基本情報】</h2>
-        <div className="grid grid-cols-2 gap-4 mb-8 border border-gray-400 p-4">
-          <div>
-            <p className="font-semibold">お名前: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.displayName || '未設定';
+        {(() => {
+          let p: any = {};
+          try {
+            p = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
               } catch {
-                return '未設定';
-              }
-            })()}</p>
+            p = {};
+          }
+
+          const diseases = Array.isArray(p.diseases) ? p.diseases : [];
+          const riskFactors = Array.isArray(p.riskFactors) ? p.riskFactors : [];
+
+          return (
+            <>
+              {/* 基本情報（画像の項目） */}
+              <h2 className="text-xl font-bold text-red-600 mb-4">【基本情報】</h2>
+              <div className="grid grid-cols-2 gap-4 mb-8 border border-gray-400 p-4">
+                <div>
+                  <p className="font-semibold">お名前: {p.displayName || '未設定'}</p>
           </div>
           <div>
-            <p className="font-semibold">年齢: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.age || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}歳</p>
+                  <p className="font-semibold">年齢: {(p.age ?? '未設定')}歳</p>
           </div>
           <div>
-            <p className="font-semibold">性別: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.gender || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
+                  <p className="font-semibold">性別: {p.gender || '未設定'}</p>
           </div>
           <div>
-            <p className="font-semibold">身長: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.height || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}cm</p>
-          </div>
-          <div>
-            <p className="font-semibold">目標体重: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.targetWeight || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}kg</p>
-          </div>
-          <div>
-            <p className="font-semibold">緊急連絡先: {(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.emergencyContact || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
+                  <p className="font-semibold">身長: {(p.height ?? '未設定')}cm</p>
+                </div>
+                <div>
+                  <p className="font-semibold">目標体重: {(p.targetWeight ?? '未設定')}kg</p>
+                </div>
+                <div>
+                  <p className="font-semibold">メール: {p.email || '未設定'}</p>
           </div>
         </div>
 
-        {/* 医療情報 */}
-        <h2 className="text-xl font-bold text-red-600 mb-4">【医療情報】</h2>
-        <div className="border border-gray-400 p-4 mb-8">
-          <div className="mb-4">
-            <p className="font-semibold mb-2">基礎疾患:</p>
-            <p className="ml-4">{(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                const diseases = profile.diseases || [];
-                return diseases.length > 0 ? diseases.join('、') : '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
-          </div>
-          <div className="mb-4">
-            <p className="font-semibold mb-2">その他の動脈硬化危険因子:</p>
-            <p className="ml-4">{(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                const riskFactors = profile.riskFactors || [];
-                return riskFactors.length > 0 ? riskFactors.join('、') : '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
-          </div>
-          <div className="mb-4">
-            <p className="font-semibold mb-2">現在の薬物療法:</p>
-            <p className="ml-4">{(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.medications || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
-          </div>
-          <div>
-            <p className="font-semibold mb-2">身体機能:</p>
-            <p className="ml-4">{(() => {
-              try {
-                const profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-                return profile.physicalFunction || '未設定';
-              } catch {
-                return '未設定';
-              }
-            })()}</p>
-          </div>
-        </div>
+              {/* 医療情報（画像の項目） */}
+              <h2 className="text-xl font-bold text-red-600 mb-4">【医療情報】</h2>
+              <div className="border border-gray-400 p-4 mb-8">
+                <div className="mb-4">
+                  <p className="font-semibold mb-2">基礎疾患:</p>
+                  <p className="ml-4">{diseases.length > 0 ? diseases.join('、') : '未設定'}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="font-semibold mb-2">他の動脈硬化危険因子:</p>
+                  <p className="ml-4">{riskFactors.length > 0 ? riskFactors.join('、') : '未設定'}</p>
+                </div>
+                <div className="mb-4">
+                  <p className="font-semibold mb-2">服薬情報:</p>
+                  <p className="ml-4">{p.medications || '未設定'}</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2">身体機能・制限事項:</p>
+                  <p className="ml-4">{p.physicalFunction || '未設定'}</p>
+                </div>
+              </div>
+
+              {/* 緊急連絡先（画像の項目） */}
+              <h2 className="text-xl font-bold text-red-600 mb-4">【緊急連絡先】</h2>
+              <div className="border border-gray-400 p-4 mb-8">
+                <p className="font-semibold">{p.emergencyContact || '未設定'}</p>
+              </div>
+            </>
+          );
+        })()}
+
+        {/* 血液検査データ / 運動負荷試験（CPX）データ（PDFに掲載） */}
+        {(() => {
+          const fmt = (v: any) => (v === null || v === undefined || v === '' ? '-' : String(v));
+          const hasAnyBloodValue = (b: PrintBloodData) =>
+            b.hbA1c != null ||
+            b.randomBloodSugar != null ||
+            b.totalCholesterol != null ||
+            b.triglycerides != null ||
+            b.hdlCholesterol != null ||
+            b.ldlCholesterol != null ||
+            b.bun != null ||
+            b.creatinine != null ||
+            b.uricAcid != null ||
+            b.hemoglobin != null ||
+            b.bnp != null;
+
+          const bloodOnly = printBloodDataList.filter(hasAnyBloodValue);
+          const cpxFlat = printBloodDataList.flatMap((b) =>
+            (b.cpxTests || []).map((c) => ({ c, parentDate: b.testDate }))
+          );
+
+          return (
+            <>
+              <h2 className="text-xl font-bold text-red-600 mb-4">【血液検査データ】</h2>
+              {printBloodDataStatus === 'loading' && (
+                <div className="border border-gray-400 p-4 mb-8 text-sm">読み込み中...</div>
+              )}
+              {printBloodDataStatus !== 'loading' && bloodOnly.length === 0 && (
+                <div className="border border-gray-400 p-4 mb-8 text-sm">未登録</div>
+              )}
+              {printBloodDataStatus !== 'loading' &&
+                bloodOnly.length > 0 &&
+                bloodOnly.map((b) => (
+                  <div key={b.id} className="border border-gray-400 p-4 mb-4 text-sm">
+                    <p className="font-semibold mb-2">検査日: {b.testDate}</p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      <p>HbA1c: {fmt(b.hbA1c)}%</p>
+                      <p>随時血糖: {fmt(b.randomBloodSugar)} mg/dL</p>
+                      <p>総コレステロール: {fmt(b.totalCholesterol)} mg/dL</p>
+                      <p>中性脂肪: {fmt(b.triglycerides)} mg/dL</p>
+                      <p>HDL: {fmt(b.hdlCholesterol)} mg/dL</p>
+                      <p>LDL: {fmt(b.ldlCholesterol)} mg/dL</p>
+                      <p>BUN: {fmt(b.bun)} mg/dL</p>
+                      <p>Cr: {fmt(b.creatinine)} mg/dL</p>
+                      <p>尿酸: {fmt(b.uricAcid)} mg/dL</p>
+                      <p>Hb: {fmt(b.hemoglobin)}</p>
+                      <p>BNP: {fmt(b.bnp)} pg/mL</p>
+                    </div>
+                  </div>
+                ))}
+
+              <h2 className="text-xl font-bold text-red-600 mb-4">【運動負荷試験（CPX）データ】</h2>
+              {printBloodDataStatus === 'loading' && (
+                <div className="border border-gray-400 p-4 mb-8 text-sm">読み込み中...</div>
+              )}
+              {printBloodDataStatus !== 'loading' && cpxFlat.length === 0 && (
+                <div className="border border-gray-400 p-4 mb-8 text-sm">未登録</div>
+              )}
+              {printBloodDataStatus !== 'loading' &&
+                cpxFlat.length > 0 &&
+                cpxFlat.map(({ c, parentDate }) => (
+                  <div key={c.id} className="border border-gray-400 p-4 mb-4 text-sm">
+                    <p className="font-semibold mb-2">
+                      検査日: {c.testDate || parentDate} / CPX #{fmt(c.cpxRound)}
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      <p>負荷: {fmt(c.loadWeight)} W</p>
+                      <p>VO2: {fmt(c.vo2)}</p>
+                      <p>Mets: {fmt(c.mets)}</p>
+                      <p>心拍: {fmt(c.heartRate)} bpm</p>
+                      <p>収縮期血圧: {fmt(c.systolicBloodPressure)} mmHg</p>
+                      <p>最大負荷: {fmt(c.maxLoad)}</p>
+                      <p>AT1分前: {fmt(c.atOneMinBefore)}</p>
+                      <p>AT中: {fmt(c.atDuring)}</p>
+                    </div>
+                    {c.findings && (
+                      <p className="mt-2 text-xs">
+                        <span className="font-semibold">所見:</span> {c.findings}
+                      </p>
+                    )}
+                  </div>
+                ))}
+            </>
+          );
+        })()}
 
         {/* 健康記録テーブル */}
         <h2 className="text-xl font-bold text-red-600 mb-4">健康記録</h2>
@@ -2192,14 +2256,20 @@ export default function Home() {
 
       {/* 食事ガイドモーダル */}
       {showMealGuide && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-transparent z-50 flex items-center justify-center p-4"
+          onClick={() => setShowMealGuide(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* モーダルヘッダー */}
             <div className="sticky top-0 bg-white border-b-2 border-orange-300 p-4 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-orange-800">🍽️ 外食の栄養情報</h2>
               <button
                 onClick={() => setShowMealGuide(false)}
-                className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
+                className="text-3xl text-gray-500 hover:text-gray-700 font-bold"
               >
                 ✕
               </button>

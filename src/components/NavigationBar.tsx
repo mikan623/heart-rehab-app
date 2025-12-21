@@ -87,6 +87,7 @@ export default function NavigationBar() {
       let saved: any = {};
       let profile: any = {};
       let liffDisplayName = '';
+      let bloodDataList: any[] = [];
       
       try {
         // ユーザーIDを取得（メール/セッションログイン → LIFF → デフォルト の優先順）
@@ -199,11 +200,110 @@ export default function NavigationBar() {
             profile.displayName = liffDisplayName; // ✅ LINE名をセット
           }
         }
+
+        // 🆕 血液検査/CPX を取得（エラーハンドリング強化）
+        try {
+          const bloodRes = await fetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
+          if (bloodRes.ok) {
+            const data = await bloodRes.json();
+            bloodDataList = Array.isArray(data) ? data : [];
+            console.log('✅ 血液検査/CPX をデータベースから取得:', bloodDataList.length);
+          } else {
+            console.log('❌ 血液検査/CPX 取得失敗（ステータス:', bloodRes.status, '）');
+            bloodDataList = [];
+          }
+        } catch (bloodError) {
+          console.log('❌ 血液検査/CPX 取得エラー:', bloodError);
+          bloodDataList = [];
+        }
       } catch (error) {
         console.error('データベースからの取得エラー、localStorageを使用:', error);
         saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
         profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+        bloodDataList = [];
       }
+
+      const hasValue = (v: any) => !(v === null || v === undefined || v === '');
+      const fmt = (v: any) => (hasValue(v) ? String(v) : '');
+      const hasAnyBloodValue = (b: any) =>
+        b?.hbA1c != null ||
+        b?.randomBloodSugar != null ||
+        b?.totalCholesterol != null ||
+        b?.triglycerides != null ||
+        b?.hdlCholesterol != null ||
+        b?.ldlCholesterol != null ||
+        b?.bun != null ||
+        b?.creatinine != null ||
+        b?.uricAcid != null ||
+        b?.hemoglobin != null ||
+        b?.bnp != null;
+
+      const bloodOnly = (bloodDataList || []).filter(hasAnyBloodValue);
+      const cpxFlat = (bloodDataList || []).flatMap((b: any) =>
+        (b?.cpxTests || []).map((c: any) => ({ c, parentDate: b.testDate }))
+      );
+
+      const buildFieldGrid = (pairs: Array<{ label: string; value: any; suffix?: string }>) => {
+        const items = pairs
+          .filter((p) => hasValue(p.value) && String(p.value).trim() !== '')
+          .map((p) => `<div>${p.label}: ${fmt(p.value)}${p.suffix ?? ''}</div>`)
+          .join('');
+        return items
+          ? `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px;">${items}</div>`
+          : `<div style="font-size: 11px;">（記載なし）</div>`;
+      };
+
+      const bloodHtml =
+        bloodOnly.length === 0
+          ? `<div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 16px;">未登録</div>`
+          : bloodOnly
+              .map(
+                (b: any) => `
+                  <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;">
+                    <div style="font-weight: bold; margin-bottom: 6px;">検査日: ${fmt(b.testDate)}</div>
+                    ${buildFieldGrid([
+                      { label: 'HbA1c', value: b.hbA1c, suffix: '%' },
+                      { label: '随時血糖', value: b.randomBloodSugar, suffix: ' mg/dL' },
+                      { label: '総コレステロール', value: b.totalCholesterol, suffix: ' mg/dL' },
+                      { label: '中性脂肪', value: b.triglycerides, suffix: ' mg/dL' },
+                      { label: 'HDL', value: b.hdlCholesterol, suffix: ' mg/dL' },
+                      { label: 'LDL', value: b.ldlCholesterol, suffix: ' mg/dL' },
+                      { label: 'BUN', value: b.bun, suffix: ' mg/dL' },
+                      { label: 'Cr', value: b.creatinine, suffix: ' mg/dL' },
+                      { label: '尿酸', value: b.uricAcid, suffix: ' mg/dL' },
+                      { label: 'Hb', value: b.hemoglobin },
+                      { label: 'BNP', value: b.bnp, suffix: ' pg/mL' },
+                    ])}
+                  </div>
+                `
+              )
+              .join('');
+
+      const cpxHtml =
+        cpxFlat.length === 0
+          ? `<div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 16px;">未登録</div>`
+          : cpxFlat
+              .map(
+                ({ c, parentDate }: any) => `
+                  <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;">
+                    <div style="font-weight: bold; margin-bottom: 6px;">
+                      検査日: ${fmt(c?.testDate || parentDate)} / CPX #${fmt(c?.cpxRound)}
+                    </div>
+                    ${buildFieldGrid([
+                      { label: '負荷', value: c?.loadWeight, suffix: ' W' },
+                      { label: 'VO2', value: c?.vo2 },
+                      { label: 'Mets', value: c?.mets },
+                      { label: '心拍', value: c?.heartRate, suffix: ' bpm' },
+                      { label: '収縮期血圧', value: c?.systolicBloodPressure, suffix: ' mmHg' },
+                      { label: '最大負荷', value: c?.maxLoad },
+                      { label: 'AT1分前', value: c?.atOneMinBefore },
+                      { label: 'AT中', value: c?.atDuring },
+                    ])}
+                    ${hasValue(c?.findings) && String(c.findings).trim() !== '' ? `<div style="margin-top: 6px; font-size: 11px;"><strong>所見:</strong> ${c.findings}</div>` : ''}
+                  </div>
+                `
+              )
+              .join('');
     
       // ヘッダー情報
       printContent.innerHTML = `
@@ -225,6 +325,16 @@ export default function NavigationBar() {
           ${profile.medications ? `<div><strong>服用薬:</strong> ${profile.medications}</div>` : ''}
           ${profile.physicalFunction ? `<div><strong>身体機能・制限事項:</strong> ${profile.physicalFunction}</div>` : ''}
           ${profile.emergencyContact ? `<div><strong>緊急連絡先:</strong> ${profile.emergencyContact}</div>` : ''}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #c2410c; font-size: 18px; margin: 0 0 10px 0;">血液検査データ</h2>
+          ${bloodHtml}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #c2410c; font-size: 18px; margin: 0 0 10px 0;">運動負荷試験（CPX）データ</h2>
+          ${cpxHtml}
         </div>
         
         <div>
