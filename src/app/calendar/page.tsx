@@ -526,10 +526,10 @@ export default function CalendarPage() {
   const deleteRecordByDateTime = async (date: string, time: string) => {
     const ok = window.confirm(`${date} ${formatTime24h(time)} の記録を削除しますか？`);
     if (!ok) return;
-
+    
     try {
       const currentUserId = user?.userId || 'user-1';
-
+      
       // UIを即時反映
       setSavedRecords((prev) => {
         const day = { ...(prev[date] || {}) };
@@ -558,7 +558,7 @@ export default function CalendarPage() {
         const data = await res.json().catch(() => ({}));
         alert(data.error || '削除に失敗しました');
       }
-
+      
       setEditingRecord(null);
       setShowDetail(false);
     } catch (e) {
@@ -697,9 +697,9 @@ export default function CalendarPage() {
             <div className="flex-1 flex items-center">
               {/* 年月は中央寄せ */}
               <div className="flex-1 flex justify-center">
-                <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                  📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
-                </h2>
+            <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+              📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
+            </h2>
               </div>
               {/* デスクトップ版：日時変更（右寄せ＝次月ボタン側に寄せる） */}
               <div className="hidden md:block ml-2 mr-10">

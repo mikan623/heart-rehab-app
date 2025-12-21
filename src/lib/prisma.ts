@@ -10,7 +10,8 @@ let prisma: PrismaClient | undefined;
 
 if (process.env.DATABASE_URL) {
   prisma = globalThis.prisma ?? new PrismaClient();
-  if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
+  // serverless環境では production でも使い回さないと接続が増えすぎるため、常に global に保持する
+  globalThis.prisma = prisma;
 }
 
 export default prisma;

@@ -618,7 +618,7 @@ export default function LandingPage() {
               },
               {
                 q: '医師に相談できますか？',
-                a: 'アプリで記録したデータは医療機関フォーマットでエクスポート可能。PDFで印刷もできるため、受診の際に持って行くと医師との相談時に活用できます。'
+                a: 'アプリで記録したデータは連携された医療従事者のみが閲覧できます。PDFで印刷もできるため、受診の際に持って行くと医師との相談時に活用できます。'
               }
             ].map((faq, idx) => (
               <details
@@ -643,20 +643,15 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div>
               <div className="text-5xl mb-4">💬</div>
-              <h4 className="font-bold text-gray-800 mb-2">チャットサポート</h4>
+              <h4 className="font-bold text-gray-800 mb-2">お問い合わせサポート</h4>
               <p className="text-gray-600">24時間以内にお返事します</p>
-                  </div>
-            <div>
-              <div className="text-5xl mb-4">📧</div>
-              <h4 className="font-bold text-gray-800 mb-2">メールサポート</h4>
-              <p className="text-gray-600">info@heart-rehab.jp</p>
-                    </div>
+            </div>
             <div>
               <div className="text-5xl mb-4">📚</div>
               <h4 className="font-bold text-gray-800 mb-2">ヘルプセンター</h4>
               <p className="text-gray-600">よくある質問と回答集</p>
-                </div>
-                </div>
+            </div>
+          </div>
         </section>
 
         {/* CTA セクション */}

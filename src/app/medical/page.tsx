@@ -384,7 +384,7 @@ const MedicalPage: React.FC = () => {
               </h2>
               <p className="text-sm md:text-base text-gray-600 mt-1">
                 患者さんを検索して、招待→承認後に健康記録 / 血液検査 / CPX を確認できます。
-              </p>
+        </p>
             </div>
           </div>
 
@@ -608,7 +608,7 @@ const MedicalPage: React.FC = () => {
                       <p className="text-gray-800">
                                 📝 その他: {memo}
                       </p>
-                            )}
+                    )}
                           </>
                         );
                       })()

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    const connected = await ensurePrismaConnection();
+    if (!connected || !prisma) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
     const { email, password, role } = await request.json();
 
     // バリデーション
@@ -93,8 +96,6 @@ export async function POST(request: NextRequest) {
       { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
