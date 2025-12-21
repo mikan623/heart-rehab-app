@@ -50,6 +50,12 @@ interface BloodData {
   hemoglobin: number | null;
   bnp: number | null;
   cpxTests?: CPXTest[];
+  labComments?: {
+    id: string;
+    content: string;
+    createdAt: string;
+    provider: { id: string; name: string | null; email: string };
+  }[];
   createdAt: string;
 }
 
@@ -66,12 +72,19 @@ interface CPXTest {
   heartRate: number | null;
   systolicBloodPressure: number | null;
   findings: string | null;
+  labComments?: {
+    id: string;
+    content: string;
+    createdAt: string;
+    provider: { id: string; name: string | null; email: string };
+  }[];
   createdAt: string;
 }
 
 const MedicalPage: React.FC = () => {
   const [searchName, setSearchName] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [inviteStatusByPatientId, setInviteStatusByPatientId] = useState<Record<string, 'pending' | 'accepted' | 'declined'>>({});
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [bloodDataList, setBloodDataList] = useState<BloodData[]>([]);
@@ -84,6 +97,14 @@ const MedicalPage: React.FC = () => {
   const [commentTarget, setCommentTarget] = useState<{ recordId: string; patientId: string; date: string; time: string } | null>(null);
   const [commentText, setCommentText] = useState('');
   const [commentSaving, setCommentSaving] = useState(false);
+  const [labCommentTarget, setLabCommentTarget] = useState<{
+    kind: 'blood' | 'cpx';
+    targetId: string;
+    patientId: string;
+    label: string;
+  } | null>(null);
+  const [labCommentText, setLabCommentText] = useState('');
+  const [labCommentSaving, setLabCommentSaving] = useState(false);
 
   const handleLogout = () => {
     try {
@@ -152,10 +173,29 @@ const MedicalPage: React.FC = () => {
       }
 
       setPatients(data.patients || []);
+      // 招待ステータスをマージ（承認済/招待中表示）
+      if (providerId) {
+        try {
+          const invRes = await fetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`);
+          const invData = await invRes.json();
+          if (invRes.ok) {
+            const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
+            (invData?.invites || []).forEach((inv: any) => {
+              if (inv?.patientId) map[inv.patientId] = inv.status;
+            });
+            setInviteStatusByPatientId(map);
+          } else {
+            setInviteStatusByPatientId({});
+          }
+        } catch {
+          setInviteStatusByPatientId({});
+        }
+      }
     } catch (err) {
       console.error(err);
       setError('通信エラーが発生しました');
       setPatients([]);
+      setInviteStatusByPatientId({});
     } finally {
       setSearching(false);
     }
@@ -180,6 +220,7 @@ const MedicalPage: React.FC = () => {
         return;
       }
       alert('招待を送信しました。利用者側が承認すると閲覧できます。');
+      setInviteStatusByPatientId((prev) => ({ ...prev, [patientId]: 'pending' }));
     } catch (err) {
       console.error(err);
       setError('招待の作成に失敗しました');
@@ -269,6 +310,50 @@ const MedicalPage: React.FC = () => {
       alert('コメント送信に失敗しました');
     } finally {
       setCommentSaving(false);
+    }
+  };
+
+  const openLabComment = (kind: 'blood' | 'cpx', patientId: string, targetId: string, label: string) => {
+    setLabCommentTarget({ kind, patientId, targetId, label });
+    setLabCommentText('');
+  };
+
+  const submitLabComment = async () => {
+    if (!providerId || !labCommentTarget) return;
+    const content = labCommentText.trim();
+    if (!content) {
+      alert('コメントを入力してください');
+      return;
+    }
+    try {
+      setLabCommentSaving(true);
+      const res = await fetch('/api/medical/lab-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId,
+          patientId: labCommentTarget.patientId,
+          kind: labCommentTarget.kind,
+          targetId: labCommentTarget.targetId,
+          content,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error || 'コメント送信に失敗しました');
+        return;
+      }
+      alert('コメントを送信しました（利用者のメッセージに届きます）');
+      if (selectedPatient) {
+        await handleSelectPatient(selectedPatient);
+      }
+      setLabCommentTarget(null);
+      setLabCommentText('');
+    } catch (e) {
+      console.error(e);
+      alert('コメント送信に失敗しました');
+    } finally {
+      setLabCommentSaving(false);
     }
   };
 
@@ -367,15 +452,35 @@ const MedicalPage: React.FC = () => {
                           {patient.email}
                         </p>
                       )}
+                      {inviteStatusByPatientId[patient.userId] === 'accepted' && (
+                        <span className="inline-flex mt-2 text-xs px-2 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 font-bold">
+                          承認済
+                        </span>
+                      )}
+                      {inviteStatusByPatientId[patient.userId] === 'pending' && (
+                        <span className="inline-flex mt-2 text-xs px-2 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-700 font-bold">
+                          招待中
+                        </span>
+                      )}
                     </div>
                     <div className="w-full sm:w-auto shrink-0 flex gap-2 sm:flex-col">
                       <button
                         type="button"
-                        disabled={inviteLoadingId === patient.userId}
+                        disabled={
+                          inviteLoadingId === patient.userId ||
+                          inviteStatusByPatientId[patient.userId] === 'accepted' ||
+                          inviteStatusByPatientId[patient.userId] === 'pending'
+                        }
                         onClick={() => handleInvite(patient.userId)}
                         className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {inviteLoadingId === patient.userId ? '招待中…' : '招待する'}
+                        {inviteStatusByPatientId[patient.userId] === 'accepted'
+                          ? '承認済'
+                          : inviteStatusByPatientId[patient.userId] === 'pending'
+                            ? '招待済'
+                            : inviteLoadingId === patient.userId
+                              ? '招待中…'
+                              : '招待する'}
                       </button>
                     <button
                       type="button"
@@ -555,6 +660,18 @@ const MedicalPage: React.FC = () => {
                             登録: {new Date(b.createdAt).toLocaleString('ja-JP')}
                           </span>
                         </div>
+                        <div className="mb-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              selectedPatient &&
+                              openLabComment('blood', selectedPatient.userId, b.id, `血液検査: ${b.testDate}`)
+                            }
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700"
+                          >
+                            コメントする
+                          </button>
+                        </div>
                         <div className="grid grid-cols-2 gap-2 text-gray-800">
                           {b.hbA1c != null && <p><strong>HbA1c:</strong> {b.hbA1c}%</p>}
                           {b.randomBloodSugar != null && <p><strong>随時血糖:</strong> {b.randomBloodSugar} mg/dL</p>}
@@ -568,6 +685,30 @@ const MedicalPage: React.FC = () => {
                           {b.hemoglobin != null && <p><strong>Hb:</strong> {b.hemoglobin}</p>}
                           {b.bnp != null && <p><strong>BNP:</strong> {b.bnp} pg/mL</p>}
                         </div>
+
+                        {/* コメント履歴（血液） */}
+                        {(b.labComments?.length || 0) > 0 && (
+                          <div className="mt-3 border-t border-orange-200 pt-3">
+                            <div className="text-xs font-bold text-gray-700 mb-2">💬 コメント</div>
+                            <div className="space-y-2">
+                              {(b.labComments || []).map((c) => (
+                                <div key={c.id} className="rounded-lg border border-purple-100 bg-white p-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-[11px] font-semibold text-gray-800 truncate">
+                                      {c.provider?.name || c.provider?.email || '医療従事者'}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 whitespace-nowrap">
+                                      {new Date(c.createdAt).toLocaleString('ja-JP')}
+                                    </div>
+                                  </div>
+                                  <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
+                                    {c.content}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -600,6 +741,23 @@ const MedicalPage: React.FC = () => {
                                 登録: {new Date(c.createdAt).toLocaleString('ja-JP')}
                               </span>
                             </div>
+                            <div className="mb-2 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  selectedPatient &&
+                                  openLabComment(
+                                    'cpx',
+                                    selectedPatient.userId,
+                                    c.id,
+                                    `CPX: ${(c.testDate || parentDate)} / #${c.cpxRound}`
+                                  )
+                                }
+                                className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700"
+                              >
+                                コメントする
+                              </button>
+                            </div>
                             <div className="grid grid-cols-2 gap-2 text-gray-800">
                               {c.loadWeight != null && <p><strong>負荷:</strong> {c.loadWeight} W</p>}
                               {c.vo2 != null && <p><strong>VO2:</strong> {c.vo2}</p>}
@@ -615,6 +773,30 @@ const MedicalPage: React.FC = () => {
                                 <strong>所見:</strong> {c.findings}
                       </p>
                     )}
+
+                            {/* コメント履歴（CPX） */}
+                            {(c.labComments?.length || 0) > 0 && (
+                              <div className="mt-3 border-t border-blue-200 pt-3">
+                                <div className="text-xs font-bold text-gray-700 mb-2">💬 コメント</div>
+                                <div className="space-y-2">
+                                  {(c.labComments || []).map((cc) => (
+                                    <div key={cc.id} className="rounded-lg border border-purple-100 bg-white p-2">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="text-[11px] font-semibold text-gray-800 truncate">
+                                          {cc.provider?.name || cc.provider?.email || '医療従事者'}
+                                        </div>
+                                        <div className="text-[10px] text-gray-500 whitespace-nowrap">
+                                          {new Date(cc.createdAt).toLocaleString('ja-JP')}
+                                        </div>
+                                      </div>
+                                      <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
+                                        {cc.content}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                   </div>
                 ))}
               </div>
@@ -668,6 +850,52 @@ const MedicalPage: React.FC = () => {
                 className="flex-1 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-60"
               >
                 {commentSaving ? '送信中…' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 検査（血液/CPX）コメント投稿モーダル */}
+      {labCommentTarget && (
+        <div className="fixed inset-0 z-[110] bg-black/30 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-bold text-gray-900">検査コメントを送る</div>
+                <div className="text-xs text-gray-600 mt-1">{labCommentTarget.label}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLabCommentTarget(null)}
+                className="text-gray-500 hover:text-gray-800 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <textarea
+              value={labCommentText}
+              onChange={(e) => setLabCommentText(e.target.value)}
+              placeholder="例）HbA1cが高めです。食事と運動を見直してみましょう。"
+              className="mt-4 w-full min-h-[120px] rounded-xl border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLabCommentTarget(null)}
+                className="flex-1 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 font-bold hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                disabled={labCommentSaving}
+                onClick={submitLabComment}
+                className="flex-1 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 disabled:opacity-60"
+              >
+                {labCommentSaving ? '送信中…' : '送信する'}
               </button>
             </div>
           </div>

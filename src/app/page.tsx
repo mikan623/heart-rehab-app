@@ -112,8 +112,13 @@ export default function LandingPage() {
               console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
               try {
                 const setupData = await setupRes.json();
-                if (setupData?.user?.role === 'medical' || setupData?.user?.role === 'patient') {
-                  localStorage.setItem('loginRole', setupData.user.role);
+                // LINEログインでも、ログイン前に選択した「利用モード（患者/医療）」を優先する
+                // DBのroleはサーバー側でupgradeのみ行う（降格しない）
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem(
+                    'loginRole',
+                    localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient'
+                  );
                 }
               } catch {
                 // ignore
@@ -225,11 +230,8 @@ export default function LandingPage() {
       localStorage.setItem('sessionToken', data.sessionToken);
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userName', data.user.name || '');
-      if (data?.user?.role === 'medical' || data?.user?.role === 'patient') {
-        localStorage.setItem('loginRole', data.user.role);
-      } else {
-        localStorage.setItem('loginRole', loginRole);
-      }
+      // ログイン前に選択した「利用モード（患者/医療）」を優先して保存（同一アカウントでも切替可能にする）
+      localStorage.setItem('loginRole', loginRole);
 
       // ロールに応じて遷移
       router.push(loginRole === 'medical' ? '/medical' : '/health-records');

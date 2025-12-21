@@ -47,6 +47,7 @@ export default function MessagesPage() {
   const userId = useMemo(() => getCurrentUserId(), []);
   const [invites, setInvites] = useState<InviteItem[]>([]);
   const [comments, setComments] = useState<CommentItem[]>([]);
+  const [labComments, setLabComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -61,11 +62,12 @@ export default function MessagesPage() {
         setLoading(false);
         return;
       }
-      const [invRes, cRes] = await Promise.all([
+      const [invRes, cRes, labRes] = await Promise.all([
         fetch(`/api/patient/invites?patientId=${encodeURIComponent(userId)}`),
         fetch(`/api/patient/comments?patientId=${encodeURIComponent(userId)}`),
+        fetch(`/api/patient/lab-comments?patientId=${encodeURIComponent(userId)}`),
       ]);
-      const [invData, cData] = await Promise.all([invRes.json(), cRes.json()]);
+      const [invData, cData, labData] = await Promise.all([invRes.json(), cRes.json(), labRes.json()]);
       if (!invRes.ok) {
         setInvites([]);
         setError(invData?.error || '招待の取得に失敗しました');
@@ -78,11 +80,18 @@ export default function MessagesPage() {
       } else {
         setComments(cData?.comments || []);
       }
+      if (!labRes.ok) {
+        setLabComments([]);
+        setError((prev) => prev || labData?.error || '検査コメント通知の取得に失敗しました');
+      } else {
+        setLabComments(labData?.comments || []);
+      }
     } catch (e) {
       console.error(e);
       setError('メッセージの取得に失敗しました');
       setInvites([]);
       setComments([]);
+      setLabComments([]);
     } finally {
       setLoading(false);
     }
@@ -194,6 +203,79 @@ export default function MessagesPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 検査（血液/CPX）コメント通知 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-200 p-4 mb-4">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">検査データへのコメント</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            血液検査・運動負荷試験（CPX）に対するコメントが届きます。
+          </p>
+
+          {loading ? (
+            <div className="text-gray-600">読み込み中...</div>
+          ) : labComments.length === 0 ? (
+            <div className="text-gray-600">コメントはありません。</div>
+          ) : (
+            <div className="space-y-3">
+              {labComments.map((c: any) => (
+                <div key={c.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-gray-800 truncate">
+                        {c.provider?.name || c.provider?.email || '医療従事者'}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {c.kind === 'blood'
+                          ? `血液検査: ${c.bloodData?.testDate || '-'}`
+                          : `CPX: ${(c.cpx?.testDate || c.cpx?.parentBloodTestDate) || '-'} / #${c.cpx?.cpxRound ?? '-'}`}
+                        {' / '}
+                        受信: {new Date(c.createdAt).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700">
+                      検査コメント
+                    </span>
+                  </div>
+
+                  <div className="mt-3 whitespace-pre-wrap text-sm text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                    {c.content}
+                  </div>
+
+                  {c.kind === 'blood' && c.bloodData?.values && (
+                    <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50/40 p-3 text-xs text-gray-800">
+                      <div className="font-bold text-orange-700 mb-2">血液検査データ</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(c.bloodData.values)
+                          .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                          .slice(0, 10)
+                          .map(([k, v]) => (
+                            <div key={k}>
+                              {k}: {String(v)}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {c.kind === 'cpx' && c.cpx?.values && (
+                    <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3 text-xs text-gray-800">
+                      <div className="font-bold text-blue-700 mb-2">CPXデータ</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(c.cpx.values)
+                          .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                          .map(([k, v]) => (
+                            <div key={k}>
+                              {k}: {String(v)}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

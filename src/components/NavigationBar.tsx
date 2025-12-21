@@ -70,11 +70,12 @@ export default function NavigationBar() {
     const fetchCount = async () => {
       try {
         const lastSeen = Number(localStorage.getItem('messagesLastSeen') || '0');
-        const [invRes, cRes] = await Promise.all([
+        const [invRes, cRes, labRes] = await Promise.all([
           fetch(`/api/patient/invites?patientId=${encodeURIComponent(uid)}`),
           fetch(`/api/patient/comments?patientId=${encodeURIComponent(uid)}`),
+          fetch(`/api/patient/lab-comments?patientId=${encodeURIComponent(uid)}`),
         ]);
-        const [invData, cData] = await Promise.all([invRes.json(), cRes.json()]);
+        const [invData, cData, labData] = await Promise.all([invRes.json(), cRes.json(), labRes.json()]);
 
         const pendingInvites = invRes.ok
           ? ((invData?.invites || []) as any[]).filter((i) => i.status === 'pending').length
@@ -86,7 +87,14 @@ export default function NavigationBar() {
             }).length
           : 0;
 
-        setUnreadCount(pendingInvites + unreadComments);
+        const unreadLabComments = labRes.ok
+          ? ((labData?.comments || []) as any[]).filter((c) => {
+              const t = new Date(c.createdAt).getTime();
+              return Number.isFinite(t) && t > lastSeen;
+            }).length
+          : 0;
+
+        setUnreadCount(pendingInvites + unreadComments + unreadLabComments);
       } catch (e) {
         console.log('⚠️ NavigationBar: 未読数取得に失敗（無視）', e);
       }

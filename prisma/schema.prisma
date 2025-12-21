@@ -40,6 +40,9 @@ model User {
   // 医療コメント（医療従事者→患者）
   providerComments MedicalComment[] @relation("ProviderComments")
   patientComments  MedicalComment[] @relation("PatientComments")
+  // 検査コメント（血液/CPX）
+  providerLabComments MedicalLabComment[] @relation("ProviderLabComments")
+  patientLabComments  MedicalLabComment[] @relation("PatientLabComments")
   
   @@map("users")
 }
@@ -183,6 +186,7 @@ model BloodData {
 
   user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   cpxTests          CardiopulmonaryExerciseTest[]
+  labComments       MedicalLabComment[]
 
   @@map("blood_data")
 }
@@ -205,7 +209,27 @@ model CardiopulmonaryExerciseTest {
   updatedAt                DateTime @updatedAt
 
   bloodData BloodData @relation(fields: [bloodDataId], references: [id], onDelete: Cascade)
+  labComments MedicalLabComment[]
 
   @@map("cardiopulmonary_exercise_tests")
+}
+
+model MedicalLabComment {
+  id        String   @id @default(cuid())
+  providerId String
+  patientId  String
+  bloodDataId String?
+  cpxTestId   String?
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  provider User @relation("ProviderLabComments", fields: [providerId], references: [id], onDelete: Cascade)
+  patient  User @relation("PatientLabComments", fields: [patientId], references: [id], onDelete: Cascade)
+  bloodData BloodData? @relation(fields: [bloodDataId], references: [id], onDelete: Cascade)
+  cpxTest   CardiopulmonaryExerciseTest? @relation(fields: [cpxTestId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt])
+  @@index([providerId, createdAt])
+  @@map("medical_lab_comments")
 }
 

@@ -52,7 +52,19 @@ export async function GET(request: NextRequest) {
         where: { userId: patientId },
         orderBy: { createdAt: 'desc' },
         include: {
-          cpxTests: { orderBy: { createdAt: 'asc' } },
+          cpxTests: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              labComments: {
+                orderBy: { createdAt: 'asc' },
+                include: { provider: { select: { id: true, name: true, email: true } } },
+              },
+            },
+          },
+          labComments: {
+            orderBy: { createdAt: 'asc' },
+            include: { provider: { select: { id: true, name: true, email: true } } },
+          },
         },
       }),
     ]);
@@ -85,7 +97,27 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    return NextResponse.json({ records: formattedRecords, bloodDataList });
+    // CPXにもコメント履歴を付与する（返信用）
+    const formattedBlood = (bloodDataList as any[]).map((b) => ({
+      ...b,
+      labComments: (b.labComments || []).map((c: any) => ({
+        id: c.id,
+        content: c.content,
+        createdAt: c.createdAt,
+        provider: { id: c.provider?.id, name: c.provider?.name ?? null, email: c.provider?.email },
+      })),
+      cpxTests: (b.cpxTests || []).map((cpx: any) => ({
+        ...cpx,
+        labComments: (cpx.labComments || []).map((c: any) => ({
+          id: c.id,
+          content: c.content,
+          createdAt: c.createdAt,
+          provider: { id: c.provider?.id, name: c.provider?.name ?? null, email: c.provider?.email },
+        })),
+      })),
+    }));
+
+    return NextResponse.json({ records: formattedRecords, bloodDataList: formattedBlood });
   } catch (error: any) {
     console.error('❌ /api/medical/patient-data GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
