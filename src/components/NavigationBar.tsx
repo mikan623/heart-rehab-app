@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { clearSession, getCurrentUserId } from "@/lib/auth";
-import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon, MessageIcon } from './NavIcons';
+import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
 
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -616,20 +616,6 @@ export default function NavigationBar() {
           <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
-        <button 
-          onClick={() => {
-            setActiveButton('messages');
-            setTimeout(() => window.location.href = '/messages', 150);
-          }}
-          className={`relative flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'messages' ? 'click-animate' : ''}`}>
-          <MessageIcon className="w-5 h-5 md:w-6 md:h-6" />
-          <span className="text-[10px] md:text-xs">メッセージ</span>
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-bold">
-              {badgeLabel}
-            </span>
-          )}
-        </button>
           </>
         )}
       </div>
@@ -668,7 +654,14 @@ export default function NavigationBar() {
                       }, 150);
                     }}
                     className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'messages' ? 'click-animate' : ''}`}>
-                    📩 メッセージ
+                    <div className="flex items-center justify-between gap-2">
+                      <span>📩 メッセージ</span>
+                      {unreadCount > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-bold">
+                          {badgeLabel}
+                        </span>
+                      )}
+                    </div>
                   </button>
                   <hr className="my-1" />
                 </>

@@ -352,9 +352,9 @@ const MedicalPage: React.FC = () => {
                 {patients.map((patient) => (
                   <li
                     key={patient.userId}
-                    className="py-4 flex items-center justify-between gap-3"
+                    className="py-4 flex flex-col sm:flex-row sm:items-center gap-3"
                   >
-                    <div>
+                    <div className="w-full min-w-0">
                       <p className="text-sm md:text-base font-bold text-gray-900">
                         {patient.displayName || '名前未登録'}
                       </p>
@@ -368,19 +368,19 @@ const MedicalPage: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    <div className="shrink-0 flex flex-col gap-2">
+                    <div className="w-full sm:w-auto shrink-0 flex gap-2 sm:flex-col">
                       <button
                         type="button"
                         disabled={inviteLoadingId === patient.userId}
                         onClick={() => handleInvite(patient.userId)}
-                        className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {inviteLoadingId === patient.userId ? '招待中…' : '招待する'}
                       </button>
                     <button
                       type="button"
                       onClick={() => handleSelectPatient(patient)}
-                        className="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
                     >
                       記録を見る
                     </button>

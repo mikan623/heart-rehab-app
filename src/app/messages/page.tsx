@@ -33,6 +33,13 @@ interface CommentItem {
     id: string;
     date: string;
     time: string;
+    bloodPressure: { systolic: number; diastolic: number };
+    pulse: number | null;
+    weight: number | null;
+    exercise: any;
+    meal: any;
+    dailyLife: string | null;
+    medicationTaken: boolean | null;
   };
 }
 
@@ -152,6 +159,40 @@ export default function MessagesPage() {
                   </div>
                   <div className="mt-3 whitespace-pre-wrap text-sm text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3">
                     {c.content}
+                  </div>
+
+                  {/* コメント対象の健康記録内容 */}
+                  <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50/40 p-3 text-sm text-gray-800">
+                    <div className="text-xs font-bold text-orange-700 mb-2">対象の健康記録</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
+                      <div>🩺 血圧: {c.healthRecord.bloodPressure?.systolic}/{c.healthRecord.bloodPressure?.diastolic}</div>
+                      <div>💓 脈拍: {c.healthRecord.pulse ?? '-'}</div>
+                      <div>⚖️ 体重: {c.healthRecord.weight ?? '-'}</div>
+                      <div>💊 服薬: {c.healthRecord.medicationTaken ? '済' : '未/不明'}</div>
+                    </div>
+                    {c.healthRecord.exercise && (
+                      <div className="mt-2 text-xs text-gray-700">
+                        🏃 運動: {c.healthRecord.exercise?.type || '-'} {c.healthRecord.exercise?.duration ? `(${c.healthRecord.exercise.duration})` : ''}
+                      </div>
+                    )}
+                    {c.healthRecord.meal && (
+                      <div className="mt-1 text-xs text-gray-700">
+                        🍽 食事: {[
+                          c.healthRecord.meal?.staple,
+                          c.healthRecord.meal?.mainDish,
+                          c.healthRecord.meal?.sideDish,
+                          c.healthRecord.meal?.other,
+                        ]
+                          .flat()
+                          .filter(Boolean)
+                          .join('、') || '-'}
+                      </div>
+                    )}
+                    {c.healthRecord.dailyLife && (
+                      <div className="mt-1 text-xs text-gray-700 whitespace-pre-wrap">
+                        📝 メモ: {c.healthRecord.dailyLife}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

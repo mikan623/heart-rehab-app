@@ -31,7 +31,21 @@ export async function GET(request: NextRequest) {
       take: 200,
       include: {
         provider: { select: { id: true, name: true, email: true } },
-        healthRecord: { select: { id: true, date: true, time: true } },
+        healthRecord: {
+          select: {
+            id: true,
+            date: true,
+            time: true,
+            bloodPressureSystolic: true,
+            bloodPressureDiastolic: true,
+            pulse: true,
+            weight: true,
+            exercise: true,
+            meal: true,
+            dailyLife: true,
+            medicationTaken: true,
+          },
+        },
       },
     });
 
@@ -52,6 +66,16 @@ export async function GET(request: NextRequest) {
           id: c.healthRecord.id,
           date: c.healthRecord.date,
           time: c.healthRecord.time,
+          bloodPressure: {
+            systolic: (c.healthRecord as any).bloodPressureSystolic,
+            diastolic: (c.healthRecord as any).bloodPressureDiastolic,
+          },
+          pulse: (c.healthRecord as any).pulse ?? null,
+          weight: (c.healthRecord as any).weight ?? null,
+          exercise: (c.healthRecord as any).exercise ?? null,
+          meal: (c.healthRecord as any).meal ?? null,
+          dailyLife: (c.healthRecord as any).dailyLife ?? null,
+          medicationTaken: (c.healthRecord as any).medicationTaken ?? null,
         },
       })),
     });
