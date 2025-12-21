@@ -26,6 +26,12 @@ interface HealthRecord {
   dailyLife: string | null;
   medicationTaken: boolean | null;
   createdAt: string;
+  medicalComments?: {
+    id: string;
+    content: string;
+    createdAt: string;
+    provider: { id: string; name: string | null; email: string };
+  }[];
 }
 
 interface BloodData {
@@ -252,6 +258,10 @@ const MedicalPage: React.FC = () => {
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');
+      // コメント履歴を即反映
+      if (selectedPatient) {
+        await handleSelectPatient(selectedPatient);
+      }
       setCommentTarget(null);
       setCommentText('');
     } catch (e) {
@@ -497,6 +507,30 @@ const MedicalPage: React.FC = () => {
                           </>
                         );
                       })()
+                    )}
+
+                    {/* コメント履歴 */}
+                    {(record.medicalComments?.length || 0) > 0 && (
+                      <div className="mt-3 border-t border-gray-200 pt-3">
+                        <div className="text-xs font-bold text-gray-700 mb-2">💬 コメント</div>
+                        <div className="space-y-2">
+                          {(record.medicalComments || []).map((c) => (
+                            <div key={c.id} className="rounded-lg border border-blue-100 bg-white p-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[11px] font-semibold text-gray-800 truncate">
+                                  {c.provider?.name || c.provider?.email || '医療従事者'}
+                                </div>
+                                <div className="text-[10px] text-gray-500 whitespace-nowrap">
+                                  {new Date(c.createdAt).toLocaleString('ja-JP')}
+                                </div>
+                              </div>
+                              <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
+                                {c.content}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}

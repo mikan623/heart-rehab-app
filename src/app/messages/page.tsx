@@ -83,6 +83,10 @@ export default function MessagesPage() {
 
   useEffect(() => {
     fetchAll();
+    // このページを開いたら未読をリセット（次回以降のバッジ計算に使う）
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('messagesLastSeen', String(Date.now()));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

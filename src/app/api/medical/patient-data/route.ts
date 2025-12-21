@@ -39,6 +39,14 @@ export async function GET(request: NextRequest) {
       prisma.healthRecord.findMany({
         where: { userId: patientId },
         orderBy: { createdAt: 'desc' },
+        include: {
+          medicalComments: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              provider: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
       }),
       prisma.bloodData.findMany({
         where: { userId: patientId },
@@ -65,6 +73,16 @@ export async function GET(request: NextRequest) {
       dailyLife: record.dailyLife,
       medicationTaken: record.medicationTaken,
       createdAt: record.createdAt,
+      medicalComments: (record.medicalComments || []).map((c: any) => ({
+        id: c.id,
+        content: c.content,
+        createdAt: c.createdAt,
+        provider: {
+          id: c.provider?.id,
+          name: c.provider?.name ?? null,
+          email: c.provider?.email,
+        },
+      })),
     }));
 
     return NextResponse.json({ records: formattedRecords, bloodDataList });

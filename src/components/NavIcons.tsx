@@ -42,3 +42,12 @@ export const TestIcon = ({ className = "w-6 h-6" }) => (
   </svg>
 );
 
+export const MessageIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M21 6.5c0-1.38-1.12-2.5-2.5-2.5h-13C4.12 4 3 5.12 3 6.5v8C3 15.88 4.12 17 5.5 17H7v3l4-3h7.5c1.38 0 2.5-1.12 2.5-2.5v-8z"
+      fill="currentColor"
+    />
+  </svg>
+);
+

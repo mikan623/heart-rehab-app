@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { clearSession } from "@/lib/auth";
-import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
+import { clearSession, getCurrentUserId } from "@/lib/auth";
+import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon, MessageIcon } from './NavIcons';
 
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -17,6 +17,7 @@ export default function NavigationBar() {
   const [loginRole, setLoginRole] = useState<'patient' | 'medical' | null>(null);
   const [user, setUser] = useState<any>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
@@ -52,6 +53,51 @@ export default function NavigationBar() {
       setLoginRole(stored);
     }
   }, []);
+
+  // 未読数（招待pending + messagesLastSeen以降のコメント数）を取得してバッジ表示
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (loginRole === 'medical') {
+      setUnreadCount(0);
+      return;
+    }
+    const uid = getCurrentUserId();
+    if (!uid) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchCount = async () => {
+      try {
+        const lastSeen = Number(localStorage.getItem('messagesLastSeen') || '0');
+        const [invRes, cRes] = await Promise.all([
+          fetch(`/api/patient/invites?patientId=${encodeURIComponent(uid)}`),
+          fetch(`/api/patient/comments?patientId=${encodeURIComponent(uid)}`),
+        ]);
+        const [invData, cData] = await Promise.all([invRes.json(), cRes.json()]);
+
+        const pendingInvites = invRes.ok
+          ? ((invData?.invites || []) as any[]).filter((i) => i.status === 'pending').length
+          : 0;
+        const unreadComments = cRes.ok
+          ? ((cData?.comments || []) as any[]).filter((c) => {
+              const t = new Date(c.createdAt).getTime();
+              return Number.isFinite(t) && t > lastSeen;
+            }).length
+          : 0;
+
+        setUnreadCount(pendingInvites + unreadComments);
+      } catch (e) {
+        console.log('⚠️ NavigationBar: 未読数取得に失敗（無視）', e);
+      }
+    };
+
+    fetchCount();
+    const id = window.setInterval(fetchCount, 30000);
+    return () => window.clearInterval(id);
+  }, [loginRole]);
+
+  const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
   // 医療機関用データエクスポート（旧機能）は廃止済み
 
@@ -570,6 +616,20 @@ export default function NavigationBar() {
           <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
+        <button 
+          onClick={() => {
+            setActiveButton('messages');
+            setTimeout(() => window.location.href = '/messages', 150);
+          }}
+          className={`relative flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'messages' ? 'click-animate' : ''}`}>
+          <MessageIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <span className="text-[10px] md:text-xs">メッセージ</span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-bold">
+              {badgeLabel}
+            </span>
+          )}
+        </button>
           </>
         )}
       </div>
@@ -584,9 +644,14 @@ export default function NavigationBar() {
             console.log('現在のshowSettingsMenu:', showSettingsMenu);
             setShowSettingsMenu(!showSettingsMenu);
           }}
-          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'menu' ? 'click-animate' : ''}`}>
+          className={`relative flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'menu' ? 'click-animate' : ''}`}>
           <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">メニュー</span>
+          {loginRole !== 'medical' && unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-bold">
+              {badgeLabel}
+            </span>
+          )}
         </button>
   
         {showSettingsMenu && (
