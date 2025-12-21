@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import PageHeader from '@/components/PageHeader';
 import { clearSession, getCurrentUserId } from '@/lib/auth';
 
 interface Patient {
@@ -222,7 +221,21 @@ const MedicalPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      <PageHeader title="医療従事者" />
+      {/* medicalページはヘッダーに「ログアウト」だけ表示（メニュー不要） */}
+      <header className="sticky top-0 z-50 bg-white shadow-sm px-3 py-2">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+          <h1 className="text-lg md:text-2xl font-bold text-orange-800">
+            医療従事者
+        </h1>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-white border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50"
+          >
+            ログアウト
+          </button>
+        </div>
+      </header>
 
       <main className="max-w-6xl mx-auto p-4 pb-28">
         <div className="max-w-6xl mx-auto">
@@ -235,14 +248,6 @@ const MedicalPage: React.FC = () => {
                 患者さんを検索して、招待→承認後に健康記録 / 血液検査 / CPX を確認できます。
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-full bg-white border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50"
-            >
-              ログアウト
-            </button>
           </div>
 
           <form
@@ -253,29 +258,29 @@ const MedicalPage: React.FC = () => {
               <div className="font-bold text-gray-800">患者名で検索</div>
               <span className="text-xs text-gray-500">部分一致OK</span>
             </div>
-            <div className="flex flex-col md:flex-row gap-3">
-              <input
-                type="text"
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-                placeholder="例）山田太郎"
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              placeholder="例）山田太郎"
                 className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
-              />
-              <button
-                type="submit"
-                disabled={searching}
+            />
+            <button
+              type="submit"
+              disabled={searching}
                 className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white text-sm md:text-base font-bold shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {searching ? '検索中…' : '検索する'}
-              </button>
-            </div>
-          </form>
+            >
+              {searching ? '検索中…' : '検索する'}
+            </button>
+          </div>
+        </form>
 
-          {error && (
+        {error && (
             <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+            {error}
+          </div>
+        )}
 
           <div className="grid lg:grid-cols-2 gap-6">
           {/* 左：患者一覧 */}
@@ -319,13 +324,13 @@ const MedicalPage: React.FC = () => {
                       >
                         {inviteLoadingId === patient.userId ? '招待中…' : '招待する'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectPatient(patient)}
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPatient(patient)}
                         className="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
-                      >
-                        記録を見る
-                      </button>
+                    >
+                      記録を見る
+                    </button>
                     </div>
                   </li>
                 ))}
@@ -522,13 +527,13 @@ const MedicalPage: React.FC = () => {
                             {c.findings && (
                               <p className="mt-2 text-gray-800">
                                 <strong>所見:</strong> {c.findings}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
             )}
           </section>
         </div>

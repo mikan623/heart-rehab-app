@@ -58,12 +58,19 @@ export async function POST(request: NextRequest) {
     const sessionToken = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
 
     // ロールは「トップで選択した値」をSupabaseへ保存して永続化する
-    // （患者/医療の切り替えが要件のため、ログイン成功時にDBを更新する）
+    // ただし、誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
     const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
-    let effectiveRole: 'patient' | 'medical' = user.role === 'medical' ? 'medical' : 'patient';
-    if (requestedRole && requestedRole !== effectiveRole) {
-      await prisma.user.update({ where: { id: user.id }, data: { role: requestedRole } });
-      effectiveRole = requestedRole;
+    const currentRole: 'patient' | 'medical' =
+      user.role === 'medical' ? 'medical' : user.role === 'patient' ? 'patient' : 'patient';
+    let effectiveRole: 'patient' | 'medical' = currentRole;
+
+    if (requestedRole === 'medical' && currentRole !== 'medical') {
+      await prisma.user.update({ where: { id: user.id }, data: { role: 'medical' } });
+      effectiveRole = 'medical';
+    } else if (!user.role && requestedRole === 'patient') {
+      // roleカラム導入直後などで未設定の場合は patient を保存しておく
+      await prisma.user.update({ where: { id: user.id }, data: { role: 'patient' } });
+      effectiveRole = 'patient';
     }
 
     return NextResponse.json(

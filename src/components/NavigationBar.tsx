@@ -473,6 +473,9 @@ export default function NavigationBar() {
           console.log('🗑️ ローカルストレージをクリア:', key);
         }
       });
+
+      // ロールもクリア（次回ログイン時に選択し直す）
+      localStorage.removeItem('loginRole');
       
       // 設定メニューを閉じる
       setShowSettingsMenu(false);

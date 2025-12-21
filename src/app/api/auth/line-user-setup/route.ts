@@ -51,10 +51,11 @@ export async function POST(request: NextRequest) {
       const shouldUpdateEmail =
         !user.email || user.email.includes('@line.local') || user.email.includes('@example.com');
       const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
-      const shouldUpdateRole =
-        !!requestedRole && ((user as any).role === 'medical' || (user as any).role === 'patient')
-          ? (user as any).role !== requestedRole
-          : !!requestedRole;
+      const currentRole = (user as any).role === 'medical' ? 'medical' : (user as any).role === 'patient' ? 'patient' : null;
+      // 誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
+      const shouldUpgradeToMedical = requestedRole === 'medical' && currentRole !== 'medical';
+      const shouldInitToPatient = !currentRole && requestedRole === 'patient';
+      const shouldUpdateRole = shouldUpgradeToMedical || shouldInitToPatient;
 
       if (shouldUpdateEmail || shouldUpdateRole) {
         user = await prisma.user.update({
@@ -66,7 +67,9 @@ export async function POST(request: NextRequest) {
                   name: displayName || user.name,
                 }
               : {}),
-            ...(shouldUpdateRole ? { role: requestedRole } : {}),
+            ...(shouldUpdateRole
+              ? { role: shouldUpgradeToMedical ? 'medical' : shouldInitToPatient ? 'patient' : requestedRole }
+              : {}),
             // ⚠️ authType は変更しない（既存の認証タイプを保持）
           },
         });
