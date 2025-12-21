@@ -11,6 +11,8 @@ export default function LandingPage() {
   const [liff, setLiff] = useState<any>(null);
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [loginRole, setLoginRole] = useState<'patient' | 'medical'>('patient');
+  const [showRoleModal, setShowRoleModal] = useState(false);
   
   // ログインフォームの状態
   const [email, setEmail] = useState('');
@@ -34,10 +36,28 @@ export default function LandingPage() {
     }
 
     // ローカルストレージからセッション確認
-    const sessionToken = localStorage.getItem('sessionToken');
-    if (sessionToken) {
-      router.push('/health-records');
-      return;
+    if (typeof window !== 'undefined') {
+      // ロール復元（患者/医療従事者）
+      try {
+        const storedRole = localStorage.getItem('loginRole');
+        if (storedRole === 'medical' || storedRole === 'patient') {
+          setLoginRole(storedRole);
+          setShowRoleModal(false);
+        } else {
+          // 未設定なら最初にモーダルで選択させる
+          setShowRoleModal(true);
+        }
+      } catch {
+        // ignore
+        setShowRoleModal(true);
+      }
+
+      const sessionToken = localStorage.getItem('sessionToken');
+      if (sessionToken) {
+        const role = localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient';
+        router.push(role === 'medical' ? '/medical' : '/health-records');
+        return;
+      }
     }
 
     const initLiff = async () => {
@@ -76,16 +96,28 @@ export default function LandingPage() {
               
               // 🆕 Supabase にユーザー情報を保存（users テーブル）
               // メールアドレスを users テーブルに保存する
-              await fetch('/api/auth/line-user-setup', {
+              const setupRes = await fetch('/api/auth/line-user-setup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   userId: profile.userId,
                   displayName: profile.displayName,
-                  email: lineEmail || undefined  // LINE メールアドレスがあればそれを使用
+                  email: lineEmail || undefined,  // LINE メールアドレスがあればそれを使用
+                  role:
+                    typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+                      ? 'medical'
+                      : 'patient',
                 })
               });
               console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
+              try {
+                const setupData = await setupRes.json();
+                if (setupData?.user?.role === 'medical' || setupData?.user?.role === 'patient') {
+                  localStorage.setItem('loginRole', setupData.user.role);
+                }
+              } catch {
+                // ignore
+              }
 
               // 🆕 プロフィール情報を Supabase(profiles) に初回保存
               try {
@@ -115,11 +147,17 @@ export default function LandingPage() {
               console.error('⚠️ LINE プロフィール取得エラー:', profileError);
             }
             
-            // 🆕 初回ログイン時はプロフィール入力へ、それ以外は健康記録ページへ
-            if (isNewProfile) {
+            // 🆕 ロールに応じて遷移（医療従事者はmedicalへ、患者は既存動線）
+            const role =
+              typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+                ? 'medical'
+                : 'patient';
+            if (role === 'medical') {
+              router.push('/medical');
+            } else if (isNewProfile) {
               router.push('/profile');
             } else {
-            router.push('/health-records');
+              router.push('/health-records');
             }
             return;
             } else {
@@ -135,6 +173,17 @@ export default function LandingPage() {
     
     initLiff();
   }, [router]);
+
+  // ロール選択モーダル表示中は背景スクロールを抑止
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!showRoleModal) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showRoleModal]);
 
   // LINE ログイン
   const handleLineLogin = async () => {
@@ -161,7 +210,7 @@ export default function LandingPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role: loginRole }),
       });
 
       if (!response.ok) {
@@ -176,9 +225,14 @@ export default function LandingPage() {
       localStorage.setItem('sessionToken', data.sessionToken);
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userName', data.user.name || '');
+      if (data?.user?.role === 'medical' || data?.user?.role === 'patient') {
+        localStorage.setItem('loginRole', data.user.role);
+      } else {
+        localStorage.setItem('loginRole', loginRole);
+      }
 
-      // 健康記録ページへ移動
-      router.push('/health-records');
+      // ロールに応じて遷移
+      router.push(loginRole === 'medical' ? '/medical' : '/health-records');
     } catch (err) {
       setError('通信エラーが発生しました');
       console.error(err);
@@ -197,7 +251,7 @@ export default function LandingPage() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, role: loginRole }),
       });
 
       if (!response.ok) {
@@ -215,15 +269,28 @@ export default function LandingPage() {
       );
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userName', data.user.name || '');
+      localStorage.setItem('loginRole', loginRole);
 
-      // 🆕 新規登録後はまずプロフィール入力ページへ
-      router.push('/profile');
+      // 🆕 新規登録後の遷移（患者:プロフィール、医療従事者:medical）
+      router.push(loginRole === 'medical' ? '/medical' : '/profile');
     } catch (err) {
       setError('通信エラーが発生しました');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const setRole = (role: 'patient' | 'medical') => {
+    setLoginRole(role);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('loginRole', role);
+    }
+  };
+
+  const chooseRole = (role: 'patient' | 'medical') => {
+    setRole(role);
+    setShowRoleModal(false);
   };
 
   const handleFormSwitch = (signup: boolean) => {
@@ -289,7 +356,34 @@ export default function LandingPage() {
           
           {/* ログイン/登録ボタン */}
           {!showLoginForm ? (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col gap-4 items-center">
+              {/* ロール選択 */}
+              <div className="inline-flex bg-white border border-orange-200 rounded-full p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setRole('patient')}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                    loginRole === 'patient'
+                      ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                      : 'text-orange-700 hover:bg-orange-50'
+                  }`}
+                >
+                  患者側
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('medical')}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                    loginRole === 'medical'
+                      ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                      : 'text-orange-700 hover:bg-orange-50'
+                  }`}
+                >
+                  医療従事者側
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {/* LINE ログインボタン */}
           <button
             onClick={handleLineLogin}
@@ -314,10 +408,38 @@ export default function LandingPage() {
                 </svg>
                 メール でログイン
               </button>
+              </div>
             </div>
           ) : (
             /* ログインフォーム */
             <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 mb-8">
+              {/* ロール選択（フォーム内でも変更可） */}
+              <div className="mb-4 flex justify-center">
+                <div className="inline-flex bg-white border border-orange-200 rounded-full p-1 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setRole('patient')}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                      loginRole === 'patient'
+                        ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                        : 'text-orange-700 hover:bg-orange-50'
+                    }`}
+                  >
+                    患者側
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('medical')}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                      loginRole === 'medical'
+                        ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                        : 'text-orange-700 hover:bg-orange-50'
+                    }`}
+                  >
+                    医療従事者側
+                  </button>
+                </div>
+              </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-6">
                 {isSignUp ? '新規登録' : 'ログイン'}
               </h3>
@@ -567,6 +689,37 @@ export default function LandingPage() {
           )}
         </section>
       </main>
+
+      {/* ロール選択モーダル（初回のみ） */}
+      {showRoleModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-6">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-orange-200 p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              あなたは利用者ですか？医療従事者ですか？
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              ログイン後に表示されるページが切り替わります。
+            </p>
+
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={() => chooseRole('patient')}
+                className="w-full py-4 rounded-xl font-bold text-lg text-white bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-md"
+              >
+                患者（利用者）
+              </button>
+              <button
+                type="button"
+                onClick={() => chooseRole('medical')}
+                className="w-full py-4 rounded-xl font-bold text-lg text-orange-700 bg-white border-2 border-orange-300 hover:bg-orange-50 shadow-sm"
+              >
+                医療従事者
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* フッター */}
       <footer className="bg-white/50 backdrop-blur-sm border-t border-orange-200 mt-16 py-8">

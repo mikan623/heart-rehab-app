@@ -4,7 +4,7 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 /**
  * LINE ログイン時にユーザー情報をセットアップ
  * POST /api/auth/line-user-setup
- * Body: { userId, displayName, email }
+ * Body: { userId, displayName, email, role }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { userId, displayName, email } = await request.json();
+    const { userId, displayName, email, role } = await request.json();
     
     console.log('💾 LINE ユーザーセットアップ:', { userId, displayName, email });
     
@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
           id: userId,
           email: email || `${userId}@line.local`,
           name: displayName || 'User',
-          authType: 'line'  // LINE ログイン初回時は authType = "line"
+          authType: 'line',  // LINE ログイン初回時は authType = "line"
+          role: role === 'medical' ? 'medical' : 'patient',
         }
       });
       console.log('✅ LINE ユーザーを作成:', user.id);
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       // 既存ユーザーの場合は、メールアドレスを更新（authType は更新しない）
       console.log('🔄 既存ユーザー更新:', userId);
       
-      // メールアドレスが未設定の場合のみ更新
+      // メールアドレスが未設定の場合のみ更新（roleは変更しない）
       if (!user.email || user.email.includes('@line.local') || user.email.includes('@example.com')) {
         user = await prisma.user.update({
           where: { id: userId },
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
             email: email || user.email,
             name: displayName || user.name,
             // ⚠️ authType は変更しない（既存の認証タイプを保持）
+            // ⚠️ role も変更しない（既存のロールを保持）
           }
         });
         console.log('✅ 既存ユーザーを更新:', user.id);
@@ -67,7 +69,8 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        authType: user.authType
+        authType: user.authType,
+        role: (user as any).role || 'patient'
       }
     });
     

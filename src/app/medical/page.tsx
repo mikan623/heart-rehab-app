@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { getCurrentUserId } from '@/lib/auth';
 
 interface Patient {
   userId: string;
@@ -72,6 +73,8 @@ const MedicalPage: React.FC = () => {
   const [searching, setSearching] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteLoadingId, setInviteLoadingId] = useState<string | null>(null);
+  const providerId = getCurrentUserId();
 
   const hasAnyBloodValue = (item: BloodData) => {
     return (
@@ -125,6 +128,33 @@ const MedicalPage: React.FC = () => {
     }
   };
 
+  const handleInvite = async (patientId: string) => {
+    if (!providerId) {
+      setError('ログイン情報が取得できませんでした');
+      return;
+    }
+    try {
+      setInviteLoadingId(patientId);
+      setError(null);
+      const res = await fetch('/api/medical/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId, patientId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || '招待の作成に失敗しました');
+        return;
+      }
+      alert('招待を送信しました。利用者側が承認すると閲覧できます。');
+    } catch (err) {
+      console.error(err);
+      setError('招待の作成に失敗しました');
+    } finally {
+      setInviteLoadingId(null);
+    }
+  };
+
   const handleSelectPatient = async (patient: Patient) => {
     setSelectedPatient(patient);
     setError(null);
@@ -135,23 +165,27 @@ const MedicalPage: React.FC = () => {
       setLoadingRecords(true);
       setLoadingBloodData(true);
 
-      const [resRecords, resBlood] = await Promise.all([
-        fetch(`/api/health-records?userId=${encodeURIComponent(patient.userId)}`),
-        fetch(`/api/blood-data?userId=${encodeURIComponent(patient.userId)}`),
-      ]);
-
-      const [dataRecords, dataBlood] = await Promise.all([resRecords.json(), resBlood.json()]);
-
-      if (!resRecords.ok) {
-        setError(dataRecords.error || '健康記録の取得に失敗しました');
+      if (!providerId) {
+        setError('ログイン情報が取得できませんでした');
         return;
       }
 
-      // blood-data 側はエラーでも空扱いで継続
-      const bloodList = Array.isArray(dataBlood) ? dataBlood : [];
+      const res = await fetch(
+        `/api/medical/patient-data?providerId=${encodeURIComponent(providerId)}&patientId=${encodeURIComponent(patient.userId)}`
+      );
+      const data = await res.json();
 
-      setRecords(dataRecords.records || []);
-      setBloodDataList(bloodList);
+      if (!res.ok) {
+        if (res.status === 403) {
+          setError('この利用者はまだ承認していません。先に招待を送って、承認後に閲覧できます。');
+          return;
+        }
+        setError(data?.error || '患者データの取得に失敗しました');
+        return;
+      }
+
+      setRecords(data.records || []);
+      setBloodDataList(data.bloodDataList || []);
     } catch (err) {
       console.error(err);
       setError('通信エラーが発生しました');
@@ -233,13 +267,23 @@ const MedicalPage: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectPatient(patient)}
-                      className="shrink-0 inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-pink-400 text-pink-600 text-xs md:text-sm font-semibold hover:bg-pink-50"
-                    >
-                      記録を見る
-                    </button>
+                    <div className="shrink-0 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        disabled={inviteLoadingId === patient.userId}
+                        onClick={() => handleInvite(patient.userId)}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs md:text-sm font-semibold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {inviteLoadingId === patient.userId ? '招待中…' : '招待する'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPatient(patient)}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-pink-400 text-pink-600 text-xs md:text-sm font-semibold hover:bg-pink-50"
+                      >
+                        記録を見る
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

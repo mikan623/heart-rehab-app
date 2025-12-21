@@ -14,6 +14,7 @@ const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 
 export default function NavigationBar() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [loginRole, setLoginRole] = useState<'patient' | 'medical' | null>(null);
   const [user, setUser] = useState<any>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
@@ -41,6 +42,14 @@ export default function NavigationBar() {
         }
     } catch (e) {
       console.log('⚠️ NavigationBar: ユーザー情報読み込みエラー（無視）', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('loginRole');
+    if (stored === 'patient' || stored === 'medical') {
+      setLoginRole(stored);
     }
   }, []);
 
@@ -448,8 +457,8 @@ export default function NavigationBar() {
         try {
           // LIFF が初期化されているかチェック
           if (window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
-            window.liff.logout();
-            console.log('✅ LINE ログアウト完了');
+        window.liff.logout();
+        console.log('✅ LINE ログアウト完了');
           }
         } catch (liffError) {
           console.log('⚠️ LINE ログアウトスキップ（LIFF 未初期化）:', liffError);
@@ -572,6 +581,22 @@ export default function NavigationBar() {
         {showSettingsMenu && (
           <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
             <div className="py-1">
+              {loginRole !== 'medical' && (
+                <>
+                  <button
+                    onClick={() => {
+                      setActiveButton('messages');
+                      setTimeout(() => {
+                        window.location.href = '/messages';
+                        setShowSettingsMenu(false);
+                      }, 150);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'messages' ? 'click-animate' : ''}`}>
+                    📩 メッセージ
+                  </button>
+                  <hr className="my-1" />
+                </>
+              )}
               <button
                 onClick={() => {
                   setActiveButton('profile');
@@ -588,8 +613,8 @@ export default function NavigationBar() {
                 onClick={() => {
                   setActiveButton('terms');
                   setTimeout(() => {
-                    window.location.href = '/terms';
-                    setShowSettingsMenu(false);
+                  window.location.href = '/terms';
+                  setShowSettingsMenu(false);
                   }, 150);
                 }}
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'terms' ? 'click-animate' : ''}`}>
@@ -621,8 +646,8 @@ export default function NavigationBar() {
                 onClick={() => {
                   setActiveButton('pdf');
                   setTimeout(() => {
-                    exportToPDF();
-                    setShowSettingsMenu(false);
+                  exportToPDF();
+                  setShowSettingsMenu(false);
                     setActiveButton(null);
                   }, 150);
                 }}

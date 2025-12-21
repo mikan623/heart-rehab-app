@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, password } = await request.json();
+    const { email, name, password, role } = await request.json();
 
     // バリデーション
     if (!email || !name || !password) {
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         name,
         password: hashedPassword,
         authType: 'email',
+        role: role === 'medical' ? 'medical' : 'patient',
       },
     });
 

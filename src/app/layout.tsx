@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import RoleRouteGuard from "@/components/RoleRouteGuard";
 
 export const metadata: Metadata = {
   title: "心臓リハビリ手帳",
@@ -18,6 +19,7 @@ export default function RootLayout({
         <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
       </head>
       <body className="p-4">
+        <RoleRouteGuard />
         {children}
       </body>
     </html>
