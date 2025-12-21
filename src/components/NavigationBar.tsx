@@ -507,6 +507,12 @@ export default function NavigationBar() {
     <div className="flex justify-between items-start gap-1 pb-1">
       {/* 左側：ナビゲーションボタン（スクロール可能） */}
       <div className="flex gap-0.5 overflow-x-auto pb-1 flex-1">
+        {loginRole === 'medical' ? (
+          <div className="flex items-center px-2 py-1 text-xs font-semibold text-orange-700 whitespace-nowrap">
+            医療従事者モード
+          </div>
+        ) : (
+          <>
         <button 
           onClick={() => {
             setActiveButton('health-records');
@@ -561,6 +567,8 @@ export default function NavigationBar() {
           <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
+          </>
+        )}
       </div>
   
       {/* 右側：メニューボタン（固定） */}

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { getCurrentUserId } from '@/lib/auth';
+import PageHeader from '@/components/PageHeader';
+import { clearSession, getCurrentUserId } from '@/lib/auth';
 
 interface Patient {
   userId: string;
@@ -75,6 +76,30 @@ const MedicalPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [inviteLoadingId, setInviteLoadingId] = useState<string | null>(null);
   const providerId = getCurrentUserId();
+
+  const handleLogout = () => {
+    try {
+      clearSession();
+      if (typeof window !== 'undefined' && (window as any).liff) {
+        try {
+          const liff = (window as any).liff;
+          if (liff?.isLoggedIn && typeof liff.isLoggedIn === 'function' && liff.isLoggedIn()) {
+            liff.logout();
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (typeof window !== 'undefined') {
+        // 役割も含めて明示的にクリア
+        localStorage.removeItem('loginRole');
+        window.location.href = '/';
+      }
+    } catch (e) {
+      console.error(e);
+      alert('ログアウトに失敗しました');
+    }
+  };
 
   const hasAnyBloodValue = (item: BloodData) => {
     return (
@@ -197,50 +222,68 @@ const MedicalPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-          医療従事者用 患者検索・健康記録一覧
-        </h1>
+      <PageHeader title="医療従事者" />
 
-        <p className="text-sm md:text-base text-gray-600 mb-4">
-          患者さんのお名前を入力して検索すると、その患者さんの健康記録一覧を確認できます。
-        </p>
+      <main className="max-w-6xl mx-auto p-4 pb-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                患者検索・データ閲覧
+              </h2>
+              <p className="text-sm md:text-base text-gray-600 mt-1">
+                患者さんを検索して、招待→承認後に健康記録 / 血液検査 / CPX を確認できます。
+              </p>
+            </div>
 
-        <form onSubmit={handleSearch} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            患者名で検索
-          </label>
-          <div className="flex flex-col md:flex-row gap-3">
-            <input
-              type="text"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              placeholder="例）山田太郎"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-400 bg-white"
-            />
             <button
-              type="submit"
-              disabled={searching}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-pink-500 text-white text-sm md:text-base font-semibold shadow-sm hover:bg-pink-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleLogout}
+              className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-full bg-white border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50"
             >
-              {searching ? '検索中…' : '検索する'}
+              ログアウト
             </button>
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            フルネームだけでなく、苗字や名前の一部でも検索できます。
-          </p>
-        </form>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          <form
+            onSubmit={handleSearch}
+            className="bg-white/90 backdrop-blur rounded-2xl shadow-sm border border-orange-200 p-4 md:p-6 mb-6"
+          >
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="font-bold text-gray-800">患者名で検索</div>
+              <span className="text-xs text-gray-500">部分一致OK</span>
+            </div>
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                placeholder="例）山田太郎"
+                className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+              />
+              <button
+                type="submit"
+                disabled={searching}
+                className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white text-sm md:text-base font-bold shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {searching ? '検索中…' : '検索する'}
+              </button>
+            </div>
+          </form>
 
-        <div className="grid md:grid-cols-2 gap-6">
+          {error && (
+            <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="grid lg:grid-cols-2 gap-6">
           {/* 左：患者一覧 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-5">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">患者一覧</h2>
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-gray-800">患者一覧</h3>
+              <span className="text-xs text-gray-500">{patients.length} 件</span>
+            </div>
 
             {patients.length === 0 && !searching && (
               <p className="text-sm text-gray-500">まだ検索結果がありません。</p>
@@ -251,10 +294,10 @@ const MedicalPage: React.FC = () => {
                 {patients.map((patient) => (
                   <li
                     key={patient.userId}
-                    className="py-3 flex items-center justify-between gap-3"
+                    className="py-4 flex items-center justify-between gap-3"
                   >
                     <div>
-                      <p className="text-sm md:text-base font-medium text-gray-900">
+                      <p className="text-sm md:text-base font-bold text-gray-900">
                         {patient.displayName || '名前未登録'}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
@@ -272,14 +315,14 @@ const MedicalPage: React.FC = () => {
                         type="button"
                         disabled={inviteLoadingId === patient.userId}
                         onClick={() => handleInvite(patient.userId)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs md:text-sm font-semibold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {inviteLoadingId === patient.userId ? '招待中…' : '招待する'}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSelectPatient(patient)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-pink-400 text-pink-600 text-xs md:text-sm font-semibold hover:bg-pink-50"
+                        className="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
                       >
                         記録を見る
                       </button>
@@ -288,11 +331,18 @@ const MedicalPage: React.FC = () => {
                 ))}
               </ul>
             )}
-          </div>
+          </section>
 
           {/* 右：健康記録一覧 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-5">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">患者データ</h2>
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-gray-800">患者データ</h3>
+              {selectedPatient && (
+                <span className="text-xs px-2 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-700 font-semibold">
+                  選択中
+                </span>
+              )}
+            </div>
 
             {!selectedPatient && (
               <p className="text-sm text-gray-500">
@@ -301,8 +351,8 @@ const MedicalPage: React.FC = () => {
             )}
 
             {selectedPatient && (
-              <div className="mb-3">
-                <p className="text-sm font-medium text-gray-900">
+              <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50/60 p-3">
+                <p className="text-sm font-bold text-gray-900">
                   {selectedPatient.displayName || '名前未登録'} さんの記録
                 </p>
                 <p className="text-xs text-gray-500">
@@ -325,7 +375,7 @@ const MedicalPage: React.FC = () => {
                 {records.map((record) => (
                   <div
                     key={record.id}
-                    className="border border-gray-200 rounded-lg p-3 text-xs md:text-sm bg-gray-50"
+                    className="border border-gray-200 rounded-xl p-3 text-xs md:text-sm bg-gray-50"
                   >
                     <div className="flex justify-between items-center mb-1.5">
                       <span className="font-semibold text-gray-800">
@@ -407,7 +457,7 @@ const MedicalPage: React.FC = () => {
                 {!loadingBloodData && bloodDataList.filter(hasAnyBloodValue).length > 0 && (
                   <div className="max-h-72 overflow-y-auto space-y-3">
                     {bloodDataList.filter(hasAnyBloodValue).map((b) => (
-                      <div key={b.id} className="border border-gray-200 rounded-lg p-3 text-xs md:text-sm bg-orange-50">
+                      <div key={b.id} className="border border-gray-200 rounded-xl p-3 text-xs md:text-sm bg-orange-50">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="font-semibold text-gray-800">{b.testDate}</span>
                           <span className="text-[10px] md:text-xs text-gray-500">
@@ -450,7 +500,7 @@ const MedicalPage: React.FC = () => {
                         .flatMap((b) => (b.cpxTests || []).map((c) => ({ c, parentDate: b.testDate })))
                         .sort((a, b) => (b.c.testDate || b.parentDate).localeCompare(a.c.testDate || a.parentDate))
                         .map(({ c, parentDate }) => (
-                          <div key={c.id} className="border border-gray-200 rounded-lg p-3 text-xs md:text-sm bg-blue-50">
+                          <div key={c.id} className="border border-gray-200 rounded-xl p-3 text-xs md:text-sm bg-blue-50">
                             <div className="flex justify-between items-center mb-1.5">
                               <span className="font-semibold text-gray-800">
                                 {(c.testDate || parentDate)} / CPX #{c.cpxRound}
@@ -480,9 +530,10 @@ const MedicalPage: React.FC = () => {
                   )}
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
+      </main>
     </div>
   );
 };
