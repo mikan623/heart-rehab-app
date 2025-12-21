@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import NavigationBar from '@/components/NavigationBar';
-import { getSession, isLineLoggedIn } from '@/lib/auth';
+import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
 import { HealthRecordIcon, CalendarIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from '@/components/NavIcons';
 
 // 学ぶアイコン
@@ -159,31 +159,27 @@ export default function BloodDataPage() {
   // 認証チェック
   useEffect(() => {
     const session = getSession();
-    
-    // メールログインセッション優先（LINE ログインより優先）
-    if (session) {
+
+    // まずはメールセッションがあればそれを採用
+    if (session?.userId) {
       setUserId(session.userId);
       setIsAuthenticated(true);
       setIsLoading(false);
       return;
     }
 
-    // メールログインセッションがない場合のみ LINE ログインをチェック
+    // LINEログイン判定（lineLoginStateが復元できる可能性あり）
     const lineLoggedIn = isLineLoggedIn();
-    if (!lineLoggedIn) {
-      // ログインしていない場合はランディングページへ
+    const resolvedUserId = getCurrentUserId();
+
+    if (!lineLoggedIn || !resolvedUserId) {
       router.push('/');
       setIsLoading(false);
       return;
     }
 
-    // LINE ログインユーザーの場合、ユーザーIDをローカルストレージから取得
-    const storedUserId = localStorage.getItem('userId');
-    if (storedUserId) {
-      setUserId(storedUserId);
-      setIsAuthenticated(true);
-    }
-    
+    setUserId(resolvedUserId);
+    setIsAuthenticated(true);
     setIsLoading(false);
   }, [router]);
 
