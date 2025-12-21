@@ -672,31 +672,41 @@ export default function GraphPage() {
               </div>
 
         {/* 週選択 */}
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
-              <button
-            onClick={() => setWeekOffset((prev) => prev - 1)}
-            className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
-              >
-            ⬅ 先週
-              </button>
-          <div className="text-center text-base font-bold text-gray-800 flex-1">{weekLabel}</div>
-          <div className="flex items-center gap-2">
-            {weekOffset < 0 && (
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => setWeekOffset((prev) => prev - 1)}
+              className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
+            >
+              ⬅ 先週
+            </button>
+
+            {/* デスクトップは中央に週ラベル */}
+            <div className="hidden md:block text-center text-base font-bold text-gray-800 flex-1">{weekLabel}</div>
+
+            <div className="flex items-center gap-2">
+              {weekOffset < 0 && (
                 <button
-                onClick={() => setWeekOffset((prev) => Math.min(prev + 1, 0))}
-                className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
-              >
-                次週 ➡
+                  onClick={() => setWeekOffset((prev) => Math.min(prev + 1, 0))}
+                  className="px-4 py-2 bg-gray-600 text-white rounded font-semibold click-press"
+                >
+                  次週 ➡
                 </button>
               )}
-            <button
-              onClick={() => setWeekOffset(0)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press"
-            >
-              ↻ 最新
-            </button>
-          </div>
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-full font-semibold click-press"
+              >
+                ↻ 最新
+              </button>
             </div>
+          </div>
+
+          {/* スマホはボタンの下に週ラベル */}
+          <div className="md:hidden mt-2 text-center text-lg font-bold text-gray-800">
+            {weekLabel}
+          </div>
+        </div>
           </div>
           
       {/* メインコンテンツ */}
