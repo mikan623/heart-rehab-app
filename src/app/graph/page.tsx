@@ -695,29 +695,6 @@ export default function GraphPage() {
           
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto p-4 pb-28">
-        {/* 朝/昼/夜フィルタ */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 mb-3">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'all', label: 'すべて' },
-              { key: 'morning', label: '朝' },
-              { key: 'noon', label: '昼' },
-              { key: 'night', label: '夜' },
-            ].map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setActiveSlot(s.key as any)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold border ${
-                  activeSlot === s.key
-                    ? 'bg-orange-500 text-white border-orange-500'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-orange-50'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
         {/* 上部表示 */}
         <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg p-4 mb-4 shadow-md border-2 border-orange-300">
           {activeMetric === 'bloodPressure' && (
@@ -753,13 +730,41 @@ export default function GraphPage() {
             </div>
         )}
 
+        {/* すべて・朝・昼・夜（グラフと記録一覧の間） */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 shadow-sm">
+          <div className="text-lg md:text-xl font-extrabold text-gray-800 mb-3">表示</div>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { key: 'all', label: 'すべて', cls: 'bg-gray-700 border-gray-700 text-white hover:bg-gray-800' },
+              { key: 'morning', label: '朝', cls: 'bg-green-500 border-green-500 text-white hover:bg-green-600' },
+              { key: 'noon', label: '昼', cls: 'bg-blue-500 border-blue-500 text-white hover:bg-blue-600' },
+              { key: 'night', label: '夜', cls: 'bg-purple-500 border-purple-500 text-white hover:bg-purple-600' },
+            ].map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setActiveSlot(s.key as any)}
+                className={`px-5 py-2 rounded-full text-base md:text-lg font-extrabold border transition ${
+                  activeSlot === s.key ? s.cls : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 健康記録一覧 */}
         <div className="bg-white rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-800">記録一覧</h3>
                     </div>
 
-          {(weekData?.points ?? []).map((p, idx) => {
+          {(() => {
+            const points = (weekData?.points ?? []).filter((p) => activeSlot === 'all' || p.slot === activeSlot);
+            if (points.length === 0) {
+              return <p className="text-sm text-gray-500">該当する記録がありません。</p>;
+            }
+            return points.map((p, idx) => {
             const dayRecord = savedRecords[p.date];
             
             if (!dayRecord) return null;
@@ -767,12 +772,25 @@ export default function GraphPage() {
             const record = (dayRecord as any)[p.timeKey] || Object.values(dayRecord)[0];
             if (!record) return null;
 
+            const slotLabel = p.slot === 'morning' ? '朝' : p.slot === 'noon' ? '昼' : '夜';
+            const slotBadgeClass =
+              p.slot === 'morning'
+                ? 'bg-green-100 text-green-800 border-green-200'
+                : p.slot === 'noon'
+                ? 'bg-blue-100 text-blue-800 border-blue-200'
+                : 'bg-purple-100 text-purple-800 border-purple-200';
+
             return (
               <div key={`${p.date}_${p.timeKey}_${idx}`} className="border-t pt-3 pb-3">
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-bold text-gray-800">{p.date}</p>
-                    <p className="text-sm text-gray-600">{p.displayTime}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${slotBadgeClass}`}>
+                        {slotLabel}
+                      </span>
+                      <p className="text-sm text-gray-600">{p.displayTime}</p>
+                    </div>
             </div>
                   {activeMetric === 'bloodPressure' && record.bloodPressure && (
                     <p className="text-xl font-bold text-pink-600">
@@ -788,7 +806,8 @@ export default function GraphPage() {
                   </div>
                 </div>
             );
-          })}
+          });
+          })()}
               </div>
       </main>
     </div>
