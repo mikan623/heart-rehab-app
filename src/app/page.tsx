@@ -63,8 +63,15 @@ export default function LandingPage() {
     const initLiff = async () => {
       try {
         if (typeof window !== 'undefined' && window.liff) {
+          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+          if (!liffId) {
+            console.warn('LIFF ID missing; skipping init');
+            // トップは isLiffReady state を持たないので、未初期化でも画面表示を続行する
+            setIsLoggedIn(false);
+            return;
+          }
           await window.liff.init({ 
-            liffId: process.env.NEXT_PUBLIC_LIFF_ID 
+            liffId
           });
           
           setLiff(window.liff);

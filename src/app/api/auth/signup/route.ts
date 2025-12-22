@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // ユーザーを作成
-    const user = await prisma.user.create({
+    const user: any = await (prisma as any).user.create({
       data: {
         id: email, // メールアドレスを ID として使用
         email,

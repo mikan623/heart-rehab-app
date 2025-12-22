@@ -46,10 +46,12 @@ interface WeekData {
   bloodPressureNightDiastolic: Array<number | null>;
   pulse: Array<number | null>;
   weight: Array<number | null>;
-  points: Array<{ date: string; timeKey: string; displayTime: string }>;
+  points: Array<{ date: string; timeKey: string; displayTime: string; slot: TimeSlot }>;
   weekStart: string; // 'YYYY-MM-DD'
   weekEnd: string;   // 'YYYY-MM-DD'
 }
+
+type TimeSlot = 'morning' | 'noon' | 'night';
 
 export default function GraphPage() {
   const router = useRouter();
@@ -59,6 +61,7 @@ export default function GraphPage() {
   const [user, setUser] = useState<any>(null);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight'>('bloodPressure');
+  const [activeSlot, setActiveSlot] = useState<'all' | TimeSlot>('all');
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
   const [weekOffset, setWeekOffset] = useState(0); // 0 = 現在週、-1 = 先週
@@ -151,6 +154,23 @@ export default function GraphPage() {
     } catch {
       return null;
     }
+  };
+
+  const slotOfTime = (timeKey: string): TimeSlot => {
+    // timeKey 例: "08:00", "18:30", "morning" など
+    let hh = 8;
+    if (timeKey === 'morning') hh = 8;
+    else if (timeKey === 'afternoon') hh = 13;
+    else if (timeKey === 'evening' || timeKey === 'night') hh = 20;
+    else {
+      const m = timeKey.match(/^(\d{1,2})/);
+      if (m) {
+        hh = Number(m[1]);
+      }
+    }
+    if (hh >= 4 && hh < 12) return 'morning';
+    if (hh >= 12 && hh < 18) return 'noon';
+    return 'night';
   };
 
   // 認証チェック
@@ -268,7 +288,7 @@ export default function GraphPage() {
 
     const weekStart = new Date(startDate);
     const labels: string[] = [];
-    const points: Array<{ date: string; timeKey: string; displayTime: string }> = [];
+    const points: Array<{ date: string; timeKey: string; displayTime: string; slot: TimeSlot }> = [];
 
     const data: WeekData = {
       labels,
@@ -302,8 +322,9 @@ export default function GraphPage() {
         if (!record) continue;
 
         const displayTime = timeKey === 'morning' ? '08:00' : timeKey;
+        const slot = slotOfTime(displayTime);
         labels.push(`${displayDate} ${displayTime}`);
-        points.push({ date: dateStr, timeKey, displayTime });
+        points.push({ date: dateStr, timeKey, displayTime, slot });
 
         const sys = record?.bloodPressure?.systolic ? parseInt(record.bloodPressure.systolic) : null;
         const dia = record?.bloodPressure?.diastolic ? parseInt(record.bloodPressure.diastolic) : null;
@@ -361,29 +382,42 @@ export default function GraphPage() {
     });
   })();
 
+  const slotColors: Record<TimeSlot, string> = {
+    morning: '#22c55e', // green（朝）
+    noon: '#3b82f6',    // blue（昼）
+    night: '#a855f7',   // purple（夜）
+  };
+  const colorForSlotArray = weekData?.points.map((p) => slotColors[p.slot]) || [];
+  const filterBySlot = (arr: Array<number | null>) =>
+    weekData
+      ? arr.map((v, idx) => (activeSlot === 'all' || weekData.points[idx].slot === activeSlot ? v : null))
+      : arr;
+
   const lineChartData = hasPoints && weekData ? {
     labels: weekData.labels,
     datasets: activeMetric === 'bloodPressure'
       ? [
           {
             label: '収縮期 (mmHg)',
-            data: weekData.bloodPressureSystolic,
+            data: filterBySlot(weekData.bloodPressureSystolic),
             borderColor: 'rgb(239, 68, 68)', // red
             backgroundColor: 'rgba(239, 68, 68, 0.08)',
             tension: 0.25,
             pointRadius: 4,
-            pointBackgroundColor: 'rgb(239, 68, 68)',
+            pointBackgroundColor: colorForSlotArray,
+            pointBorderColor: colorForSlotArray,
             borderWidth: 2,
             spanGaps: true,
           },
           {
             label: '拡張期 (mmHg)',
-            data: weekData.bloodPressureDiastolic,
+            data: filterBySlot(weekData.bloodPressureDiastolic),
             borderColor: 'rgb(236, 72, 153)', // pink
             backgroundColor: 'rgba(236, 72, 153, 0.08)',
             tension: 0.25,
             pointRadius: 4,
-            pointBackgroundColor: 'rgb(236, 72, 153)',
+            pointBackgroundColor: colorForSlotArray,
+            pointBorderColor: colorForSlotArray,
             borderWidth: 2,
             spanGaps: true,
           },
@@ -392,12 +426,13 @@ export default function GraphPage() {
       ? [
           {
             label: '脈拍 (回/分)',
-            data: weekData.pulse,
+            data: filterBySlot(weekData.pulse),
             borderColor: 'rgb(59, 130, 246)', // 青
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             tension: 0.3,
             pointRadius: 5,
-            pointBackgroundColor: 'rgb(59, 130, 246)',
+            pointBackgroundColor: colorForSlotArray,
+            pointBorderColor: colorForSlotArray,
             borderWidth: 2,
             spanGaps: true,
           },
@@ -405,12 +440,13 @@ export default function GraphPage() {
       : [
           {
             label: '体重 (kg)',
-            data: weekData.weight,
+            data: filterBySlot(weekData.weight),
             borderColor: 'rgb(168, 85, 247)', // 紫
             backgroundColor: 'rgba(168, 85, 247, 0.1)',
             tension: 0.3,
             pointRadius: 5,
-            pointBackgroundColor: 'rgb(168, 85, 247)',
+            pointBackgroundColor: colorForSlotArray,
+            pointBorderColor: colorForSlotArray,
         borderWidth: 2,
             spanGaps: true,
           },
@@ -659,6 +695,29 @@ export default function GraphPage() {
           
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto p-4 pb-28">
+        {/* 朝/昼/夜フィルタ */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 mb-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'all', label: 'すべて' },
+              { key: 'morning', label: '朝' },
+              { key: 'noon', label: '昼' },
+              { key: 'night', label: '夜' },
+            ].map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setActiveSlot(s.key as any)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border ${
+                  activeSlot === s.key
+                    ? 'bg-orange-500 text-white border-orange-500'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-orange-50'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
         {/* 上部表示 */}
         <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg p-4 mb-4 shadow-md border-2 border-orange-300">
           {activeMetric === 'bloodPressure' && (

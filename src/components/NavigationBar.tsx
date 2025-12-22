@@ -40,10 +40,10 @@ export default function NavigationBar() {
       const storedName = localStorage.getItem('userName') || '';
       if (storedId) {
         setUser({ userId: storedId, displayName: storedName });
-        }
+          }
     } catch (e) {
       console.log('⚠️ NavigationBar: ユーザー情報読み込みエラー（無視）', e);
-    }
+        }
   }, []);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function NavigationBar() {
     if (!uid) {
       setUnreadCount(0);
       return;
-    }
+          }
 
     const fetchCount = async () => {
       try {

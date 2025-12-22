@@ -228,8 +228,14 @@ export default function CalendarPage() {
         }
 
         if (typeof window !== 'undefined' && window.liff) {
+          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+          if (!liffId) {
+            console.warn('LIFF ID missing; skipping init');
+            setIsLiffReady(true);
+            return;
+          }
           await window.liff.init({ 
-            liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' 
+            liffId
           });
           
           setLiff(window.liff);

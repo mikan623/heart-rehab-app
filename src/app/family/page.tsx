@@ -186,7 +186,13 @@ export default function FamilyPage() {
         // LIFF初期化処理
         if (typeof window !== 'undefined' && window.liff) {
           try {
-            await window.liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+            const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+            if (!liffId) {
+              console.warn('LIFF ID missing; skipping init');
+              setIsLiffReady(true);
+              return;
+            }
+            await window.liff.init({ liffId });
             console.log('LIFF initialized successfully');
             
             // ログインチェック

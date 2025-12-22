@@ -457,9 +457,15 @@ export default function Home() {
 
         // LIFFが利用可能かチェック
         if (typeof window !== 'undefined' && window.liff) {
+          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+          if (!liffId) {
+            console.warn('LIFF ID missing; skipping init');
+            setIsLiffReady(true);
+            return;
+          }
           // LIFF初期化
           await window.liff.init({ 
-            liffId: process.env.NEXT_PUBLIC_LIFF_ID 
+            liffId
           });
           
           setLiff(window.liff);
@@ -2082,7 +2088,7 @@ export default function Home() {
 
         {(() => {
           let p: any = {};
-          try {
+              try {
             p = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
               } catch {
             p = {};
