@@ -731,9 +731,12 @@ export default function GraphPage() {
         )}
 
         {/* すべて・朝・昼・夜（グラフと記録一覧の間） */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 shadow-sm">
+        <div
+          className="bg-white rounded-lg border border-gray-200 p-4 mb-4 shadow-sm"
+          style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}
+        >
           <div className="text-lg md:text-xl font-extrabold text-gray-800 mb-3">表示</div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-nowrap gap-3 overflow-x-auto whitespace-nowrap">
             {[
               { key: 'all', label: 'すべて', cls: 'bg-gray-700 border-gray-700 text-white hover:bg-gray-800' },
               { key: 'morning', label: '朝', cls: 'bg-green-500 border-green-500 text-white hover:bg-green-600' },
@@ -750,9 +753,9 @@ export default function GraphPage() {
                 {s.label}
               </button>
             ))}
+            </div>
           </div>
-        </div>
-
+          
         {/* 健康記録一覧 */}
         <div className="bg-white rounded-lg p-4 shadow-md">
           <div className="flex justify-between items-center mb-4">
@@ -790,8 +793,8 @@ export default function GraphPage() {
                         {slotLabel}
                       </span>
                       <p className="text-sm text-gray-600">{p.displayTime}</p>
-                    </div>
-            </div>
+                  </div>
+                </div>
                   {activeMetric === 'bloodPressure' && record.bloodPressure && (
                     <p className="text-xl font-bold text-pink-600">
                       {record.bloodPressure.systolic} / {record.bloodPressure.diastolic} mmHg
@@ -803,8 +806,8 @@ export default function GraphPage() {
                   {activeMetric === 'weight' && (
                     <p className="text-xl font-bold text-purple-600">{record.weight} kg</p>
                     )}
-                  </div>
-                </div>
+              </div>
+            </div>
             );
           });
           })()}

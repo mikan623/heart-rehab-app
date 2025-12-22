@@ -169,7 +169,7 @@ export default function LandingPage() {
             } else if (isNewProfile) {
               router.push('/profile');
             } else {
-              router.push('/health-records');
+            router.push('/health-records');
             }
             return;
             } else {
@@ -652,13 +652,13 @@ export default function LandingPage() {
               <div className="text-5xl mb-4">💬</div>
               <h4 className="font-bold text-gray-800 mb-2">お問い合わせサポート</h4>
               <p className="text-gray-600">24時間以内にお返事します</p>
-            </div>
+                    </div>
             <div>
               <div className="text-5xl mb-4">📚</div>
               <h4 className="font-bold text-gray-800 mb-2">ヘルプセンター</h4>
               <p className="text-gray-600">よくある質問と回答集</p>
-            </div>
-          </div>
+                </div>
+                </div>
         </section>
 
         {/* CTA セクション */}
