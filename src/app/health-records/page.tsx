@@ -30,6 +30,7 @@ interface HealthRecord {
   };
   dailyLife: string;
   medicationTaken?: boolean;
+  medicationTimes?: { morning: boolean; noon: boolean; night: boolean };
 }
 
 type PrintBloodData = {
@@ -124,7 +125,8 @@ export default function Home() {
       other: ''
     },
     dailyLife: '',
-    medicationTaken: false
+    medicationTaken: false,
+    medicationTimes: { morning: false, noon: false, night: false }
   });
   
   // 入力フィールドの再レンダリングを防ぐためのキー
@@ -232,6 +234,7 @@ export default function Home() {
     };
     dailyLife: string;
     medicationTaken?: boolean;
+    medicationTimes?: { morning: boolean; noon: boolean; night: boolean };
   }
 
   // 時間を日本語表記に変換する関数
@@ -1249,7 +1252,7 @@ export default function Home() {
                 💊 服薬確認
               </span>
               <span className="text-base md:text-xl font-semibold text-gray-700">
-                {healthRecord.medicationTaken ? '今、薬飲みました' : '未入力'}
+                {healthRecord.medicationTaken ? '飲みました' : '未入力'}
               </span>
             </button>
 
@@ -1441,14 +1444,13 @@ export default function Home() {
             <div className="flex items-end gap-4">
               <div className="flex-1">
                 <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
+                  type="text"
+                  inputMode="decimal"
                   onKeyDown={blockInvalidKeys}
                   value={healthRecord?.weight || ''}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    const value = e.target.value.replace(/。/g, '.').replace(/,/g, '.');
+                    if (value === '' || /^\d*(\.\d*)?$/.test(value)) {
                       setHealthRecord({
                         ...healthRecord,
                         weight: value
@@ -1726,20 +1728,41 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-            <label className="flex items-center space-x-4 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50">
-              <input
-                type="checkbox"
-                checked={healthRecord?.medicationTaken || false}
-                    onChange={(e) =>
-                      setHealthRecord({
-                  ...healthRecord,
-                  medicationTaken: e.target.checked
-                      })
-                    }
-                className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <span className="text-xl text-gray-700">今、薬飲みました</span>
-            </label>
+                <div className="mb-3 text-lg font-semibold text-gray-700">飲みました</div>
+                <div className="flex items-center justify-between gap-3">
+                  {[
+                    { key: 'morning', label: '朝' },
+                    { key: 'noon', label: '昼' },
+                    { key: 'night', label: '夜' },
+                  ].map((t) => {
+                    const checked = (healthRecord as any)?.medicationTimes?.[t.key] || false;
+                    return (
+                      <label
+                        key={t.key}
+                        className="flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const nextTimes = {
+                              ...(healthRecord as any)?.medicationTimes,
+                              [t.key]: e.target.checked,
+                            };
+                            const anyTaken = !!(nextTimes.morning || nextTimes.noon || nextTimes.night);
+                            setHealthRecord({
+                              ...(healthRecord as any),
+                              medicationTimes: nextTimes,
+                              medicationTaken: anyTaken,
+                            });
+                          }}
+                          className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                        />
+                        <span className="text-xl text-gray-700 font-bold">{t.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}

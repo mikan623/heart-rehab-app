@@ -448,7 +448,7 @@ const MedicalPage: React.FC = () => {
                         {patient.gender || '性別未登録'}
                       </p>
                       {patient.email && (
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-400 mt-0.5 break-all">
                           {patient.email}
                         </p>
                       )}
@@ -463,7 +463,7 @@ const MedicalPage: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <div className="w-full sm:w-auto shrink-0 flex gap-2 sm:flex-col">
+                    <div className="w-full sm:w-auto shrink-0 flex flex-col sm:flex-row gap-2">
                       <button
                         type="button"
                         disabled={
@@ -472,7 +472,7 @@ const MedicalPage: React.FC = () => {
                           inviteStatusByPatientId[patient.userId] === 'pending'
                         }
                         onClick={() => handleInvite(patient.userId)}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-3 py-2 rounded-xl bg-orange-500 text-white text-xs md:text-sm font-bold hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {inviteStatusByPatientId[patient.userId] === 'accepted'
                           ? '承認済'
@@ -482,10 +482,10 @@ const MedicalPage: React.FC = () => {
                               ? '招待中…'
                               : '招待する'}
                       </button>
-                    <button
+                      <button
                       type="button"
                       onClick={() => handleSelectPatient(patient)}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
                     >
                       記録を見る
                     </button>
