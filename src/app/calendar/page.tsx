@@ -31,6 +31,7 @@ declare global {
 export default function CalendarPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [heightCm, setHeightCm] = useState<number | null>(null);
 
   const today = new Date();
   const year = today.getFullYear();
@@ -152,6 +153,30 @@ export default function CalendarPage() {
     }
     // ローカル開発時はユーザーIDなしでも動くようフォールバック
     return `${baseKey}_local`;
+  };
+
+  const loadLocalProfileHeightCm = (overrideUserId?: string): number | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const key = overrideUserId ? `profile_${overrideUserId}` : getStorageKey('profile');
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      const h = p?.height;
+      if (h === null || h === undefined || h === '') return null;
+      const n = typeof h === 'number' ? h : Number(h);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const calcBmi = (weightKg: number | null, heightCmValue: number | null): number | null => {
+    if (!weightKg || !heightCmValue) return null;
+    const hm = heightCmValue / 100;
+    if (!Number.isFinite(hm) || hm <= 0) return null;
+    const bmi = weightKg / (hm * hm);
+    return Number.isFinite(bmi) ? Math.round(bmi * 10) / 10 : null;
   };
 
   const [editingRecord, setEditingRecord] = useState<{
@@ -291,6 +316,32 @@ export default function CalendarPage() {
     
     initLiff();
   }, []);
+
+  // プロフィール身長（BMI用）を取得
+  useEffect(() => {
+    const fetchHeight = async () => {
+      if (!isAuthenticated) return;
+      const userId = user?.userId;
+      if (!userId) return;
+      try {
+        const res = await fetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const hRaw = data?.profile?.height;
+          const h =
+            hRaw === null || hRaw === undefined || hRaw === ''
+              ? null
+              : (typeof hRaw === 'number' ? hRaw : Number(hRaw));
+          setHeightCm(h !== null && Number.isFinite(h) && h > 0 ? h : loadLocalProfileHeightCm(userId));
+        } else {
+          setHeightCm(loadLocalProfileHeightCm(userId));
+        }
+      } catch {
+        setHeightCm(loadLocalProfileHeightCm(userId));
+      }
+    };
+    fetchHeight();
+  }, [isAuthenticated, user?.userId]);
 
   // fetchHealthRecords関数を追加
   const fetchHealthRecords = async (userId: string = 'user-1') => {
@@ -901,7 +952,18 @@ export default function CalendarPage() {
                             <p className="text-gray-700"><span className="font-semibold">脈拍:</span> {(record as HealthRecord).pulse}回/分</p>
                           )}
                           {(record as HealthRecord).weight && (
-                            <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
+                            <>
+                              <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
+                              {(() => {
+                                const wRaw = (record as HealthRecord).weight;
+                                const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
+                                const bmi = calcBmi(Number.isFinite(w as any) ? (w as any) : null, heightCm);
+                                if (bmi === null) return null;
+                                return (
+                                  <p className="text-gray-700"><span className="font-semibold">BMI:</span> {bmi}</p>
+                                );
+                              })()}
+                            </>
                           )}
                           {((record as HealthRecord).exercise?.type || (record as HealthRecord).exercise?.duration) && (
                             <p className="text-gray-700"><span className="font-semibold">運動:</span> {(record as HealthRecord).exercise?.type || ''} {(record as HealthRecord).exercise?.duration || ''}分</p>
@@ -1332,6 +1394,13 @@ export default function CalendarPage() {
                         <p><strong>血圧:</strong> {record.bloodPressure?.systolic}/{record.bloodPressure?.diastolic} mmHg</p>
                         <p><strong>脈拍:</strong> {record.pulse || '-'} 回/分</p>
                         <p><strong>体重:</strong> {record.weight || '-'} kg</p>
+                        {(() => {
+                          const wRaw = record.weight;
+                          const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
+                          const bmi = calcBmi(Number.isFinite(w as any) ? (w as any) : null, heightCm);
+                          if (bmi === null) return null;
+                          return <p><strong>BMI:</strong> {bmi}</p>;
+                        })()}
                         {record.exercise?.type && (
                           <p><strong>運動:</strong> {record.exercise.type} ({record.exercise.duration}分)</p>
                         )}

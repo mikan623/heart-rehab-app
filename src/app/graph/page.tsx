@@ -46,6 +46,7 @@ interface WeekData {
   bloodPressureNightDiastolic: Array<number | null>;
   pulse: Array<number | null>;
   weight: Array<number | null>;
+  bmi: Array<number | null>;
   points: Array<{ date: string; timeKey: string; displayTime: string; slot: TimeSlot }>;
   weekStart: string; // 'YYYY-MM-DD'
   weekEnd: string;   // 'YYYY-MM-DD'
@@ -60,7 +61,8 @@ export default function GraphPage() {
   const [savedRecords, setSavedRecords] = useState<{ [key: string]: { [key: string]: HealthRecord } }>({});
   const [user, setUser] = useState<any>(null);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
-  const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight'>('bloodPressure');
+  const [heightCm, setHeightCm] = useState<number | null>(null);
+  const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight' | 'bmi'>('bloodPressure');
   const [activeSlot, setActiveSlot] = useState<'all' | TimeSlot>('all');
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
@@ -154,6 +156,29 @@ export default function GraphPage() {
     } catch {
       return null;
     }
+  };
+
+  const loadLocalProfileHeightCm = (overrideUserId?: string): number | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(localStorageKey('profile', overrideUserId));
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      const h = p?.height;
+      if (h === null || h === undefined || h === '') return null;
+      const n = typeof h === 'number' ? h : Number(h);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const calcBmi = (weightKg: number | null, heightCmValue: number | null): number | null => {
+    if (!weightKg || !heightCmValue) return null;
+    const hm = heightCmValue / 100;
+    if (!Number.isFinite(hm) || hm <= 0) return null;
+    const bmi = weightKg / (hm * hm);
+    return Number.isFinite(bmi) ? Math.round(bmi * 10) / 10 : null;
   };
 
   const slotOfTime = (timeKey: string): TimeSlot => {
@@ -252,6 +277,12 @@ export default function GraphPage() {
           if (profileRes.ok) {
             const profileData = await profileRes.json();
             const twRaw = profileData?.profile?.targetWeight;
+            const hRaw = profileData?.profile?.height;
+            const h =
+              hRaw === null || hRaw === undefined || hRaw === ''
+                ? null
+                : (typeof hRaw === 'number' ? hRaw : Number(hRaw));
+            setHeightCm(h !== null && Number.isFinite(h) && h > 0 ? h : loadLocalProfileHeightCm(userId));
             const tw =
               twRaw === null || twRaw === undefined || twRaw === ''
                 ? null
@@ -264,9 +295,11 @@ export default function GraphPage() {
             }
           } else {
             setTargetWeight(loadLocalProfileTargetWeight(userId));
+            setHeightCm(loadLocalProfileHeightCm(userId));
           }
         } catch {
           setTargetWeight(loadLocalProfileTargetWeight(userId));
+          setHeightCm(loadLocalProfileHeightCm(userId));
         }
       } catch (error) {
         console.error('Failed to fetch records:', error);
@@ -298,6 +331,7 @@ export default function GraphPage() {
       bloodPressureNightDiastolic: [],
       pulse: [],
       weight: [],
+      bmi: [],
       points,
       weekStart: formatDateLocal(weekStart),
       weekEnd: formatDateLocal(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6)),
@@ -340,6 +374,10 @@ export default function GraphPage() {
         // 体重は現実的な範囲のみ採用（異常値は軸が壊れるので無視）
         data.weight.push(w !== null && Number.isFinite(w) && w >= 0 && w <= 300 ? w : null);
 
+        // BMI（身長cmがある場合のみ）
+        const safeW = w !== null && Number.isFinite(w) && w >= 0 && w <= 300 ? w : null;
+        data.bmi.push(calcBmi(safeW, heightCm));
+
         // 夜データは現状未実装のため null で埋める（将来拡張用）
         data.bloodPressureNightSystolic.push(null);
         data.bloodPressureNightDiastolic.push(null);
@@ -347,7 +385,7 @@ export default function GraphPage() {
     }
 
     setWeekData(data);
-  }, [savedRecords, weekOffset]);
+  }, [savedRecords, weekOffset, heightCm]);
 
   if (isLoading) {
     return (
@@ -437,6 +475,21 @@ export default function GraphPage() {
             spanGaps: true,
           },
         ]
+      : activeMetric === 'bmi'
+      ? [
+          {
+            label: 'BMI',
+            data: filterBySlot(weekData.bmi),
+            borderColor: 'rgb(20, 184, 166)', // teal
+            backgroundColor: 'rgba(20, 184, 166, 0.10)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: colorForSlotArray,
+            pointBorderColor: colorForSlotArray,
+            borderWidth: 2,
+            spanGaps: true,
+          },
+        ]
       : [
           {
             label: '体重 (kg)',
@@ -504,6 +557,19 @@ export default function GraphPage() {
         borderWidth: 2,
             },
           ]
+        : activeMetric === 'bmi'
+        ? [
+            {
+              label: 'BMI',
+              data: emptyWeekLabels.map(() => 0),
+              borderColor: 'rgb(20, 184, 166)',
+              backgroundColor: 'rgba(20, 184, 166, 0.10)',
+              tension: 0.3,
+              pointRadius: 5,
+              pointBackgroundColor: 'rgb(20, 184, 166)',
+              borderWidth: 2,
+            },
+          ]
         : [
             {
               label: '体重 (kg)',
@@ -558,6 +624,10 @@ export default function GraphPage() {
               const p = weekData.pulse[idx];
               return `脈拍: ${p ?? '-'} 回/分`;
             }
+            if (activeMetric === 'bmi') {
+              const b = weekData.bmi[idx];
+              return `BMI: ${b ?? '-'} `;
+            }
             const w = weekData.weight[idx];
             return `体重: ${w ?? '-'} kg`;
           },
@@ -589,6 +659,13 @@ export default function GraphPage() {
               ticks: { stepSize: 10 },
             }
           : {}),
+        ...(activeMetric === 'bmi'
+          ? {
+              min: 0,
+              max: 50,
+              ticks: { stepSize: 5 },
+            }
+          : {}),
       },
       x: {
         ticks: {
@@ -605,6 +682,17 @@ export default function GraphPage() {
   const weekLabel = weekStartDate && weekEndDate 
     ? `${weekStartDate.split('-')[1]}月${weekStartDate.split('-')[2]}日～${weekEndDate.split('-')[2]}日`
     : '';
+
+  const latestBmi = (() => {
+    if (!weekData?.bmi?.length) return null;
+    // 表示中の時間帯フィルタに合わせて、直近のBMIを拾う
+    for (let i = weekData.bmi.length - 1; i >= 0; i--) {
+      if (activeSlot !== 'all' && weekData.points?.[i]?.slot !== activeSlot) continue;
+      const v = weekData.bmi[i];
+      if (v !== null && v !== undefined && Number.isFinite(v)) return v;
+    }
+    return null;
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
@@ -640,6 +728,7 @@ export default function GraphPage() {
             { key: 'bloodPressure', label: '血圧', icon: '🩸' },
             { key: 'pulse', label: '脈拍', icon: '💓' },
             { key: 'weight', label: '体重', icon: '⚖️' },
+            { key: 'bmi', label: 'BMI', icon: '📏' },
           ].map((metric) => (
             <button
               key={metric.key}
@@ -713,6 +802,14 @@ export default function GraphPage() {
             <p className="text-lg font-bold text-purple-600">
               目標体重：{targetWeight !== null ? `${targetWeight} kg` : '未設定'}
             </p>
+          )}
+          {activeMetric === 'bmi' && (
+            <div className="text-lg font-bold text-teal-600">
+              <p>BMI：{latestBmi ?? '-'}</p>
+              <p className="text-sm font-semibold text-gray-600 mt-1">
+                身長：{heightCm ? `${heightCm} cm` : '未設定'}
+              </p>
+            </div>
           )}
         </div>
 
@@ -806,6 +903,16 @@ export default function GraphPage() {
                   {activeMetric === 'weight' && (
                     <p className="text-xl font-bold text-purple-600">{record.weight} kg</p>
                     )}
+                  {activeMetric === 'bmi' && (
+                    <p className="text-xl font-bold text-teal-600">
+                      BMI: {calcBmi(
+                        record?.weight === null || record?.weight === undefined || record?.weight === ''
+                          ? null
+                          : Number.parseFloat(String(record.weight)),
+                        heightCm
+                      ) ?? '-'}
+                    </p>
+                  )}
               </div>
             </div>
             );

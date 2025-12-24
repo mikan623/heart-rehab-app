@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { clearSession, getCurrentUserId } from "@/lib/auth";
+import { clearLineLogin, clearSession, getCurrentUserId } from "@/lib/auth";
 import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
 
 // 学ぶアイコン
@@ -485,6 +485,8 @@ export default function NavigationBar() {
     try {
       // メールログイン情報をクリア
       clearSession();
+      // LINEログイン状態（sessionStorage含む）もクリア
+      clearLineLogin();
       console.log('✅ メールログイン情報をクリア');
       
       // LIFF からログアウト

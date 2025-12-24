@@ -1741,8 +1741,8 @@ export default function Home() {
                         key={t.key}
                         className="flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50"
                       >
-                        <input
-                          type="checkbox"
+              <input
+                type="checkbox"
                           checked={checked}
                           onChange={(e) => {
                             const nextTimes = {
@@ -1756,13 +1756,13 @@ export default function Home() {
                               medicationTaken: anyTaken,
                             });
                           }}
-                          className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                        />
+                className="w-6 h-6 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+              />
                         <span className="text-xl text-gray-700 font-bold">{t.label}</span>
-                      </label>
+            </label>
                     );
                   })}
-                </div>
+          </div>
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => setActiveSection(null)}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { clearSession, getCurrentUserId } from '@/lib/auth';
+import { clearLineLogin, clearSession, getCurrentUserId } from '@/lib/auth';
 
 interface Patient {
   userId: string;
@@ -109,6 +109,7 @@ const MedicalPage: React.FC = () => {
   const handleLogout = () => {
     try {
       clearSession();
+      clearLineLogin();
       if (typeof window !== 'undefined' && (window as any).liff) {
         try {
           const liff = (window as any).liff;
