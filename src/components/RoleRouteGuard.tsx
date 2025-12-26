@@ -22,11 +22,24 @@ function isPublicPath(pathname: string) {
 export default function RoleRouteGuard() {
   const pathname = usePathname();
   const router = useRouter();
-  const [role, setRole] = useState<"patient" | "medical" | null>(() => getRoleFromLocalStorage());
+  const [role, setRole] = useState<"patient" | "medical" | null>(null);
+
+  // localStorage のロール変更を拾う（同一タブ内の切替対策）
+  useEffect(() => {
+    if (!pathname) return;
+    const r = getRoleFromLocalStorage();
+    // public path でも状態は同期しておく（ログアウト→再選択の直後に反映させる）
+    setRole((prev) => (prev === r ? prev : r));
+  }, [pathname]);
 
   // localStorage に無い場合はSupabase（DB）から復元
   useEffect(() => {
     const ensureRole = async () => {
+      const localRole = getRoleFromLocalStorage();
+      if (localRole) {
+        setRole(localRole);
+        return;
+      }
       if (role) return;
       if (!pathname) return;
       if (isPublicPath(pathname)) return;
@@ -54,18 +67,20 @@ export default function RoleRouteGuard() {
     if (!pathname) return;
     if (isPublicPath(pathname)) return;
 
+    // まず localStorage を優先（同一ユーザーでの切替を可能にする）
+    const effectiveRole = getRoleFromLocalStorage() || role;
     // まだロールが確定していない場合は何もしない（復元を待つ）
-    if (!role) return;
+    if (!effectiveRole) return;
     const isMedicalPage = pathname === "/medical" || pathname.startsWith("/medical/");
 
     // 患者側：/medical を閲覧不可
-    if (role === "patient" && isMedicalPage) {
+    if (effectiveRole === "patient" && isMedicalPage) {
       router.replace("/health-records");
       return;
     }
 
     // 医療従事者側：/medical 以外は閲覧不可
-    if (role === "medical" && !isMedicalPage) {
+    if (effectiveRole === "medical" && !isMedicalPage) {
       router.replace("/medical");
     }
   }, [pathname, role, router]);

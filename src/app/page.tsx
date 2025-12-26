@@ -37,6 +37,9 @@ export default function LandingPage() {
 
     // ローカルストレージからセッション確認
     if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const switchRole = params.get('switchRole') === '1';
+
       // ロール復元（患者/医療従事者）
       try {
         const storedRole = localStorage.getItem('loginRole');
@@ -54,6 +57,13 @@ export default function LandingPage() {
 
       const sessionToken = localStorage.getItem('sessionToken');
       if (sessionToken) {
+        // 別端末で「ロールを選び直したい」場合の逃げ道
+        // /?switchRole=1 で開くと自動リダイレクトを止めてモーダルを出す
+        if (switchRole) {
+          setShowRoleModal(true);
+          setIsLoggedIn(false);
+          return;
+        }
         const role = localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient';
         router.push(role === 'medical' ? '/medical' : '/health-records');
         return;
