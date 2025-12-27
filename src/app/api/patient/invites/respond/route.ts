@@ -4,11 +4,16 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 // 患者（利用者）側：招待を承認/拒否
 // POST: { patientId, inviteId, action } action: "accept" | "decline"
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
 
     const body = await request.json();
@@ -24,8 +29,9 @@ export async function POST(request: NextRequest) {
       where: { id: patientId },
       select: { role: true },
     });
-    if (!patient || patient.role !== 'patient') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // medicalアカウントでも利用者モードでメッセージ閲覧できるようにする
+    if (!patient || (patient.role !== 'patient' && patient.role !== 'medical')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const invite = await prisma.medicalInvite.findUnique({
@@ -44,10 +50,10 @@ export async function POST(request: NextRequest) {
       data: { status: action === 'accept' ? 'accepted' : 'declined' },
     });
 
-    return NextResponse.json({ success: true, invite: updated });
+    return NextResponse.json({ success: true, invite: updated }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('❌ /api/patient/invites/respond POST error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 

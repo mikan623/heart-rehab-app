@@ -4,11 +4,16 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 // 利用者側：未読数（招待pending + messagesLastSeen以降のコメント）をまとめて返す
 // GET: ?patientId=...&since=UnixMs
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
-      return NextResponse.json({ total: 0, error: 'Database not available' }, { status: 503 });
+      return NextResponse.json(
+        { total: 0, error: 'Database not available' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -25,8 +30,9 @@ export async function GET(request: NextRequest) {
       where: { id: patientId },
       select: { role: true },
     });
-    if (!patient || patient.role !== 'patient') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // medicalアカウントでも利用者モードでメッセージ閲覧できるようにする
+    if (!patient || (patient.role !== 'patient' && patient.role !== 'medical')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const [pendingInvites, unreadHealthComments, unreadLabComments] = await Promise.all([
@@ -44,11 +50,12 @@ export async function GET(request: NextRequest) {
         unreadHealthComments,
         unreadLabComments,
       },
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('❌ /api/patient/unread-count GET error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }
+
 
 

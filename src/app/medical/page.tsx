@@ -147,6 +147,31 @@ const MedicalPage: React.FC = () => {
     );
   };
 
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+    let lastErr: any = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, { ...init, cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true as const, status: res.status, data };
+        if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        return { ok: false as const, status: res.status, data };
+      } catch (e) {
+        lastErr = e;
+        if (attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        throw lastErr;
+      }
+    }
+    throw lastErr;
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -164,7 +189,7 @@ const MedicalPage: React.FC = () => {
       setSelectedPatient(null);
       setRecords([]);
 
-      const res = await fetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`);
+      const res = await fetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
       const data = await res.json();
 
       if (!res.ok) {
@@ -177,7 +202,7 @@ const MedicalPage: React.FC = () => {
       // 招待ステータスをマージ（承認済/招待中表示）
       if (providerId) {
         try {
-          const invRes = await fetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`);
+          const invRes = await fetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`, { cache: 'no-store' });
           const invData = await invRes.json();
           if (invRes.ok) {
             const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
@@ -210,14 +235,17 @@ const MedicalPage: React.FC = () => {
     try {
       setInviteLoadingId(patientId);
       setError(null);
-      const res = await fetch('/api/medical/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ providerId, patientId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error || '招待の作成に失敗しました');
+      const { ok, data } = await fetchJsonWithRetry(
+        '/api/medical/invites',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ providerId, patientId }),
+        },
+        2
+      );
+      if (!ok) {
+        setError((data as any)?.error || '招待の作成に失敗しました');
         return;
       }
       alert('招待を送信しました。利用者側が承認すると閲覧できます。');
@@ -246,7 +274,8 @@ const MedicalPage: React.FC = () => {
       }
 
       const res = await fetch(
-        `/api/medical/patient-data?providerId=${encodeURIComponent(providerId)}&patientId=${encodeURIComponent(patient.userId)}`
+        `/api/medical/patient-data?providerId=${encodeURIComponent(providerId)}&patientId=${encodeURIComponent(patient.userId)}`,
+        { cache: 'no-store' }
       );
       const data = await res.json();
 
@@ -284,19 +313,22 @@ const MedicalPage: React.FC = () => {
     }
     try {
       setCommentSaving(true);
-      const res = await fetch('/api/medical/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId,
-          patientId: commentTarget.patientId,
-          healthRecordId: commentTarget.recordId,
-          content,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data?.error || 'コメント送信に失敗しました');
+      const { ok, data } = await fetchJsonWithRetry(
+        '/api/medical/comments',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            providerId,
+            patientId: commentTarget.patientId,
+            healthRecordId: commentTarget.recordId,
+            content,
+          }),
+        },
+        2
+      );
+      if (!ok) {
+        alert((data as any)?.error || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');
@@ -328,20 +360,23 @@ const MedicalPage: React.FC = () => {
     }
     try {
       setLabCommentSaving(true);
-      const res = await fetch('/api/medical/lab-comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId,
-          patientId: labCommentTarget.patientId,
-          kind: labCommentTarget.kind,
-          targetId: labCommentTarget.targetId,
-          content,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data?.error || 'コメント送信に失敗しました');
+      const { ok, data } = await fetchJsonWithRetry(
+        '/api/medical/lab-comments',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            providerId,
+            patientId: labCommentTarget.patientId,
+            kind: labCommentTarget.kind,
+            targetId: labCommentTarget.targetId,
+            content,
+          }),
+        },
+        2
+      );
+      if (!ok) {
+        alert((data as any)?.error || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');

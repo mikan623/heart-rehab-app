@@ -5,11 +5,16 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 // GET: ?providerId=... [&patientId=...]
 // POST: { providerId, patientId }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
-      return NextResponse.json({ invites: [], error: 'Database not available' }, { status: 503 });
+      return NextResponse.json(
+        { invites: [], error: 'Database not available' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -56,10 +61,10 @@ export async function GET(request: NextRequest) {
           email: i.patient.email,
         },
       })),
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('❌ /api/medical/invites GET error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 
@@ -67,7 +72,10 @@ export async function POST(request: NextRequest) {
   try {
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
 
     const body = await request.json();
@@ -101,10 +109,10 @@ export async function POST(request: NextRequest) {
       update: { status: 'pending' },
     });
 
-    return NextResponse.json({ invite });
+    return NextResponse.json({ invite }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('❌ /api/medical/invites POST error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 

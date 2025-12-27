@@ -52,6 +52,31 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+    let lastErr: any = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, { ...init, cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true as const, status: res.status, data };
+        if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        return { ok: false as const, status: res.status, data };
+      } catch (e) {
+        lastErr = e;
+        if (attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        throw lastErr;
+      }
+    }
+    throw lastErr;
+  };
+
   const fetchAll = async () => {
     try {
       setError(null);
@@ -62,29 +87,29 @@ export default function MessagesPage() {
         setLoading(false);
         return;
       }
-      const [invRes, cRes, labRes] = await Promise.all([
-        fetch(`/api/patient/invites?patientId=${encodeURIComponent(userId)}`),
-        fetch(`/api/patient/comments?patientId=${encodeURIComponent(userId)}`),
-        fetch(`/api/patient/lab-comments?patientId=${encodeURIComponent(userId)}`),
+      const [invR, cR, labR] = await Promise.all([
+        fetchJsonWithRetry(`/api/patient/invites?patientId=${encodeURIComponent(userId)}`),
+        fetchJsonWithRetry(`/api/patient/comments?patientId=${encodeURIComponent(userId)}`),
+        fetchJsonWithRetry(`/api/patient/lab-comments?patientId=${encodeURIComponent(userId)}`),
       ]);
-      const [invData, cData, labData] = await Promise.all([invRes.json(), cRes.json(), labRes.json()]);
-      if (!invRes.ok) {
+
+      if (!invR.ok) {
         setInvites([]);
-        setError(invData?.error || '招待の取得に失敗しました');
+        setError((invR.data as any)?.error || '招待の取得に失敗しました');
       } else {
-        setInvites(invData?.invites || []);
+        setInvites(((invR.data as any)?.invites || []) as InviteItem[]);
       }
-      if (!cRes.ok) {
+      if (!cR.ok) {
         setComments([]);
-        setError((prev) => prev || cData?.error || 'コメント通知の取得に失敗しました');
+        setError((prev) => prev || (cR.data as any)?.error || 'コメント通知の取得に失敗しました');
       } else {
-        setComments(cData?.comments || []);
+        setComments(((cR.data as any)?.comments || []) as CommentItem[]);
       }
-      if (!labRes.ok) {
+      if (!labR.ok) {
         setLabComments([]);
-        setError((prev) => prev || labData?.error || '検査コメント通知の取得に失敗しました');
+        setError((prev) => prev || (labR.data as any)?.error || '検査コメント通知の取得に失敗しました');
       } else {
-        setLabComments(labData?.comments || []);
+        setLabComments(((labR.data as any)?.comments || []) as any[]);
       }
     } catch (e) {
       console.error(e);
@@ -98,11 +123,14 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
-    fetchAll();
-    // このページを開いたら未読をリセット（次回以降のバッジ計算に使う）
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('messagesLastSeen', String(Date.now()));
-    }
+    (async () => {
+      await fetchAll();
+      // このページを開いたら未読をリセット（次回以降のバッジ計算に使う）
+      // ユーザーIDごとに保持（複数アカウント/ロール切替でも取りこぼさない）
+      if (typeof window !== 'undefined' && userId) {
+        localStorage.setItem(`messagesLastSeen_${userId}`, String(Date.now()));
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,14 +139,17 @@ export default function MessagesPage() {
     try {
       setBusyId(inviteId);
       setError(null);
-      const res = await fetch('/api/patient/invites/respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId: userId, inviteId, action }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error || '操作に失敗しました');
+      const { ok, data } = await fetchJsonWithRetry(
+        '/api/patient/invites/respond',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patientId: userId, inviteId, action }),
+        },
+        2
+      );
+      if (!ok) {
+        setError((data as any)?.error || '操作に失敗しました');
         return;
       }
       await fetchAll();
@@ -144,6 +175,18 @@ export default function MessagesPage() {
           <p className="text-sm text-gray-600 mb-4">
             健康記録に対して医療従事者が記載したコメントが届きます。
           </p>
+          {!loading && error && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="min-w-0 truncate">{error}</div>
+              <button
+                type="button"
+                onClick={fetchAll}
+                className="shrink-0 rounded-md bg-white border border-red-200 px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-50"
+              >
+                再読み込み
+              </button>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-gray-600">読み込み中...</div>

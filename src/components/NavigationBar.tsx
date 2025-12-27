@@ -67,15 +67,42 @@ export default function NavigationBar() {
       return;
           }
 
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+      let lastErr: any = null;
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const res = await fetch(url, { ...init, cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) return { ok: true as const, status: res.status, data };
+          // 一時障害はリトライ
+          if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
+            await sleep(350 * (attempt + 1));
+            continue;
+          }
+          return { ok: false as const, status: res.status, data };
+        } catch (e) {
+          lastErr = e;
+          if (attempt < retries) {
+            await sleep(350 * (attempt + 1));
+            continue;
+          }
+          throw lastErr;
+        }
+      }
+      throw lastErr;
+    };
+
     const fetchCount = async () => {
       try {
-        const lastSeen = Number(localStorage.getItem('messagesLastSeen') || '0');
-        const res = await fetch(
+        // ユーザーIDごとにlastSeenを分ける（複数アカウント/ロール切替でも取りこぼさない）
+        const lastSeenKey = `messagesLastSeen_${uid}`;
+        const lastSeen = Number(localStorage.getItem(lastSeenKey) || '0');
+        const { ok, data } = await fetchJsonWithRetry(
           `/api/patient/unread-count?patientId=${encodeURIComponent(uid)}&since=${encodeURIComponent(String(lastSeen))}`
         );
-        if (!res.ok) return;
-        const data = await res.json();
-        setUnreadCount(Number(data?.total) || 0);
+        if (!ok) return;
+        setUnreadCount(Number((data as any)?.total) || 0);
       } catch (e) {
         console.log('⚠️ NavigationBar: 未読数取得に失敗（無視）', e);
       }
