@@ -1417,14 +1417,16 @@ export default function Home() {
                       bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
                       });
                   }}
-                  placeholder="1~299"
+                  placeholder="0"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
-                {fieldErrors['bloodPressure.systolic'] && (
+                {fieldErrors['bloodPressure.systolic'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.systolic']}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">1〜299 mmHg（整数）</p>
                 )}
               </div>
               <div className="flex-1">
@@ -1446,14 +1448,16 @@ export default function Home() {
                       bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
                       });
                   }}
-                  placeholder="1~299"
+                  placeholder="0"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
-                {fieldErrors['bloodPressure.diastolic'] && (
+                {fieldErrors['bloodPressure.diastolic'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.diastolic']}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">1〜299 mmHg（整数）</p>
                 )}
               </div>
             </div>
@@ -1489,32 +1493,36 @@ export default function Home() {
                     ✕
                   </button>
                 </div>
-            <label className="block text-lg font-semibold text-gray-700 mb-3">
-              脈拍数
-            </label>
+            <label className="block text-lg font-semibold text-gray-700 mb-3">脈拍数</label>
             <div className="flex items-end gap-4">
+              <div className="flex-1">
               <input
                 type="number"
-                min={1}
+                  min={1}
                 inputMode="numeric"
-                onKeyDown={blockInvalidKeysInt}
+                  onKeyDown={blockInvalidKeysInt}
                 value={healthRecord?.pulse || ''}
                 onChange={(e) => {
-                  setFormError(null);
-                  const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
-                  clearFieldError('pulse');
-                  setHealthRecord({ ...healthRecord, pulse: value });
-                }}
-                placeholder="1~299"
-                className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
-                  fieldErrors['pulse'] ? 'border-red-400 focus:border-red-500' : 'border-pink-300 focus:border-pink-500'
-                }`}
-                    style={{ WebkitAppearance: 'textfield' as any }}
-              />
-              {fieldErrors['pulse'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>}
-                  <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">
-                    回/分
-                  </span>
+                    setFormError(null);
+                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    clearFieldError('pulse');
+                    setHealthRecord({ ...healthRecord, pulse: value });
+                  }}
+                  placeholder="0"
+                  className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                    fieldErrors['pulse']
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-pink-300 focus:border-pink-500'
+                  }`}
+                  style={{ WebkitAppearance: 'textfield' as any }}
+                />
+                {fieldErrors['pulse'] ? (
+                  <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">1〜299 回/分（整数）</p>
+                )}
+              </div>
+              <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">回/分</span>
             </div>
                 <div className="mt-6 flex justify-end">
                   <button
@@ -1564,13 +1572,17 @@ export default function Home() {
                     clearFieldError('weight');
                     setHealthRecord({ ...healthRecord, weight: value });
                   }}
-                  placeholder="0~200"
+                  placeholder="0"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['weight'] ? 'border-red-400 focus:border-red-500' : 'border-yellow-300 focus:border-yellow-500'
                   }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
-                {fieldErrors['weight'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>}
+                {fieldErrors['weight'] ? (
+                  <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">0〜200 kg（小数OK・最大2桁）</p>
+                )}
               </div>
               <span className="text-xl text-gray-600 font-semibold">kg</span>
             </div>
@@ -1653,7 +1665,7 @@ export default function Home() {
                           exercise: { ...healthRecord?.exercise, duration: value },
                           });
                       }}
-                      placeholder="0~1440"
+                      placeholder="0"
                       className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                         fieldErrors['exercise.duration']
                           ? 'border-red-400 focus:border-red-500'
@@ -1661,8 +1673,10 @@ export default function Home() {
                       }`}
                           style={{ WebkitAppearance: 'textfield' as any }}
                     />
-                    {fieldErrors['exercise.duration'] && (
+                    {fieldErrors['exercise.duration'] ? (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors['exercise.duration']}</p>
+                    ) : (
+                      <p className="mt-2 text-xs text-gray-500">0〜1440 分（整数）</p>
                     )}
                   </div>
                   <span className="text-xl text-gray-600 font-semibold">分</span>
@@ -2045,7 +2059,7 @@ export default function Home() {
                       }
                       setHealthRecord({ ...healthRecord, dailyLife: trimmed });
                     }}
-              placeholder="自覚症状やその他は 400 文字以内で入力してください"
+              placeholder="400 文字以内で入力してください"
               rows={6}
               className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none resize-none ${
                 fieldErrors['dailyLife'] ? 'border-red-400 focus:border-red-500' : 'border-purple-300 focus:border-purple-500'
@@ -2055,7 +2069,7 @@ export default function Home() {
               {fieldErrors['dailyLife'] ? (
                 <p className="text-sm text-red-600">{fieldErrors['dailyLife']}</p>
               ) : (
-                <p className="text-xs text-gray-500">最大 400 文字（症状＋メモの合計）</p>
+                <p className="text-xs text-gray-500">最大 400 文字</p>
               )}
               <p className="text-xs text-gray-500">
                 {String(healthRecord?.dailyLife || '').length}/400
