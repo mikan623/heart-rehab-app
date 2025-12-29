@@ -134,6 +134,8 @@ export default function Home() {
   
   // 保存状態を管理
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   // 認証チェック
   useEffect(() => {
@@ -284,6 +286,104 @@ export default function Home() {
 
   const blockInvalidKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+  };
+
+  const blockInvalidKeysInt = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E', '.', ',', '。', '．'].includes(e.key)) e.preventDefault();
+  };
+
+  const toHalfWidthNumberLike = (s: string) =>
+    s
+      .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+      .replace(/[，,]/g, '.')
+      .replace(/[。．]/g, '.');
+
+  const sanitizeInt = (raw: string, opts: { max?: number; maxDigits?: number } = {}) => {
+    const { max = 999, maxDigits = 3 } = opts;
+    const v = toHalfWidthNumberLike(raw).replace(/\D/g, '').slice(0, maxDigits);
+    if (!v) return '';
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.min(n, max));
+  };
+
+  const sanitizeDecimal = (raw: string, opts: { max?: number; maxDecimals?: number } = {}) => {
+    const { max = 200, maxDecimals = 2 } = opts;
+    const v0 = toHalfWidthNumberLike(raw);
+    const cleaned = v0.replace(/[^0-9.]/g, '');
+    const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
+    const intPart = intPartRaw.replace(/^0+(?=\d)/, ''); // 先頭0整理
+    const decPart = decPartRaw.slice(0, maxDecimals);
+    const v = decPart.length ? `${intPart || '0'}.${decPart}` : (intPart || '');
+    if (!v) return '';
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.min(n, max));
+  };
+
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const hasAnyErrorForSection = (section: EditSection) => {
+    if (!section) return false;
+    const keys = Object.keys(fieldErrors);
+    if (section === 'bloodPressure') return keys.some((k) => k.startsWith('bloodPressure.'));
+    if (section === 'pulse') return keys.includes('pulse');
+    if (section === 'weight') return keys.includes('weight');
+    if (section === 'exercise') return keys.some((k) => k.startsWith('exercise.'));
+    if (section === 'meal') return keys.some((k) => k.startsWith('meal.'));
+    if (section === 'medication') return keys.some((k) => k.startsWith('medication'));
+    if (section === 'dailyLife') return keys.some((k) => k.startsWith('dailyLife'));
+    return false;
+  };
+
+  const validateAll = () => {
+    const errs: Record<string, string> = {};
+    const add = (k: string, msg: string) => {
+      if (!errs[k]) errs[k] = msg;
+    };
+
+    const sys = healthRecord?.bloodPressure?.systolic?.trim?.() ?? '';
+    const dia = healthRecord?.bloodPressure?.diastolic?.trim?.() ?? '';
+    const pulse = (healthRecord as any)?.pulse?.trim?.() ?? '';
+    const weight = (healthRecord as any)?.weight?.trim?.() ?? '';
+    const dur = (healthRecord as any)?.exercise?.duration?.trim?.() ?? '';
+
+    if (!sys) add('bloodPressure.systolic', '収縮期血圧（上）は必須です');
+    if (!dia) add('bloodPressure.diastolic', '拡張期血圧（下）は必須です');
+    if (!pulse) add('pulse', '脈拍は必須です');
+
+    const sysN = sys ? Number(sys) : NaN;
+    const diaN = dia ? Number(dia) : NaN;
+    const pulseN = pulse ? Number(pulse) : NaN;
+
+    if (sys && (!Number.isFinite(sysN) || sysN <= 0 || sysN >= 300)) {
+      add('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
+    }
+    if (dia && (!Number.isFinite(diaN) || diaN <= 20 || diaN >= 300)) {
+      add('bloodPressure.diastolic', '拡張期血圧（下）は 21〜299 mmHg の範囲で入力してください');
+    }
+    if (pulse && (!Number.isFinite(pulseN) || pulseN <= 20 || pulseN >= 200)) {
+      add('pulse', '脈拍は 21〜199 回/分 の範囲で入力してください');
+    }
+
+    if (weight) {
+      const w = Number(weight);
+      if (!Number.isFinite(w) || w < 0 || w > 200) add('weight', '体重は 0〜200 kg の範囲で入力してください');
+    }
+
+    if (dur) {
+      const d = Number(dur);
+      if (!Number.isFinite(d) || d < 0 || d > 1440) add('exercise.duration', '運動時間は 0〜1440 分の範囲で入力してください');
+    }
+
+    return errs;
   };
   
   const nonNegative = (v: string) => {
@@ -682,48 +782,24 @@ export default function Home() {
     try {
       // 保存開始
       setSaveStatus('saving');
+      setFormError(null);
       
-      // バリデーション
-      if (!healthRecord.bloodPressure.systolic || !healthRecord.bloodPressure.diastolic || !healthRecord.pulse) {
-        alert('血圧と脈拍は必須項目です');
+      // バリデーション（複数項目をまとめて赤枠表示）
+      const errs = validateAll();
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs);
+        setFormError('入力内容にエラーがあります。赤枠の項目を修正してください。');
         setSaveStatus('idle');
+        // 最初のエラー項目を開く
+        const keys = Object.keys(errs);
+        const first = keys[0] || '';
+        if (first.startsWith('bloodPressure.')) setActiveSection('bloodPressure');
+        else if (first === 'pulse') setActiveSection('pulse');
+        else if (first === 'weight') setActiveSection('weight');
+        else if (first.startsWith('exercise.')) setActiveSection('exercise');
         return;
-      }
-
-      // 数値バリデーション
-      const systolic = Number(healthRecord.bloodPressure.systolic);
-      const diastolic = Number(healthRecord.bloodPressure.diastolic);
-      const pulse = Number(healthRecord.pulse);
-
-      // ① 収縮期血圧(上): 300以上は制限
-      if (isNaN(systolic) || systolic <= 0 || systolic >= 300) {
-        alert('収縮期血圧(上)は 1〜299 mmHg の範囲で入力してください');
-        setSaveStatus('idle');
-        return;
-      }
-
-      // ② 拡張期血圧(下): 20以下は制限（＝21以上を許可）
-      if (isNaN(diastolic) || diastolic <= 20) {
-        alert('拡張期血圧(下)は 21 mmHg 以上の値を入力してください');
-        setSaveStatus('idle');
-        return;
-      }
-
-      // ③ 脈拍: 20以下 / 200以上は制限（＝21〜199のみ許可）
-      if (isNaN(pulse) || pulse <= 20 || pulse >= 200) {
-        alert('脈拍は 21〜199 回/分 の範囲で入力してください');
-        setSaveStatus('idle');
-        return;
-      }
-
-      // ④ 体重: 入力されている場合のみ 0〜200kg に制限
-      if (healthRecord.weight) {
-        const weight = Number(healthRecord.weight);
-        if (isNaN(weight) || weight < 0 || weight > 200) {
-          alert('体重は 0〜200 kg の範囲で入力してください');
-          setSaveStatus('idle');
-          return;
-        }
+      } else {
+        setFieldErrors({});
       }
 
       // 日時から日付と時間を分離
@@ -893,8 +969,20 @@ export default function Home() {
           medicationTaken: false
         });
       } else {
-        const error = await response.json();
-        alert(`保存に失敗しました: ${error.error}`);
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 400 && (error as any)?.fieldErrors) {
+          const fe = (error as any).fieldErrors as Record<string, string>;
+          setFieldErrors(fe);
+          setFormError('入力内容にエラーがあります。赤枠の項目を修正してください。');
+          const keys = Object.keys(fe);
+          const first = keys[0] || '';
+          if (first.startsWith('bloodPressure.')) setActiveSection('bloodPressure');
+          else if (first === 'pulse') setActiveSection('pulse');
+          else if (first === 'weight') setActiveSection('weight');
+          else if (first.startsWith('exercise.')) setActiveSection('exercise');
+        } else {
+          alert(`保存に失敗しました: ${(error as any)?.error || '不明なエラー'}`);
+        }
         setSaveStatus('idle');
       }
     } catch (error) {
@@ -1140,6 +1228,11 @@ export default function Home() {
       >
         {/* 健康記録（横幅full） */}
         <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-3 mb-1 md:mb-2 w-full">
+          {formError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2 pb-4 md:pb-2 border-b md:border-b-0 border-gray-200">
             <h2 className="text-2xl md:text-4xl font-bold md:font-bold text-gray-800">
               健康記録
@@ -1171,7 +1264,9 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setActiveSection('bloodPressure')}
-              className="w-full bg-white border-2 border-orange-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+              className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                hasAnyErrorForSection('bloodPressure') ? 'border-red-400 ring-2 ring-red-100' : 'border-orange-300'
+              }`}
             >
               <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                 🩸 血圧
@@ -1189,7 +1284,9 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setActiveSection('pulse')}
-              className="w-full bg-white border-2 border-pink-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+              className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                hasAnyErrorForSection('pulse') ? 'border-red-400 ring-2 ring-red-100' : 'border-pink-300'
+              }`}
             >
               <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                 💓 脈拍
@@ -1202,7 +1299,9 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setActiveSection('weight')}
-              className="w-full bg-white border-2 border-yellow-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+              className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                hasAnyErrorForSection('weight') ? 'border-red-400 ring-2 ring-red-100' : 'border-yellow-300'
+              }`}
             >
               <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                 ⚖️ 体重
@@ -1215,7 +1314,9 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setActiveSection('exercise')}
-              className="w-full bg-white border-2 border-green-300 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between"
+              className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                hasAnyErrorForSection('exercise') ? 'border-red-400 ring-2 ring-red-100' : 'border-green-300'
+              }`}
             >
               <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                 🚴 運動内容
@@ -1300,24 +1401,26 @@ export default function Home() {
                   type="number"
                   min={0}
                   inputMode="numeric"
-                  onKeyDown={blockInvalidKeys}
+                  onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.systolic || ''}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        bloodPressure: {
-                          ...healthRecord?.bloodPressure,
-                          systolic: value
-                        }
-                      });
-                    }
+                    setFormError(null);
+                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    clearFieldError('bloodPressure.systolic');
+                    setHealthRecord({
+                      ...healthRecord,
+                      bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
+                    });
                   }}
                   placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                  className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                    fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
+                  }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
+                {fieldErrors['bloodPressure.systolic'] && (
+                  <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.systolic']}</p>
+                )}
               </div>
               <div className="flex-1">
                 <label className="block text-lg font-semibold text-gray-700 mb-3">
@@ -1327,24 +1430,26 @@ export default function Home() {
                   type="number"
                   min={0}
                   inputMode="numeric"
-                  onKeyDown={blockInvalidKeys}
+                  onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.diastolic || ''}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        bloodPressure: {
-                          ...healthRecord?.bloodPressure,
-                          diastolic: value
-                        }
-                      });
-                    }
+                    setFormError(null);
+                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    clearFieldError('bloodPressure.diastolic');
+                    setHealthRecord({
+                      ...healthRecord,
+                      bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
+                    });
                   }}
                   placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 placeholder:text-gray-400"
+                  className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                    fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
+                  }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
+                {fieldErrors['bloodPressure.diastolic'] && (
+                  <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.diastolic']}</p>
+                )}
               </div>
             </div>
                 <div className="mt-6 flex justify-end">
@@ -1387,21 +1492,21 @@ export default function Home() {
                 type="number"
                 min={0}
                 inputMode="numeric"
-                onKeyDown={blockInvalidKeys}
+                onKeyDown={blockInvalidKeysInt}
                 value={healthRecord?.pulse || ''}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                    setHealthRecord({
-                      ...healthRecord,
-                      pulse: value
-                    });
-                  }
+                  setFormError(null);
+                  const value = sanitizeInt(e.target.value, { max: 199, maxDigits: 3 });
+                  clearFieldError('pulse');
+                  setHealthRecord({ ...healthRecord, pulse: value });
                 }}
                 placeholder="0"
-                className="w-full px-4 py-3 text-xl border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500 placeholder:text-gray-400"
+                className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                  fieldErrors['pulse'] ? 'border-red-400 focus:border-red-500' : 'border-pink-300 focus:border-pink-500'
+                }`}
                     style={{ WebkitAppearance: 'textfield' as any }}
               />
+              {fieldErrors['pulse'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>}
                   <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">
                     回/分
                   </span>
@@ -1449,18 +1554,18 @@ export default function Home() {
                   onKeyDown={blockInvalidKeys}
                   value={healthRecord?.weight || ''}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/。/g, '.').replace(/,/g, '.');
-                    if (value === '' || /^\d*(\.\d*)?$/.test(value)) {
-                      setHealthRecord({
-                        ...healthRecord,
-                        weight: value
-                      });
-                    }
+                    setFormError(null);
+                    const value = sanitizeDecimal(e.target.value, { max: 200, maxDecimals: 2 });
+                    clearFieldError('weight');
+                    setHealthRecord({ ...healthRecord, weight: value });
                   }}
                   placeholder="0"
-                  className="w-full px-4 py-3 text-xl border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 placeholder:text-gray-400"
+                  className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                    fieldErrors['weight'] ? 'border-red-400 focus:border-red-500' : 'border-yellow-300 focus:border-yellow-500'
+                  }`}
                       style={{ WebkitAppearance: 'textfield' as any }}
                 />
+                {fieldErrors['weight'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>}
               </div>
               <span className="text-xl text-gray-600 font-semibold">kg</span>
             </div>
@@ -1532,24 +1637,28 @@ export default function Home() {
                       type="number"
                       min={0}
                       inputMode="numeric"
-                      onKeyDown={blockInvalidKeys}
+                      onKeyDown={blockInvalidKeysInt}
                       value={healthRecord?.exercise?.duration || ''}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setHealthRecord({
-                            ...healthRecord,
-                            exercise: {
-                              ...healthRecord?.exercise,
-                              duration: value
-                            }
-                          });
-                        }
+                        setFormError(null);
+                        const value = sanitizeInt(e.target.value, { max: 1440, maxDigits: 4 });
+                        clearFieldError('exercise.duration');
+                        setHealthRecord({
+                          ...healthRecord,
+                          exercise: { ...healthRecord?.exercise, duration: value },
+                        });
                       }}
                       placeholder="0"
-                      className="w-full px-4 py-3 text-xl border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 placeholder:text-gray-400"
+                      className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                        fieldErrors['exercise.duration']
+                          ? 'border-red-400 focus:border-red-500'
+                          : 'border-green-300 focus:border-green-500'
+                      }`}
                           style={{ WebkitAppearance: 'textfield' as any }}
                     />
+                    {fieldErrors['exercise.duration'] && (
+                      <p className="mt-2 text-sm text-red-600">{fieldErrors['exercise.duration']}</p>
+                    )}
                   </div>
                   <span className="text-xl text-gray-600 font-semibold">分</span>
                 </div>

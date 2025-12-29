@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // 型定義を追加
 interface HealthRecordResponse {
   id: string;
@@ -27,7 +29,10 @@ export async function GET(request: NextRequest) {
     // データベースがない場合は空の配列を返す
     if (!connected || !prisma) {
       console.log('⚠️ Database not available, returning empty array');
-      return NextResponse.json({ records: [] });
+      return NextResponse.json(
+        { records: [], error: 'Database not available' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
     
     const { searchParams } = new URL(request.url);
@@ -68,7 +73,7 @@ export async function GET(request: NextRequest) {
       createdAt: record.createdAt
     }));
     
-    return NextResponse.json({ records: formattedRecords });
+    return NextResponse.json({ records: formattedRecords }, { headers: { 'Cache-Control': 'no-store' } });
     
   } catch (error: any) {
     console.error('❌ Health Records API Error:', {
@@ -77,8 +82,11 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
     
-    // エラー時は空の配列を返す（GETは読み取り専用だから）
-    return NextResponse.json({ records: [] });
+    // エラー時は status を返す（クライアント側でリトライ/フォールバックできるようにする）
+    return NextResponse.json(
+      { records: [], error: 'Internal server error' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    );
   }
 }
 
@@ -221,13 +229,65 @@ export async function POST(request: NextRequest) {
     console.log('💾 Saving health record for userId:', userId);
     console.log('📝 Health record data:', healthRecord);
     
-    // バリデーション
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    // バリデーション（複数項目をまとめて返す）
+    const fieldErrors: Record<string, string> = {};
+    const addErr = (k: string, msg: string) => {
+      if (!fieldErrors[k]) fieldErrors[k] = msg;
+    };
+
+    if (!userId) addErr('userId', 'ユーザーIDが不正です');
+
+    if (!healthRecord?.date) addErr('date', '日付が未指定です');
+    if (!healthRecord?.time) addErr('time', '時間が未指定です');
+
+    const sysRaw = healthRecord?.bloodPressure?.systolic;
+    const diaRaw = healthRecord?.bloodPressure?.diastolic;
+    if (!sysRaw) addErr('bloodPressure.systolic', '収縮期血圧（上）は必須です');
+    if (!diaRaw) addErr('bloodPressure.diastolic', '拡張期血圧（下）は必須です');
+
+    const pulseRaw = healthRecord?.pulse;
+    if (!pulseRaw) addErr('pulse', '脈拍は必須です');
+
+    const systolic = sysRaw ? Number(sysRaw) : NaN;
+    const diastolic = diaRaw ? Number(diaRaw) : NaN;
+    const pulse = pulseRaw ? Number(pulseRaw) : NaN;
+
+    // 収縮期: 1〜299
+    if (sysRaw && (!Number.isFinite(systolic) || systolic <= 0 || systolic >= 300)) {
+      addErr('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
     }
-    
-    if (!healthRecord.bloodPressure?.systolic || !healthRecord.bloodPressure?.diastolic) {
-      return NextResponse.json({ error: 'Blood pressure is required' }, { status: 400 });
+    // 拡張期: 21〜299（クライアント側と揃える）
+    if (diaRaw && (!Number.isFinite(diastolic) || diastolic <= 20 || diastolic >= 300)) {
+      addErr('bloodPressure.diastolic', '拡張期血圧（下）は 21〜299 mmHg の範囲で入力してください');
+    }
+    // 脈拍: 21〜199
+    if (pulseRaw && (!Number.isFinite(pulse) || pulse <= 20 || pulse >= 200)) {
+      addErr('pulse', '脈拍は 21〜199 回/分 の範囲で入力してください');
+    }
+
+    // 体重: 任意、0〜200（小数OK）
+    const weightRaw = healthRecord?.weight;
+    if (weightRaw !== null && weightRaw !== undefined && String(weightRaw).trim() !== '') {
+      const weight = Number(weightRaw);
+      if (!Number.isFinite(weight) || weight < 0 || weight > 200) {
+        addErr('weight', '体重は 0〜200 kg の範囲で入力してください');
+      }
+    }
+
+    // 運動時間: 任意、0〜1440
+    const durRaw = healthRecord?.exercise?.duration;
+    if (durRaw !== null && durRaw !== undefined && String(durRaw).trim() !== '') {
+      const dur = Number(durRaw);
+      if (!Number.isFinite(dur) || dur < 0 || dur > 1440) {
+        addErr('exercise.duration', '運動時間は 0〜1440 分の範囲で入力してください');
+      }
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      return NextResponse.json(
+        { error: 'Validation failed', fieldErrors },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
+      );
     }
     
     // ⚠️ データベースが接続できない場合はローカルストレージを使用

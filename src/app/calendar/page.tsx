@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
-import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
 
 
 // 健康記録の型定義
@@ -202,6 +202,31 @@ export default function CalendarPage() {
   const [user, setUser] = useState<any>(null);
   const [isLiffReady, setIsLiffReady] = useState(false);
 
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+    let lastErr: any = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, { ...init, cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true as const, status: res.status, data };
+        if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        return { ok: false as const, status: res.status, data };
+      } catch (e) {
+        lastErr = e;
+        if (attempt < retries) {
+          await sleep(350 * (attempt + 1));
+          continue;
+        }
+        throw lastErr;
+      }
+    }
+    throw lastErr;
+  };
+
   // 🆕 追加：LINEミニアプリ最適化用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
@@ -321,13 +346,12 @@ export default function CalendarPage() {
   useEffect(() => {
     const fetchHeight = async () => {
       if (!isAuthenticated) return;
-      const userId = user?.userId;
+      const userId = getCurrentUserId();
       if (!userId) return;
       try {
-        const res = await fetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const hRaw = data?.profile?.height;
+        const { ok, data } = await fetchJsonWithRetry(`/api/profiles?userId=${encodeURIComponent(userId)}`);
+        if (ok) {
+          const hRaw = (data as any)?.profile?.height;
           const h =
             hRaw === null || hRaw === undefined || hRaw === ''
               ? null
@@ -344,25 +368,23 @@ export default function CalendarPage() {
   }, [isAuthenticated, user?.userId]);
 
   // fetchHealthRecords関数を追加
-  const fetchHealthRecords = async (userId: string = 'user-1') => {
+  const fetchHealthRecords = async (userId: string) => {
     try {
       setIsLoading(true);
       console.log('Fetching health records...');
       
       // 相対パスでAPIを呼び出し
-      const response = await fetch(`/api/health-records?userId=${userId}`);
+      const { ok, status, data } = await fetchJsonWithRetry(`/api/health-records?userId=${encodeURIComponent(userId)}`);
+      console.log('Response status:', status);
+      console.log('Response ok:', ok);
       
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
-      if (response.ok) {
-        const data = await response.json();
+      if (ok) {
         console.log('Fetched data:', data);
         
         // データベースの形式をカレンダー表示用に変換
         const formattedRecords: {[key: string]: {[key: string]: any}} = {};
         
-        data.records.forEach((record: any) => {
+        (data as any).records.forEach((record: any) => {
           const dateKey = record.date.split('T')[0]; // YYYY-MM-DD形式
           const timeKey = record.time;
           
@@ -387,8 +409,7 @@ export default function CalendarPage() {
         console.log('Formatted records:', formattedRecords);
         setSavedRecords(formattedRecords);
       } else {
-        const errorText = await response.text();
-        console.error('Failed to fetch health records:', response.status, errorText);
+        console.error('Failed to fetch health records:', status, (data as any)?.error);
       }
     } catch (error) {
       console.error('Error fetching health records:', error);
@@ -399,7 +420,10 @@ export default function CalendarPage() {
 
   // データベースから健康記録を取得
   useEffect(() => {
-    const currentUserId = user?.userId || 'user-1';
+    if (!isAuthenticated) return;
+    // userId が確定してから取得（user-1フォールバックで空表示になるのを防ぐ）
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
     fetchHealthRecords(currentUserId);
     
     // 直近の記録（健康記録ページから遷移してきた場合など）をチェック
@@ -422,7 +446,7 @@ export default function CalendarPage() {
         console.log('⚠️ lastSavedRecord 読み込みエラー（無視）:', e);
       }
     }
-  }, [user]);
+  }, [isAuthenticated, isLiffReady, user?.userId]);
 
   // カレンダー生成
   const generateCalendarDays = (date: Date) => {
@@ -953,7 +977,7 @@ export default function CalendarPage() {
                           )}
                           {(record as HealthRecord).weight && (
                             <>
-                              <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
+                            <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
                               {(() => {
                                 const wRaw = (record as HealthRecord).weight;
                                 const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
