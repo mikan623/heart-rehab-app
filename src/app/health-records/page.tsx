@@ -374,11 +374,12 @@ export default function Home() {
     if (sys && (!Number.isFinite(sysN) || sysN <= 0 || sysN >= 300)) {
       add('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
     }
-    if (dia && (!Number.isFinite(diaN) || diaN <= 20 || diaN >= 300)) {
-      add('bloodPressure.diastolic', '拡張期血圧（下）は 21〜299 mmHg の範囲で入力してください');
+    if (dia && (!Number.isFinite(diaN) || diaN <= 0 || diaN >= 300)) {
+      add('bloodPressure.diastolic', '拡張期血圧（下）は 1〜299 mmHg の範囲で入力してください');
     }
-    if (pulse && (!Number.isFinite(pulseN) || pulseN <= 20 || pulseN >= 200)) {
-      add('pulse', '脈拍は 21〜199 回/分 の範囲で入力してください');
+    // 脈拍: 1〜299
+    if (pulse && (!Number.isFinite(pulseN) || pulseN <= 0 || pulseN >= 300)) {
+      add('pulse', '脈拍は 1〜299 回/分 の範囲で入力してください');
     }
 
     if (weight) {
@@ -392,7 +393,7 @@ export default function Home() {
     }
 
     // 文字数制限
-    if (mealOther && mealOther.length > 400) add('meal.other', '食事内容（その他）は 400 文字以内で入力してください');
+    if (mealOther && mealOther.length > 200) add('meal.other', '食事内容（その他）は 200 文字以内で入力してください');
     if (dailyLife && dailyLife.length > 400) add('dailyLife', '自覚症状やその他は 400 文字以内で入力してください');
 
     return errs;
@@ -1403,7 +1404,7 @@ export default function Home() {
                 </label>
                 <input
                   type="number"
-                  min={0}
+                  min={1}
                   inputMode="numeric"
                   onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.systolic || ''}
@@ -1416,7 +1417,7 @@ export default function Home() {
                       bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
                       });
                   }}
-                  placeholder="0"
+                  placeholder="1~299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
@@ -1432,7 +1433,7 @@ export default function Home() {
                 </label>
                 <input
                   type="number"
-                  min={0}
+                  min={1}
                   inputMode="numeric"
                   onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.diastolic || ''}
@@ -1445,7 +1446,7 @@ export default function Home() {
                       bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
                       });
                   }}
-                  placeholder="0"
+                  placeholder="1~299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
@@ -1494,17 +1495,17 @@ export default function Home() {
             <div className="flex items-end gap-4">
               <input
                 type="number"
-                min={0}
+                min={1}
                 inputMode="numeric"
                 onKeyDown={blockInvalidKeysInt}
                 value={healthRecord?.pulse || ''}
                 onChange={(e) => {
                   setFormError(null);
-                  const value = sanitizeInt(e.target.value, { max: 199, maxDigits: 3 });
+                  const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
                   clearFieldError('pulse');
                   setHealthRecord({ ...healthRecord, pulse: value });
                 }}
-                placeholder="0"
+                placeholder="1~299"
                 className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                   fieldErrors['pulse'] ? 'border-red-400 focus:border-red-500' : 'border-pink-300 focus:border-pink-500'
                 }`}
@@ -1563,7 +1564,7 @@ export default function Home() {
                     clearFieldError('weight');
                     setHealthRecord({ ...healthRecord, weight: value });
                   }}
-                  placeholder="0"
+                  placeholder="0~200"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['weight'] ? 'border-red-400 focus:border-red-500' : 'border-yellow-300 focus:border-yellow-500'
                   }`}
@@ -1652,7 +1653,7 @@ export default function Home() {
                           exercise: { ...healthRecord?.exercise, duration: value },
                           });
                       }}
-                      placeholder="0"
+                      placeholder="0~1440"
                       className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                         fieldErrors['exercise.duration']
                           ? 'border-red-400 focus:border-red-500'
@@ -1795,10 +1796,10 @@ export default function Home() {
               <input
                 type="text"
                 value={healthRecord?.meal?.other || ''}
-                maxLength={400}
+                maxLength={200}
                 onChange={(e) => {
                   setFormError(null);
-                  const next = String(e.target.value || '').slice(0, 400);
+                  const next = String(e.target.value || '').slice(0, 200);
                   if (next.length >= 0) {
                     clearFieldError('meal.other');
                   }
@@ -1819,10 +1820,10 @@ export default function Home() {
                 {fieldErrors['meal.other'] ? (
                   <p className="text-sm text-red-600">{fieldErrors['meal.other']}</p>
                 ) : (
-                  <p className="text-xs text-gray-500">最大 400 文字</p>
+                  <p className="text-xs text-gray-500">最大 200 文字</p>
                 )}
                 <p className="text-xs text-gray-500">
-                  {String(healthRecord?.meal?.other || '').length}/400
+                  {String(healthRecord?.meal?.other || '').length}/200
                 </p>
             </div>
           </div>
@@ -2044,7 +2045,7 @@ export default function Home() {
                       }
                       setHealthRecord({ ...healthRecord, dailyLife: trimmed });
                     }}
-              placeholder="自由にお書きください"
+              placeholder="自覚症状やその他は 400 文字以内で入力してください"
               rows={6}
               className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none resize-none ${
                 fieldErrors['dailyLife'] ? 'border-red-400 focus:border-red-500' : 'border-purple-300 focus:border-purple-500'

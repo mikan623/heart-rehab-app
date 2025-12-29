@@ -256,13 +256,13 @@ export async function POST(request: NextRequest) {
     if (sysRaw && (!Number.isFinite(systolic) || systolic <= 0 || systolic >= 300)) {
       addErr('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
     }
-    // 拡張期: 21〜299（クライアント側と揃える）
-    if (diaRaw && (!Number.isFinite(diastolic) || diastolic <= 20 || diastolic >= 300)) {
-      addErr('bloodPressure.diastolic', '拡張期血圧（下）は 21〜299 mmHg の範囲で入力してください');
+    // 拡張期: 1〜299
+    if (diaRaw && (!Number.isFinite(diastolic) || diastolic <= 0 || diastolic >= 300)) {
+      addErr('bloodPressure.diastolic', '拡張期血圧（下）は 1〜299 mmHg の範囲で入力してください');
     }
-    // 脈拍: 21〜199
-    if (pulseRaw && (!Number.isFinite(pulse) || pulse <= 20 || pulse >= 200)) {
-      addErr('pulse', '脈拍は 21〜199 回/分 の範囲で入力してください');
+    // 脈拍: 1〜299
+    if (pulseRaw && (!Number.isFinite(pulse) || pulse <= 0 || pulse >= 300)) {
+      addErr('pulse', '脈拍は 1〜299 回/分 の範囲で入力してください');
     }
 
     // 体重: 任意、0〜200（小数OK）
@@ -285,8 +285,8 @@ export async function POST(request: NextRequest) {
 
     // 文字数制限
     const mealOther = healthRecord?.meal?.other;
-    if (mealOther !== null && mealOther !== undefined && String(mealOther).length > 400) {
-      addErr('meal.other', '食事内容（その他）は 400 文字以内で入力してください');
+    if (mealOther !== null && mealOther !== undefined && String(mealOther).length > 200) {
+      addErr('meal.other', '食事内容（その他）は 200 文字以内で入力してください');
     }
     const dailyLife = healthRecord?.dailyLife;
     if (dailyLife !== null && dailyLife !== undefined && String(dailyLife).length > 400) {
