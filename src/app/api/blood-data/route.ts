@@ -56,11 +56,75 @@ export async function POST(request: NextRequest) {
       bloodValues?: any;
       cpxTests?: any[];
     };
+
+    const fieldErrors: Record<string, string> = {};
+    const addErr = (k: string, msg: string) => {
+      if (!fieldErrors[k]) fieldErrors[k] = msg;
+    };
+    const parseNum0to1000 = (v: any, key: string): number | null => {
+      if (v === null || v === undefined || String(v).trim() === '') return null;
+      const n = Number(v);
+      if (!Number.isFinite(n)) {
+        addErr(key, '数値を入力してください');
+        return null;
+      }
+      if (n < 0 || n > 1000) {
+        addErr(key, '0〜1000 の範囲で入力してください');
+        return null;
+      }
+      return n;
+    };
     
     if (!userId) {
       return NextResponse.json(
         { error: 'userId is required' },
         { status: 400 }
+      );
+    }
+
+    // バリデーション（>1000 を禁止、小数OK）
+    if (mode !== 'cpx') {
+      const keys = [
+        'hbA1c',
+        'randomBloodSugar',
+        'totalCholesterol',
+        'triglycerides',
+        'hdlCholesterol',
+        'ldlCholesterol',
+        'bun',
+        'creatinine',
+        'uricAcid',
+        'hemoglobin',
+        'bnp',
+      ];
+      for (const k of keys) parseNum0to1000(bloodValues?.[k], `bloodValues.${k}`);
+    }
+    if (Array.isArray(cpxTests)) {
+      cpxTests.forEach((cpx: any, idx: number) => {
+        // cpxRound は整数
+        const round = cpx?.cpxRound;
+        if (round !== null && round !== undefined && String(round).trim() !== '') {
+          const n = Number(round);
+          if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 1000) {
+            addErr(`cpxTests.${idx}.cpxRound`, 'CPX回数は 1〜1000 の整数で入力してください');
+          }
+        }
+        [
+          'atOneMinBefore',
+          'atDuring',
+          'maxLoad',
+          'loadWeight',
+          'vo2',
+          'mets',
+          'heartRate',
+          'systolicBloodPressure',
+        ].forEach((k) => parseNum0to1000(cpx?.[k], `cpxTests.${idx}.${k}`));
+      });
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      return NextResponse.json(
+        { error: 'Validation failed', fieldErrors },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
       );
     }
     
@@ -79,17 +143,17 @@ export async function POST(request: NextRequest) {
         data: {
           userId,
           testDate,
-          hbA1c: mode === 'cpx' ? null : (bloodValues?.hbA1c ?? null),
-          randomBloodSugar: mode === 'cpx' ? null : (bloodValues?.randomBloodSugar ?? null),
-          totalCholesterol: mode === 'cpx' ? null : (bloodValues?.totalCholesterol ?? null),
-          triglycerides: mode === 'cpx' ? null : (bloodValues?.triglycerides ?? null),
-          hdlCholesterol: mode === 'cpx' ? null : (bloodValues?.hdlCholesterol ?? null),
-          ldlCholesterol: mode === 'cpx' ? null : (bloodValues?.ldlCholesterol ?? null),
-          bun: mode === 'cpx' ? null : (bloodValues?.bun ?? null),
-          creatinine: mode === 'cpx' ? null : (bloodValues?.creatinine ?? null),
-          uricAcid: mode === 'cpx' ? null : (bloodValues?.uricAcid ?? null),
-          hemoglobin: mode === 'cpx' ? null : (bloodValues?.hemoglobin ?? null),
-          bnp: mode === 'cpx' ? null : (bloodValues?.bnp ?? null),
+          hbA1c: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.hbA1c, 'bloodValues.hbA1c'),
+          randomBloodSugar: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.randomBloodSugar, 'bloodValues.randomBloodSugar'),
+          totalCholesterol: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.totalCholesterol, 'bloodValues.totalCholesterol'),
+          triglycerides: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.triglycerides, 'bloodValues.triglycerides'),
+          hdlCholesterol: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.hdlCholesterol, 'bloodValues.hdlCholesterol'),
+          ldlCholesterol: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.ldlCholesterol, 'bloodValues.ldlCholesterol'),
+          bun: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.bun, 'bloodValues.bun'),
+          creatinine: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.creatinine, 'bloodValues.creatinine'),
+          uricAcid: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.uricAcid, 'bloodValues.uricAcid'),
+          hemoglobin: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.hemoglobin, 'bloodValues.hemoglobin'),
+          bnp: mode === 'cpx' ? null : parseNum0to1000(bloodValues?.bnp, 'bloodValues.bnp'),
         },
         include: { cpxTests: true },
       });
@@ -103,14 +167,14 @@ export async function POST(request: NextRequest) {
             bloodDataId: newBloodData.id,
             testDate: cpx.testDate || testDate,
             cpxRound: cpx.cpxRound,
-            atOneMinBefore: cpx.atOneMinBefore || null,
-            atDuring: cpx.atDuring || null,
-            maxLoad: cpx.maxLoad || null,
-            loadWeight: cpx.loadWeight || null,
-            vo2: cpx.vo2 || null,
-            mets: cpx.mets || null,
-            heartRate: cpx.heartRate || null,
-            systolicBloodPressure: cpx.systolicBloodPressure || null,
+            atOneMinBefore: parseNum0to1000(cpx.atOneMinBefore, 'cpx.atOneMinBefore'),
+            atDuring: parseNum0to1000(cpx.atDuring, 'cpx.atDuring'),
+            maxLoad: parseNum0to1000(cpx.maxLoad, 'cpx.maxLoad'),
+            loadWeight: parseNum0to1000(cpx.loadWeight, 'cpx.loadWeight'),
+            vo2: parseNum0to1000(cpx.vo2, 'cpx.vo2'),
+            mets: parseNum0to1000(cpx.mets, 'cpx.mets'),
+            heartRate: parseNum0to1000(cpx.heartRate, 'cpx.heartRate'),
+            systolicBloodPressure: parseNum0to1000(cpx.systolicBloodPressure, 'cpx.systolicBloodPressure'),
             findings: cpx.findings || null,
           }
         });
@@ -143,11 +207,74 @@ export async function PUT(request: NextRequest) {
       bloodValues?: any;
       cpxTests?: any[];
     };
+
+    const fieldErrors: Record<string, string> = {};
+    const addErr = (k: string, msg: string) => {
+      if (!fieldErrors[k]) fieldErrors[k] = msg;
+    };
+    const parseNum0to1000 = (v: any, key: string): number | null => {
+      if (v === null || v === undefined || String(v).trim() === '') return null;
+      const n = Number(v);
+      if (!Number.isFinite(n)) {
+        addErr(key, '数値を入力してください');
+        return null;
+      }
+      if (n < 0 || n > 1000) {
+        addErr(key, '0〜1000 の範囲で入力してください');
+        return null;
+      }
+      return n;
+    };
     
     if (!id) {
       return NextResponse.json(
         { error: 'id is required' },
         { status: 400 }
+      );
+    }
+
+    // バリデーション（>1000 を禁止、小数OK）
+    if (mode !== 'cpx') {
+      const keys = [
+        'hbA1c',
+        'randomBloodSugar',
+        'totalCholesterol',
+        'triglycerides',
+        'hdlCholesterol',
+        'ldlCholesterol',
+        'bun',
+        'creatinine',
+        'uricAcid',
+        'hemoglobin',
+        'bnp',
+      ];
+      for (const k of keys) parseNum0to1000(bloodValues?.[k], `bloodValues.${k}`);
+    }
+    if (Array.isArray(cpxTests)) {
+      cpxTests.forEach((cpx: any, idx: number) => {
+        const round = cpx?.cpxRound;
+        if (round !== null && round !== undefined && String(round).trim() !== '') {
+          const n = Number(round);
+          if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 1000) {
+            addErr(`cpxTests.${idx}.cpxRound`, 'CPX回数は 1〜1000 の整数で入力してください');
+          }
+        }
+        [
+          'atOneMinBefore',
+          'atDuring',
+          'maxLoad',
+          'loadWeight',
+          'vo2',
+          'mets',
+          'heartRate',
+          'systolicBloodPressure',
+        ].forEach((k) => parseNum0to1000(cpx?.[k], `cpxTests.${idx}.${k}`));
+      });
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      return NextResponse.json(
+        { error: 'Validation failed', fieldErrors },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
       );
     }
     
@@ -159,17 +286,17 @@ export async function PUT(request: NextRequest) {
         ...(mode === 'cpx'
           ? {}
           : {
-              hbA1c: bloodValues?.hbA1c ?? null,
-              randomBloodSugar: bloodValues?.randomBloodSugar ?? null,
-              totalCholesterol: bloodValues?.totalCholesterol ?? null,
-              triglycerides: bloodValues?.triglycerides ?? null,
-              hdlCholesterol: bloodValues?.hdlCholesterol ?? null,
-              ldlCholesterol: bloodValues?.ldlCholesterol ?? null,
-              bun: bloodValues?.bun ?? null,
-              creatinine: bloodValues?.creatinine ?? null,
-              uricAcid: bloodValues?.uricAcid ?? null,
-              hemoglobin: bloodValues?.hemoglobin ?? null,
-              bnp: bloodValues?.bnp ?? null,
+              hbA1c: parseNum0to1000(bloodValues?.hbA1c, 'bloodValues.hbA1c'),
+              randomBloodSugar: parseNum0to1000(bloodValues?.randomBloodSugar, 'bloodValues.randomBloodSugar'),
+              totalCholesterol: parseNum0to1000(bloodValues?.totalCholesterol, 'bloodValues.totalCholesterol'),
+              triglycerides: parseNum0to1000(bloodValues?.triglycerides, 'bloodValues.triglycerides'),
+              hdlCholesterol: parseNum0to1000(bloodValues?.hdlCholesterol, 'bloodValues.hdlCholesterol'),
+              ldlCholesterol: parseNum0to1000(bloodValues?.ldlCholesterol, 'bloodValues.ldlCholesterol'),
+              bun: parseNum0to1000(bloodValues?.bun, 'bloodValues.bun'),
+              creatinine: parseNum0to1000(bloodValues?.creatinine, 'bloodValues.creatinine'),
+              uricAcid: parseNum0to1000(bloodValues?.uricAcid, 'bloodValues.uricAcid'),
+              hemoglobin: parseNum0to1000(bloodValues?.hemoglobin, 'bloodValues.hemoglobin'),
+              bnp: parseNum0to1000(bloodValues?.bnp, 'bloodValues.bnp'),
             }),
       },
       include: {
@@ -189,14 +316,14 @@ export async function PUT(request: NextRequest) {
               bloodDataId: id,
               testDate: cpx.testDate || testDate,
               cpxRound: cpx.cpxRound,
-              atOneMinBefore: cpx.atOneMinBefore || null,
-              atDuring: cpx.atDuring || null,
-              maxLoad: cpx.maxLoad || null,
-              loadWeight: cpx.loadWeight || null,
-              vo2: cpx.vo2 || null,
-              mets: cpx.mets || null,
-              heartRate: cpx.heartRate || null,
-              systolicBloodPressure: cpx.systolicBloodPressure || null,
+              atOneMinBefore: parseNum0to1000(cpx.atOneMinBefore, 'cpx.atOneMinBefore'),
+              atDuring: parseNum0to1000(cpx.atDuring, 'cpx.atDuring'),
+              maxLoad: parseNum0to1000(cpx.maxLoad, 'cpx.maxLoad'),
+              loadWeight: parseNum0to1000(cpx.loadWeight, 'cpx.loadWeight'),
+              vo2: parseNum0to1000(cpx.vo2, 'cpx.vo2'),
+              mets: parseNum0to1000(cpx.mets, 'cpx.mets'),
+              heartRate: parseNum0to1000(cpx.heartRate, 'cpx.heartRate'),
+              systolicBloodPressure: parseNum0to1000(cpx.systolicBloodPressure, 'cpx.systolicBloodPressure'),
               findings: cpx.findings || null,
             }
           });

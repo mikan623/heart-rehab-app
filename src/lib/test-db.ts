@@ -1,9 +1,12 @@
-import prisma from './prisma';
+import prisma, { ensurePrismaConnection } from './prisma';
 
 export async function testDatabaseConnection() {
   try {
-    // データベース接続テスト
-    await prisma.$connect();
+    const connected = await ensurePrismaConnection();
+    if (!connected || !prisma) {
+      console.error('❌ Database not available (no DATABASE_URL or connection failed)');
+      return false;
+    }
     console.log('✅ Database connection successful');
     
     // テーブル存在確認
@@ -15,6 +18,6 @@ export async function testDatabaseConnection() {
     console.error('❌ Database connection failed:', error);
     return false;
   } finally {
-    await prisma.$disconnect();
+    // prisma は共有インスタンスなので、ここで disconnect しない
   }
 }

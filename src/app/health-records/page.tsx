@@ -29,8 +29,8 @@ interface HealthRecord {
     other: string;
   };
   dailyLife: string;
-  medicationTaken?: boolean;
-  medicationTimes?: { morning: boolean; noon: boolean; night: boolean };
+  medicationTaken: boolean;
+  medicationTimes: { morning: boolean; noon: boolean; night: boolean };
 }
 
 type PrintBloodData = {
@@ -113,21 +113,18 @@ export default function Home() {
   const [printTableRows, setPrintTableRows] = useState<React.ReactNode[]>([]);
   const [printBloodDataList, setPrintBloodDataList] = useState<PrintBloodData[]>([]);
   const [printBloodDataStatus, setPrintBloodDataStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
-  const [healthRecord, setHealthRecord] = useState({
+  const createEmptyHealthRecord = (): HealthRecord => ({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
     exercise: { type: '', duration: '' },
     weight: '',  
-    meal: {
-      staple: [],        // 配列に変更
-      mainDish: [],      // 配列に変更
-      sideDish: [],      // 配列に変更
-      other: ''
-    },
+    meal: { staple: [], mainDish: [], sideDish: [], other: '' },
     dailyLife: '',
     medicationTaken: false,
-    medicationTimes: { morning: false, noon: false, night: false }
+    medicationTimes: { morning: false, noon: false, night: false },
   });
+
+  const [healthRecord, setHealthRecord] = useState<HealthRecord>(() => createEmptyHealthRecord());
   
   // 入力フィールドの再レンダリングを防ぐためのキー
   const [inputKey, setInputKey] = useState(0);
@@ -136,6 +133,30 @@ export default function Home() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const labelForFieldErrorKey = (key: string) => {
+    const map: Record<string, string> = {
+      'bloodPressure.systolic': '血圧（上）',
+      'bloodPressure.diastolic': '血圧（下）',
+      pulse: '脈拍',
+      weight: '体重',
+      'exercise.duration': '運動時間',
+      'meal.other': '食事内容（その他）',
+      dailyLife: '自覚症状やその他',
+      date: '日付',
+      time: '時間',
+    };
+    return map[key] || key;
+  };
+
+  const openSectionForErrorKey = (key: string) => {
+    if (key.startsWith('bloodPressure.')) return setActiveSection('bloodPressure');
+    if (key === 'pulse') return setActiveSection('pulse');
+    if (key === 'weight') return setActiveSection('weight');
+    if (key.startsWith('exercise.')) return setActiveSection('exercise');
+    if (key.startsWith('meal.')) return setActiveSection('meal');
+    if (key.startsWith('dailyLife')) return setActiveSection('dailyLife');
+  };
   
   // 認証チェック
   useEffect(() => {
@@ -193,7 +214,7 @@ export default function Home() {
       setPrintTableRows([<tr key="error"><td className="border border-gray-400 p-2" colSpan={9}>データ取得エラー</td></tr>]);
     }
   }, []);
-
+  
   // PDF印刷用：血液検査/CPXデータも取得
   useEffect(() => {
     const fetchBloodDataForPrint = async () => {
@@ -222,22 +243,7 @@ export default function Home() {
     fetchBloodDataForPrint();
   }, [isAuthenticated]);
   
-  // 健康記録の型定義を追加
-  interface HealthRecord {
-    bloodPressure: { systolic: string; diastolic: string };
-    pulse: string;
-    exercise: { type: string; duration: string };
-    weight: string;
-    meal: {
-      staple: string | string[];
-      mainDish: string | string[];
-      sideDish: string | string[];
-      other: string;
-    };
-    dailyLife: string;
-    medicationTaken?: boolean;
-    medicationTimes?: { morning: boolean; noon: boolean; night: boolean };
-  }
+  // （HealthRecord の再定義は不要。上の型を使用）
 
   // 時間を日本語表記に変換する関数
   const getTimeLabel = (time: string) => {
@@ -354,6 +360,8 @@ export default function Home() {
     const pulse = (healthRecord as any)?.pulse?.trim?.() ?? '';
     const weight = (healthRecord as any)?.weight?.trim?.() ?? '';
     const dur = (healthRecord as any)?.exercise?.duration?.trim?.() ?? '';
+    const mealOther = String((healthRecord as any)?.meal?.other ?? '');
+    const dailyLife = String((healthRecord as any)?.dailyLife ?? '');
 
     if (!sys) add('bloodPressure.systolic', '収縮期血圧（上）は必須です');
     if (!dia) add('bloodPressure.diastolic', '拡張期血圧（下）は必須です');
@@ -382,6 +390,10 @@ export default function Home() {
       const d = Number(dur);
       if (!Number.isFinite(d) || d < 0 || d > 1440) add('exercise.duration', '運動時間は 0〜1440 分の範囲で入力してください');
     }
+
+    // 文字数制限
+    if (mealOther && mealOther.length > 400) add('meal.other', '食事内容（その他）は 400 文字以内で入力してください');
+    if (dailyLife && dailyLife.length > 400) add('dailyLife', '自覚症状やその他は 400 文字以内で入力してください');
 
     return errs;
   };
@@ -902,20 +914,7 @@ export default function Home() {
         }
         
         // フォームをリセット
-        setHealthRecord({
-          bloodPressure: { systolic: '', diastolic: '' },
-          pulse: '',
-          exercise: { type: '', duration: '' },
-          weight: '',
-          meal: {
-            staple: [],
-            mainDish: [],
-            sideDish: [],
-            other: ''
-          },
-          dailyLife: '',
-          medicationTaken: false
-        });
+        setHealthRecord(createEmptyHealthRecord());
       } else if (response.status === 503) {
         // ⚠️ データベースが利用不可の場合、ローカルストレージに保存
         console.log('⚠️ Database unavailable (503), saving to localStorage');
@@ -954,20 +953,7 @@ export default function Home() {
         }
         
         // フォームをリセット
-        setHealthRecord({
-          bloodPressure: { systolic: '', diastolic: '' },
-          pulse: '',
-          exercise: { type: '', duration: '' },
-          weight: '',
-          meal: {
-            staple: [],
-            mainDish: [],
-            sideDish: [],
-            other: ''
-          },
-          dailyLife: '',
-          medicationTaken: false
-        });
+        setHealthRecord(createEmptyHealthRecord());
       } else {
         const error = await response.json().catch(() => ({}));
         if (response.status === 400 && (error as any)?.fieldErrors) {
@@ -1233,6 +1219,24 @@ export default function Home() {
               {formError}
             </div>
           )}
+          {Object.keys(fieldErrors).length > 0 && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <div className="text-sm font-bold text-red-700 mb-2">入力エラー（修正が必要な項目）</div>
+              <ul className="space-y-1">
+                {Object.entries(fieldErrors).map(([k, msg]) => (
+                  <li key={k}>
+                    <button
+                      type="button"
+                      onClick={() => openSectionForErrorKey(k)}
+                      className="w-full text-left text-sm text-red-700 hover:underline"
+                    >
+                      <span className="font-bold">{labelForFieldErrorKey(k)}:</span> {msg}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2 pb-4 md:pb-2 border-b md:border-b-0 border-gray-200">
             <h2 className="text-2xl md:text-4xl font-bold md:font-bold text-gray-800">
               健康記録
@@ -1340,7 +1344,7 @@ export default function Home() {
                 🍽️ 食事内容
               </span>
               <span className="text-base md:text-xl font-semibold text-gray-700">
-                {hasMealInput ? '記入済' : '未入力'}
+                {hasMealInput ? '入力済み' : '未入力'}
               </span>
             </button>
 
@@ -1407,10 +1411,10 @@ export default function Home() {
                     setFormError(null);
                     const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
                     clearFieldError('bloodPressure.systolic');
-                    setHealthRecord({
-                      ...healthRecord,
+                      setHealthRecord({
+                        ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
-                    });
+                      });
                   }}
                   placeholder="0"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
@@ -1436,10 +1440,10 @@ export default function Home() {
                     setFormError(null);
                     const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
                     clearFieldError('bloodPressure.diastolic');
-                    setHealthRecord({
-                      ...healthRecord,
+                      setHealthRecord({
+                        ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
-                    });
+                      });
                   }}
                   placeholder="0"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
@@ -1643,10 +1647,10 @@ export default function Home() {
                         setFormError(null);
                         const value = sanitizeInt(e.target.value, { max: 1440, maxDigits: 4 });
                         clearFieldError('exercise.duration');
-                        setHealthRecord({
-                          ...healthRecord,
+                          setHealthRecord({
+                            ...healthRecord,
                           exercise: { ...healthRecord?.exercise, duration: value },
-                        });
+                          });
                       }}
                       placeholder="0"
                       className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
@@ -1791,19 +1795,37 @@ export default function Home() {
               <input
                 type="text"
                 value={healthRecord?.meal?.other || ''}
-                    onChange={(e) =>
-                      setHealthRecord({
+                maxLength={400}
+                onChange={(e) => {
+                  setFormError(null);
+                  const next = String(e.target.value || '').slice(0, 400);
+                  if (next.length >= 0) {
+                    clearFieldError('meal.other');
+                  }
+                  setHealthRecord({
                   ...healthRecord,
                   meal: {
                     ...healthRecord.meal,
-                    other: e.target.value
-                  }
-                      })
-                    }
+                      other: next,
+                    },
+                  });
+                }}
                 placeholder="果物、乳製品など"
-                className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500 placeholder:text-gray-400"
+                className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
+                  fieldErrors['meal.other'] ? 'border-red-400 focus:border-red-500' : 'border-red-300 focus:border-red-500'
+                }`}
               />
+              <div className="mt-2 flex items-center justify-between gap-2">
+                {fieldErrors['meal.other'] ? (
+                  <p className="text-sm text-red-600">{fieldErrors['meal.other']}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">最大 400 文字</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  {String(healthRecord?.meal?.other || '').length}/400
+                </p>
             </div>
+          </div>
 
                 <div className="mt-6 flex justify-end">
                   <button
@@ -1923,6 +1945,8 @@ export default function Home() {
                             type="checkbox"
                             checked={isChecked}
                             onChange={(e) => {
+                              setFormError(null);
+                              clearFieldError('dailyLife');
                               const current = healthRecord?.dailyLife || '';
                               
                               // 【症状】と【メモ】を分離
@@ -1951,11 +1975,15 @@ export default function Home() {
                               if (!symptomsStr && memoStr) {
                                 updated = `【メモ】${memoStr}`;
                               }
-                              
-                              setHealthRecord({
-                ...healthRecord,
-                                dailyLife: updated.trim()
-                              });
+                              const trimmed = updated.trim();
+                              if (trimmed.length > 400) {
+                                setFieldErrors((prev) => ({
+                                  ...prev,
+                                  dailyLife: '自覚症状やその他は 400 文字以内で入力してください',
+                                }));
+                                return;
+                              }
+                              setHealthRecord({ ...healthRecord, dailyLife: trimmed });
                             }}
                             className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
                           />
@@ -1978,6 +2006,8 @@ export default function Home() {
                       return memoMatch ? memoMatch[1].trim() : '';
                     })()}
                     onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('dailyLife');
                       const current = healthRecord?.dailyLife || '';
                       
                       // 【症状】セクションを保持
@@ -1985,27 +2015,51 @@ export default function Home() {
                       const symptomsStr = symptomsMatch ? symptomsMatch[1].trim() : '';
                       
                       // 新しいテキストを【メモ】として追加
+                      const memoInput = String(e.target.value || '');
                       let updated = '';
                       if (symptomsStr) {
                         updated = `【症状】${symptomsStr}`;
-                        if (e.target.value.trim()) {
-                          updated += ` 【メモ】${e.target.value}`;
+                        if (memoInput.trim()) {
+                          // 400文字制限に収まるようにメモ部分をトリム
+                          const prefix = `${updated} 【メモ】`;
+                          const remain = Math.max(0, 400 - prefix.length);
+                          const clipped = memoInput.slice(0, remain);
+                          updated = `${updated} 【メモ】${clipped}`;
                         }
                       } else {
-                        if (e.target.value.trim()) {
-                          updated = `【メモ】${e.target.value}`;
+                        if (memoInput.trim()) {
+                          const prefix = `【メモ】`;
+                          const remain = Math.max(0, 400 - prefix.length);
+                          const clipped = memoInput.slice(0, remain);
+                          updated = `【メモ】${clipped}`;
                         }
                       }
-                      
-                      setHealthRecord({
-                        ...healthRecord,
-                        dailyLife: updated.trim()
-                      });
+                      const trimmed = updated.trim();
+                      if (trimmed.length > 400) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          dailyLife: '自覚症状やその他は 400 文字以内で入力してください',
+                        }));
+                        return;
+                      }
+                      setHealthRecord({ ...healthRecord, dailyLife: trimmed });
                     }}
               placeholder="自由にお書きください"
               rows={6}
-              className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+              className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none resize-none ${
+                fieldErrors['dailyLife'] ? 'border-red-400 focus:border-red-500' : 'border-purple-300 focus:border-purple-500'
+              }`}
             />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              {fieldErrors['dailyLife'] ? (
+                <p className="text-sm text-red-600">{fieldErrors['dailyLife']}</p>
+              ) : (
+                <p className="text-xs text-gray-500">最大 400 文字（症状＋メモの合計）</p>
+              )}
+              <p className="text-xs text-gray-500">
+                {String(healthRecord?.dailyLife || '').length}/400
+              </p>
+            </div>
           </div>
 
                 <div className="mt-6 flex justify-end">

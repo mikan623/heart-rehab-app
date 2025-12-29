@@ -62,6 +62,8 @@ export default function BloodDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [bloodDataList, setBloodDataList] = useState<BloodData[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // ページモード: 'list' | 'new' | 'edit'
   const [pageMode, setPageMode] = useState<'list' | 'new' | 'edit'>('list');
@@ -98,6 +100,95 @@ export default function BloodDataPage() {
       findings: null,
     }
   ]);
+
+  const blockInvalidKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // 数値入力で指数表記や符号を禁止（小数点は許可）
+    if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+  };
+
+  const toHalfWidthNumberLike = (s: string) =>
+    s
+      .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+      .replace(/[，,]/g, '.')
+      .replace(/[。．]/g, '.');
+
+  const sanitizeDecimal1000 = (raw: string, maxDecimals = 3) => {
+    const v0 = toHalfWidthNumberLike(String(raw ?? ''));
+    const cleaned = v0.replace(/[^0-9.]/g, '');
+    const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
+    const intPart = intPartRaw.replace(/^0+(?=\d)/, '');
+    const decPart = decPartRaw.slice(0, maxDecimals);
+    const v = decPart.length ? `${intPart || '0'}.${decPart}` : (intPart || '');
+    if (!v) return '';
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.min(n, 1000));
+  };
+
+  const toNullableNumber1000 = (raw: string) => {
+    const s = sanitizeDecimal1000(raw);
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const labelForErrorKey = (key: string) => {
+    const bloodMap: Record<string, string> = {
+      hbA1c: 'HbA1c',
+      randomBloodSugar: '随時血糖',
+      totalCholesterol: '総コレステロール',
+      triglycerides: '中性脂肪',
+      hdlCholesterol: 'HDLコレステロール',
+      ldlCholesterol: 'LDLコレステロール',
+      bun: 'BUN',
+      creatinine: 'Cr',
+      uricAcid: '尿酸',
+      hemoglobin: 'ヘモグロビン',
+      bnp: 'BNP',
+    };
+    const cpxMap: Record<string, string> = {
+      cpxRound: '回数',
+      atOneMinBefore: 'AT1分前',
+      atDuring: 'AT中',
+      maxLoad: '最大負荷時',
+      loadWeight: '負荷量(W)',
+      vo2: 'VO2',
+      mets: 'Mets',
+      heartRate: '心拍数',
+      systolicBloodPressure: '収縮期血圧',
+    };
+    if (key === 'testDate') return '検査日';
+    if (key.startsWith('bloodValues.')) {
+      const k = key.replace('bloodValues.', '');
+      return `血液: ${bloodMap[k] || k}`;
+    }
+    const m1 = key.match(/^cpxTests\.(\d+)\.(.+)$/);
+    if (m1) {
+      const idx = Number(m1[1]) + 1;
+      const k = m1[2];
+      return `CPX #${idx}: ${cpxMap[k] || k}`;
+    }
+    const m2 = key.match(/^cpx\.(.+)$/);
+    if (m2) {
+      const k = m2[1];
+      return `CPX: ${cpxMap[k] || k}`;
+    }
+    return key;
+  };
+
+  const openSectionForErrorKey = (key: string) => {
+    if (key.startsWith('bloodValues.')) setRecordType('blood');
+    if (key.startsWith('cpxTests.') || key.startsWith('cpx.')) setRecordType('cpx');
+  };
 
   // CPX記録モードでは、上の検査日を各CPXに自動適用（下の検査日入力は不要）
   useEffect(() => {
@@ -230,11 +321,14 @@ export default function BloodDataPage() {
 
   const handleSave = async () => {
     if (!testDate || !userId) {
-      alert('検査日を入力してください');
+      setFormError('入力内容にエラーがあります。赤字の項目を確認してください。');
+      setFieldErrors((prev) => ({ ...prev, testDate: '検査日を入力してください' }));
       return;
     }
 
     setSaveStatus('saving');
+    setFormError(null);
+    setFieldErrors({});
     try {
       const payload = {
         mode: recordType || 'blood',
@@ -255,7 +349,19 @@ export default function BloodDataPage() {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('保存に失敗しました');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 400 && (data as any)?.fieldErrors) {
+          const fe = (data as any).fieldErrors as Record<string, string>;
+          setFormError('入力内容にエラーがあります。赤字の項目を確認してください。');
+          setFieldErrors(fe);
+          const firstKey = Object.keys(fe)[0];
+          if (firstKey) openSectionForErrorKey(firstKey);
+          setSaveStatus('idle');
+          return;
+        }
+        throw new Error((data as any)?.error || '保存に失敗しました');
+      }
 
       setSaveStatus('saved');
       setTimeout(() => {
@@ -266,7 +372,7 @@ export default function BloodDataPage() {
       }, 1500);
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      setFormError('保存に失敗しました。入力内容を確認して再度お試しください。');
       setSaveStatus('idle');
     }
   };
@@ -709,7 +815,7 @@ export default function BloodDataPage() {
                   }}
                   className="text-gray-500 hover:text-gray-700 font-bold"
                 >
-                  ✕ キャンセル
+                  ✕
                 </button>
               </div>
             </div>
@@ -720,10 +826,38 @@ export default function BloodDataPage() {
               <input
                 type="date"
                 value={testDate}
-                onChange={(e) => setTestDate(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                onChange={(e) => {
+                  setFormError(null);
+                  clearFieldError('testDate');
+                  setTestDate(e.target.value);
+                }}
+                className={`w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                  fieldErrors['testDate'] ? 'border-red-400' : 'border-orange-300'
+                }`}
               />
+              {fieldErrors['testDate'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['testDate']}</p>}
             </div>
+
+            {(formError || Object.keys(fieldErrors).length > 0) && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                {formError && <div className="text-sm font-bold text-red-700 mb-2">{formError}</div>}
+                {Object.keys(fieldErrors).length > 0 && (
+                  <ul className="space-y-1">
+                    {Object.entries(fieldErrors).map(([k, msg]) => (
+                      <li key={k}>
+                        <button
+                          type="button"
+                          onClick={() => openSectionForErrorKey(k)}
+                          className="w-full text-left text-sm text-red-700 hover:underline"
+                        >
+                          <span className="font-bold">{labelForErrorKey(k)}:</span> {msg}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {/* 血液検査結果 */}
             {(recordType || 'blood') !== 'cpx' && (
@@ -734,10 +868,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">HbA1c (%)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.hbA1c || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, hbA1c: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.hbA1c');
+                      setBloodValues({ ...bloodValues, hbA1c: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="4.3～5.8"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -747,10 +886,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">随時血糖 (mg/dL)</label>
                   <input
-                    type="number"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.randomBloodSugar || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, randomBloodSugar: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.randomBloodSugar');
+                      setBloodValues({ ...bloodValues, randomBloodSugar: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="140未満"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -760,10 +904,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">総コレステロール (mg/dL)</label>
                   <input
-                    type="number"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.totalCholesterol || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, totalCholesterol: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.totalCholesterol');
+                      setBloodValues({ ...bloodValues, totalCholesterol: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="130～220"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -773,10 +922,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">中性脂肪 (mg/dL)</label>
                   <input
-                    type="number"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.triglycerides || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, triglycerides: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.triglycerides');
+                      setBloodValues({ ...bloodValues, triglycerides: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="30～150"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -786,10 +940,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">HDLコレステロール (mg/dL)</label>
                   <input
-                    type="number"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.hdlCholesterol || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, hdlCholesterol: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.hdlCholesterol');
+                      setBloodValues({ ...bloodValues, hdlCholesterol: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="40～100"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -799,10 +958,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">LDLコレステロール (mg/dL)</label>
                   <input
-                    type="number"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.ldlCholesterol || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, ldlCholesterol: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.ldlCholesterol');
+                      setBloodValues({ ...bloodValues, ldlCholesterol: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="70～139"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -812,10 +976,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">BUN (mg/dL)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.bun || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, bun: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.bun');
+                      setBloodValues({ ...bloodValues, bun: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="8～20"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -825,10 +994,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">Cr (mg/dL)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.creatinine || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, creatinine: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.creatinine');
+                      setBloodValues({ ...bloodValues, creatinine: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="0.3～0.8"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -838,10 +1012,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">尿酸 (mg/dL)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.uricAcid || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, uricAcid: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.uricAcid');
+                      setBloodValues({ ...bloodValues, uricAcid: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="2.6～6"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -851,10 +1030,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">ヘモグロビン (mg/dL)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.hemoglobin || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, hemoglobin: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.hemoglobin');
+                      setBloodValues({ ...bloodValues, hemoglobin: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="12～18"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -864,10 +1048,15 @@ export default function BloodDataPage() {
                 <div>
                   <label className="block text-gray-600 text-sm mb-1">BNP (pg/mL)</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
+                    inputMode="decimal"
+                    onKeyDown={blockInvalidKeys}
                     value={bloodValues.bnp || ''}
-                    onChange={(e) => setBloodValues({ ...bloodValues, bnp: e.target.value ? parseFloat(e.target.value) : null })}
+                    onChange={(e) => {
+                      setFormError(null);
+                      clearFieldError('bloodValues.bnp');
+                      setBloodValues({ ...bloodValues, bnp: toNullableNumber1000(e.target.value) });
+                    }}
                     placeholder="18以下"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
@@ -910,12 +1099,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">AT1分前</label>
                         <input
-                          type="number"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.atOneMinBefore || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.atOneMinBefore`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].atOneMinBefore = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].atOneMinBefore = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -926,12 +1118,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">AT中</label>
                         <input
-                          type="number"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.atDuring || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.atDuring`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].atDuring = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].atDuring = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -942,12 +1137,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">最大負荷時</label>
                         <input
-                          type="number"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.maxLoad || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.maxLoad`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].maxLoad = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].maxLoad = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -958,12 +1156,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">負荷量 (W)</label>
                         <input
-                          type="number"
-                          step="1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.loadWeight || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.loadWeight`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].loadWeight = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].loadWeight = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -974,12 +1175,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">VO2 (ml/min/kg)</label>
                         <input
-                          type="number"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.vo2 || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.vo2`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].vo2 = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].vo2 = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -990,12 +1194,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">Mets</label>
                         <input
-                          type="number"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.mets || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.mets`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].mets = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].mets = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -1006,12 +1213,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">心拍数 (bpm)</label>
                         <input
-                          type="number"
-                          step="1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.heartRate || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.heartRate`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].heartRate = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].heartRate = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
@@ -1022,12 +1232,15 @@ export default function BloodDataPage() {
                       <div>
                         <label className="block text-gray-600 text-sm mb-1">収縮期血圧 (mmHg)</label>
                         <input
-                          type="number"
-                          step="1"
+                          type="text"
+                          inputMode="decimal"
+                          onKeyDown={blockInvalidKeys}
                           value={cpx.systolicBloodPressure || ''}
                           onChange={(e) => {
+                            setFormError(null);
+                            clearFieldError(`cpxTests.${index}.systolicBloodPressure`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].systolicBloodPressure = e.target.value ? parseFloat(e.target.value) : null;
+                            newCpxTests[index].systolicBloodPressure = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"

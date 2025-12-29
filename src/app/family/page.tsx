@@ -189,7 +189,18 @@ export default function FamilyPage() {
             const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
             if (!liffId) {
               console.warn('LIFF ID missing; skipping init');
-              setIsLiffReady(true);
+              // LIFFが使えない/未設定の場合はフォールバックでlocalStorageから読み込み
+              const savedFamily = localStorage.getItem('familyMembers');
+              if (savedFamily) {
+                const parsedFamily = JSON.parse(savedFamily);
+                const convertedFamily = parsedFamily.map((member: any) => ({
+                  ...member,
+                  isRegistered: member.isRegistered === 'true' || member.isRegistered === true
+                }));
+                setFamilyMembers(convertedFamily);
+              } else {
+                setFamilyMembers([]);
+              }
               return;
             }
             await window.liff.init({ liffId });

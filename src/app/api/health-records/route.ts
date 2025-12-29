@@ -283,6 +283,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 文字数制限
+    const mealOther = healthRecord?.meal?.other;
+    if (mealOther !== null && mealOther !== undefined && String(mealOther).length > 400) {
+      addErr('meal.other', '食事内容（その他）は 400 文字以内で入力してください');
+    }
+    const dailyLife = healthRecord?.dailyLife;
+    if (dailyLife !== null && dailyLife !== undefined && String(dailyLife).length > 400) {
+      addErr('dailyLife', '自覚症状やその他は 400 文字以内で入力してください');
+    }
+
     if (Object.keys(fieldErrors).length > 0) {
       return NextResponse.json(
         { error: 'Validation failed', fieldErrors },
