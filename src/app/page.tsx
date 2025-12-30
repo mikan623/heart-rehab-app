@@ -14,7 +14,6 @@ export default function LandingPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'medical'>('patient');
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [copyLiffStatus, setCopyLiffStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   
   // ログインフォームの状態
   const [email, setEmail] = useState('');
@@ -356,41 +355,6 @@ export default function LandingPage() {
     setError('');
   };
 
-  // LINEで必ずLIFFとして開くURLをコピー（LINEトークで共有する用）
-  const copyLiffLink = async () => {
-    const url = buildLiffUrl('/');
-    if (!url) {
-      setCopyLiffStatus('failed');
-      setTimeout(() => setCopyLiffStatus('idle'), 2500);
-      return;
-    }
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else if (typeof document !== 'undefined') {
-        // フォールバック（古いAndroid/一部WebView）
-        const ta = document.createElement('textarea');
-        ta.value = url;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.top = '0';
-        ta.style.left = '0';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      } else {
-        throw new Error('clipboard unavailable');
-      }
-      setCopyLiffStatus('copied');
-      setTimeout(() => setCopyLiffStatus('idle'), 1800);
-    } catch {
-      setCopyLiffStatus('failed');
-      setTimeout(() => setCopyLiffStatus('idle'), 2500);
-    }
-  };
-
   // ローディング中または初期化中
   if (!isClient || isLoggedIn === null) {
     return (
@@ -443,36 +407,6 @@ export default function LandingPage() {
             心臓リハビリ手帳は、心臓疾患を持つ方が安心して健康を管理できるアプリです。
             毎日の健康記録を通じて、あなたの心臓の状態を見守ります。
           </p>
-
-          {/* ✅ LIFFリンク共有（LINE内で必ずLIFFとして開く導線） */}
-          {buildLiffUrl('/') && (
-            <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 text-left">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-extrabold text-gray-900">LINEで開く（LIFF）リンク</p>
-                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                    LINEトークでURLを共有する場合は、こちらをコピーして送ってください。
-                    「ログインしました（続行）」の表示が出にくくなります。
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={copyLiffLink}
-                  className="shrink-0 px-4 py-2 rounded-full bg-green-600 text-white font-extrabold hover:bg-green-700 click-press"
-                >
-                  {copyLiffStatus === 'copied' ? 'コピーしました' : 'リンクをコピー'}
-                </button>
-              </div>
-              {copyLiffStatus === 'failed' && (
-                <p className="mt-2 text-sm text-red-600">
-                  コピーに失敗しました。時間をおいて再度お試しください（LIFF ID未設定の可能性もあります）。
-                </p>
-              )}
-              <p className="mt-2 text-[11px] text-gray-500">
-                ※ LINEアプリ内で開くことを推奨します（外部ブラウザだと挙動が異なる場合があります）。
-              </p>
-            </div>
-          )}
           
           {/* ログイン/登録ボタン */}
           {!showLoginForm ? (
