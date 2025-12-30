@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
+import { readJsonOrThrow } from "@/lib/readJson";
 
 
 // 健康記録の型定義
@@ -573,7 +574,7 @@ export default function CalendarPage() {
       });
       
       if (response.ok) {
-        const result = await response.json();
+        const result = await readJsonOrThrow(response);
         console.log('✅ カレンダー: データベース保存成功:', result);
         
         // データベースから最新のデータを再取得してUIを更新
@@ -588,7 +589,7 @@ export default function CalendarPage() {
           setSaveStatus('idle');
         }, 3000);
       } else {
-        const errorData = await response.json();
+        const errorData = await readJsonOrThrow(response);
         console.error('❌ カレンダー: データベース保存失敗:', errorData);
         alert(`保存に失敗しました: ${errorData.details || errorData.error}`);
         setSaveStatus('idle');

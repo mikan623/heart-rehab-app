@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import RoleRouteGuard from "@/components/RoleRouteGuard";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "心臓リハビリ手帳",
@@ -16,7 +17,10 @@ export default function RootLayout({
     <html lang="ja">
       <head>
         {/* LIFF SDKを追加 */}
-        <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+        <Script
+          src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className="p-4">
         <RoleRouteGuard />

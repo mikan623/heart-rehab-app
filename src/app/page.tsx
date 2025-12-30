@@ -70,9 +70,20 @@ export default function LandingPage() {
       }
     }
 
+    const waitForLiff = async (timeoutMs = 3500, intervalMs = 50) => {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        if (typeof window !== 'undefined' && (window as any).liff) return (window as any).liff;
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+      return null;
+    };
+
     const initLiff = async () => {
       try {
-        if (typeof window !== 'undefined' && window.liff) {
+        // Android等でSDK読み込みが遅れると window.liff が未定義のまま固まることがあるため待機
+        const liffSdk = await waitForLiff();
+        if (typeof window !== 'undefined' && liffSdk) {
           const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
           if (!liffId) {
             console.warn('LIFF ID missing; skipping init');
@@ -80,25 +91,25 @@ export default function LandingPage() {
             setIsLoggedIn(false);
             return;
           }
-          await window.liff.init({ 
+          await liffSdk.init({ 
             liffId
           });
           
-          setLiff(window.liff);
+          setLiff(liffSdk);
 
           // ログイン状態をチェック
-          if (window.liff.isLoggedIn()) {
+          if (liffSdk.isLoggedIn()) {
             // ✅ LINE ログイン済み時：ユーザー情報を取得して Supabase に保存
             let isNewProfile = false;
 
             try {
-              const profile = await window.liff.getProfile();
+              const profile = await liffSdk.getProfile();
               console.log('✅ LINE プロフィール取得:', profile);
 
               // 📧 LINE メールアドレス取得（あれば）
               let lineEmail = '';
               try {
-                const liffIdToken = await window.liff.getIDToken();
+                const liffIdToken = await liffSdk.getIDToken();
                 if (liffIdToken) {
                   const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
                   lineEmail = decodedToken.email || '';
@@ -186,6 +197,10 @@ export default function LandingPage() {
             // ログインしていない場合のみウェルカムページを表示
             setIsLoggedIn(false);
           }
+        } else {
+          // SDKが読めていない場合でもローディング固定にしない
+          console.warn('LIFF SDK not ready; falling back to login screen');
+          setIsLoggedIn(false);
         }
       } catch (error) {
         console.error('LIFF初期化エラー:', error);

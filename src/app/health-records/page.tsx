@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getCurrentUserId, getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { readJsonOrThrow } from "@/lib/readJson";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -230,7 +231,7 @@ export default function Home() {
           setPrintBloodDataStatus('error');
           return;
         }
-        const data = await res.json();
+        const data = await readJsonOrThrow(res);
         setPrintBloodDataList(Array.isArray(data) ? data : []);
         setPrintBloodDataStatus('loaded');
       } catch (e) {
@@ -848,7 +849,7 @@ export default function Home() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        const result = await readJsonOrThrow(response);
         alert(`${timeKey}の健康記録を保存しました！`);
         
         // 保存完了状態に更新
@@ -956,7 +957,7 @@ export default function Home() {
         // フォームをリセット
         setHealthRecord(createEmptyHealthRecord());
       } else {
-        const error = await response.json().catch(() => ({}));
+        const error = await readJsonOrThrow(response).catch(() => ({} as any));
         if (response.status === 400 && (error as any)?.fieldErrors) {
           const fe = (error as any).fieldErrors as Record<string, string>;
           setFieldErrors(fe);

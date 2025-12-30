@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import NavigationBar from "@/components/NavigationBar";
+import { readJsonOrThrow } from "@/lib/readJson";
 
 // （デスクトップナビは NavigationBar に統一）
 import {
@@ -233,7 +234,7 @@ export default function GraphPage() {
 
         const res = await fetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
-          const data = await res.json();
+          const data = await readJsonOrThrow(res);
           const records = Array.isArray(data.records) ? data.records : [];
 
           // 日付→時刻→記録 のマップに整形
@@ -275,7 +276,7 @@ export default function GraphPage() {
         try {
           const profileRes = await fetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
           if (profileRes.ok) {
-            const profileData = await profileRes.json();
+            const profileData = await readJsonOrThrow(profileRes);
             const twRaw = profileData?.profile?.targetWeight;
             const hRaw = profileData?.profile?.height;
             const h =
@@ -723,7 +724,7 @@ export default function GraphPage() {
 
       {/* 指標タブ - 大きくした */}
       <div className="bg-white shadow-sm px-4 py-3">
-        <div className="max-w-6xl mx-auto flex gap-3 mb-4 overflow-x-auto pb-2">
+        <div className="max-w-6xl mx-auto grid grid-cols-4 gap-2 mb-4 md:flex md:gap-3 md:overflow-x-auto md:pb-2">
           {[
             { key: 'bloodPressure', label: '血圧', icon: '🩸' },
             { key: 'pulse', label: '脈拍', icon: '💓' },
@@ -733,7 +734,7 @@ export default function GraphPage() {
             <button
               key={metric.key}
               onClick={() => setActiveMetric(metric.key as typeof activeMetric)}
-              className={`px-6 py-3 rounded-full font-bold text-base whitespace-nowrap transition click-press flex-shrink-0 ${
+              className={`w-full md:w-auto px-3 md:px-6 py-3 rounded-full font-bold text-sm md:text-base whitespace-nowrap transition click-press ${
                 activeMetric === metric.key
                   ? 'bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-lg'
                   : 'bg-gray-300 text-gray-700'
@@ -833,7 +834,7 @@ export default function GraphPage() {
           style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}
         >
           <div className="text-lg md:text-xl font-extrabold text-gray-800 mb-3">表示</div>
-          <div className="flex flex-nowrap gap-3 overflow-x-auto whitespace-nowrap">
+          <div className="grid grid-cols-4 gap-2 md:flex md:flex-nowrap md:gap-3 md:overflow-x-auto md:whitespace-nowrap">
             {[
               { key: 'all', label: 'すべて', cls: 'bg-gray-700 border-gray-700 text-white hover:bg-gray-800' },
               { key: 'morning', label: '朝', cls: 'bg-green-500 border-green-500 text-white hover:bg-green-600' },
@@ -843,7 +844,7 @@ export default function GraphPage() {
               <button
                 key={s.key}
                 onClick={() => setActiveSlot(s.key as any)}
-                className={`px-5 py-2 rounded-full text-base md:text-lg font-extrabold border transition ${
+                className={`w-full px-2 md:px-5 py-2 rounded-full text-sm md:text-lg font-extrabold border transition ${
                   activeSlot === s.key ? s.cls : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                 }`}
               >
