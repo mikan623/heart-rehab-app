@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { buildLiffUrl } from "@/lib/liffUrl";
 
 // 家族メンバーの型定義
 interface FamilyMember {
@@ -330,10 +331,10 @@ export default function FamilyPage() {
       const inviteId = data.inviteId as string;
 
       // LIFF の URL を生成（LINE上で開く想定）
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
       let inviteUrl = '';
-      if (liffId) {
-        inviteUrl = `https://liff.line.me/${liffId}?familyInviteId=${inviteId}`;
+      const liffUrl = buildLiffUrl(`/family-invite?familyInviteId=${inviteId}`);
+      if (liffUrl) {
+        inviteUrl = liffUrl;
       } else if (typeof window !== 'undefined') {
         inviteUrl = `${window.location.origin}/family-invite?familyInviteId=${inviteId}`;
       }
