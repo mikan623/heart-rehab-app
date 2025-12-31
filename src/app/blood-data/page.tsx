@@ -8,32 +8,45 @@ import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
 
 // （デスクトップナビは NavigationBar に統一）
 
-interface BloodValues {
-  hbA1c: number | null;
-  randomBloodSugar: number | null;
-  totalCholesterol: number | null;
-  triglycerides: number | null;
-  hdlCholesterol: number | null;
-  ldlCholesterol: number | null;
-  bun: number | null;
-  creatinine: number | null;
-  uricAcid: number | null;
-  hemoglobin: number | null;
-  bnp: number | null;
+type BloodValueKey =
+  | 'hbA1c'
+  | 'randomBloodSugar'
+  | 'totalCholesterol'
+  | 'triglycerides'
+  | 'hdlCholesterol'
+  | 'ldlCholesterol'
+  | 'bun'
+  | 'creatinine'
+  | 'uricAcid'
+  | 'hemoglobin'
+  | 'bnp';
+
+interface BloodValuesForm {
+  hbA1c: string;
+  randomBloodSugar: string;
+  totalCholesterol: string;
+  triglycerides: string;
+  hdlCholesterol: string;
+  ldlCholesterol: string;
+  bun: string;
+  creatinine: string;
+  uricAcid: string;
+  hemoglobin: string;
+  bnp: string;
 }
 
-interface CPXTest {
+interface CPXTestForm {
   id?: string;
   testDate: string;
   cpxRound: number;
-  atOneMinBefore: number | null;
-  atDuring: number | null;
-  maxLoad: number | null;
-  loadWeight: number | null;
-  vo2: number | null;
-  mets: number | null;
-  heartRate: number | null;
-  systolicBloodPressure: number | null;
+  atOneMinBefore: string;
+  atDuring: string;
+  maxLoad: string;
+  loadWeight: string;
+  vo2: string;
+  mets: string;
+  heartRate: string;
+  systolicBloodPressure: string;
   findings: string | null;
 }
 
@@ -51,7 +64,18 @@ interface BloodData {
   uricAcid: number | null;
   hemoglobin: number | null;
   bnp: number | null;
-  cpxTests: CPXTest[];
+  cpxTests: Array<
+    Omit<CPXTestForm, 'atOneMinBefore' | 'atDuring' | 'maxLoad' | 'loadWeight' | 'vo2' | 'mets' | 'heartRate' | 'systolicBloodPressure'> & {
+      atOneMinBefore: number | null;
+      atDuring: number | null;
+      maxLoad: number | null;
+      loadWeight: number | null;
+      vo2: number | null;
+      mets: number | null;
+      heartRate: number | null;
+      systolicBloodPressure: number | null;
+    }
+  >;
   createdAt: string;
 }
 
@@ -72,31 +96,31 @@ export default function BloodDataPage() {
 
   // 入力フォーム
   const [testDate, setTestDate] = useState<string>('');
-  const [bloodValues, setBloodValues] = useState<BloodValues>({
-    hbA1c: null,
-    randomBloodSugar: null,
-    totalCholesterol: null,
-    triglycerides: null,
-    hdlCholesterol: null,
-    ldlCholesterol: null,
-    bun: null,
-    creatinine: null,
-    uricAcid: null,
-    hemoglobin: null,
-    bnp: null,
+  const [bloodValues, setBloodValues] = useState<BloodValuesForm>({
+    hbA1c: '',
+    randomBloodSugar: '',
+    totalCholesterol: '',
+    triglycerides: '',
+    hdlCholesterol: '',
+    ldlCholesterol: '',
+    bun: '',
+    creatinine: '',
+    uricAcid: '',
+    hemoglobin: '',
+    bnp: '',
   });
-  const [cpxTests, setCpxTests] = useState<CPXTest[]>([
+  const [cpxTests, setCpxTests] = useState<CPXTestForm[]>([
     {
       testDate: '',
       cpxRound: 1,
-      atOneMinBefore: null,
-      atDuring: null,
-      maxLoad: null,
-      loadWeight: null,
-      vo2: null,
-      mets: null,
-      heartRate: null,
-      systolicBloodPressure: null,
+      atOneMinBefore: '',
+      atDuring: '',
+      maxLoad: '',
+      loadWeight: '',
+      vo2: '',
+      mets: '',
+      heartRate: '',
+      systolicBloodPressure: '',
       findings: null,
     }
   ]);
@@ -121,17 +145,33 @@ export default function BloodDataPage() {
     const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
     const intPart = intPartRaw.replace(/^0+(?=\d)/, '').slice(0, maxIntDigits);
     const decPart = decPartRaw.slice(0, maxDecimals);
-    const v = decPart.length ? `${intPart || '0'}.${decPart}` : (intPart || '');
+    const hasDot = cleaned.includes('.');
+    if (hasDot) {
+      if (decPart.length) return `${intPart || '0'}.${decPart}`;
+      // 末尾 "." を保持（入力途中を許可）
+      return `${intPart || '0'}.`;
+    }
+    // 「0だけ」は小数入力へ誘導（0. にする）
+    if ((intPart || '') === '0' && maxDecimals > 0) return '0.';
+    const v = intPart || '';
     if (!v) return '';
     const n = Number(v);
     if (!Number.isFinite(n)) return '';
     return String(n);
   };
 
-  const toNullableNumber1000 = (raw: string) => {
-    const s = sanitizeDecimal1000(raw);
-    if (!s) return null;
-    const n = Number(s);
+  const normalizeDecimalOnBlur = (s: string) => {
+    const v = String(s ?? '').trim();
+    if (!v) return '';
+    if (v === '.' || v === '0.' || v === '0' || /^0\.0*$/.test(v)) return '';
+    if (v.endsWith('.')) return v.slice(0, -1);
+    return v;
+  };
+
+  const toNullableNumber = (raw: string) => {
+    const v = String(raw ?? '').trim();
+    if (!v) return null;
+    const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
 
@@ -221,7 +261,7 @@ export default function BloodDataPage() {
     );
   };
 
-  type CPXCardItem = CPXTest & { bloodDataId: string; parentCreatedAt: string };
+  type CPXCardItem = (BloodData['cpxTests'][number] & { bloodDataId: string; parentCreatedAt: string });
 
   const bloodCards = bloodDataList.filter(hasAnyBloodValue);
   const cpxCards: CPXCardItem[] = bloodDataList
@@ -293,30 +333,30 @@ export default function BloodDataPage() {
   const resetForm = () => {
     setTestDate('');
     setBloodValues({
-      hbA1c: null,
-      randomBloodSugar: null,
-      totalCholesterol: null,
-      triglycerides: null,
-      hdlCholesterol: null,
-      ldlCholesterol: null,
-      bun: null,
-      creatinine: null,
-      uricAcid: null,
-      hemoglobin: null,
-      bnp: null,
+      hbA1c: '',
+      randomBloodSugar: '',
+      totalCholesterol: '',
+      triglycerides: '',
+      hdlCholesterol: '',
+      ldlCholesterol: '',
+      bun: '',
+      creatinine: '',
+      uricAcid: '',
+      hemoglobin: '',
+      bnp: '',
     });
     setCpxTests([
       {
         testDate: '',
         cpxRound: 1,
-        atOneMinBefore: null,
-        atDuring: null,
-        maxLoad: null,
-        loadWeight: null,
-        vo2: null,
-        mets: null,
-        heartRate: null,
-        systolicBloodPressure: null,
+        atOneMinBefore: '',
+        atDuring: '',
+        maxLoad: '',
+        loadWeight: '',
+        vo2: '',
+        mets: '',
+        heartRate: '',
+        systolicBloodPressure: '',
         findings: null,
       }
     ]);
@@ -338,8 +378,39 @@ export default function BloodDataPage() {
         userId,
         testDate,
         ...(recordType === 'cpx'
-          ? { cpxTests: cpxTests.filter(t => t.testDate) } // CPXのみ
-          : { bloodValues, cpxTests: cpxTests.filter(t => t.testDate) }), // 互換: blood側でもCPX送信は許可
+          ? {
+              cpxTests: cpxTests
+                .filter((t) => t.testDate)
+                .map((t) => ({
+                  ...t,
+                  atOneMinBefore: toNullableNumber(t.atOneMinBefore),
+                  atDuring: toNullableNumber(t.atDuring),
+                  maxLoad: toNullableNumber(t.maxLoad),
+                  loadWeight: toNullableNumber(t.loadWeight),
+                  vo2: toNullableNumber(t.vo2),
+                  mets: toNullableNumber(t.mets),
+                  heartRate: toNullableNumber(t.heartRate),
+                  systolicBloodPressure: toNullableNumber(t.systolicBloodPressure),
+                })),
+            } // CPXのみ
+          : {
+              bloodValues: Object.fromEntries(
+                (Object.keys(bloodValues) as BloodValueKey[]).map((k) => [k, toNullableNumber(bloodValues[k])])
+              ),
+              cpxTests: cpxTests
+                .filter((t) => t.testDate)
+                .map((t) => ({
+                  ...t,
+                  atOneMinBefore: toNullableNumber(t.atOneMinBefore),
+                  atDuring: toNullableNumber(t.atDuring),
+                  maxLoad: toNullableNumber(t.maxLoad),
+                  loadWeight: toNullableNumber(t.loadWeight),
+                  vo2: toNullableNumber(t.vo2),
+                  mets: toNullableNumber(t.mets),
+                  heartRate: toNullableNumber(t.heartRate),
+                  systolicBloodPressure: toNullableNumber(t.systolicBloodPressure),
+                })),
+            }), // 互換: blood側でもCPX送信は許可
       };
 
       const method = pageMode === 'edit' ? 'PUT' : 'POST';
@@ -386,31 +457,42 @@ export default function BloodDataPage() {
     // 編集は従来通り「血液データ（＋CPX）」編集として扱う（必要なら後で分割導線も追加）
     setRecordType('blood');
     setBloodValues({
-      hbA1c: bloodData.hbA1c,
-      randomBloodSugar: bloodData.randomBloodSugar,
-      totalCholesterol: bloodData.totalCholesterol,
-      triglycerides: bloodData.triglycerides,
-      hdlCholesterol: bloodData.hdlCholesterol,
-      ldlCholesterol: bloodData.ldlCholesterol,
-      bun: bloodData.bun,
-      creatinine: bloodData.creatinine,
-      uricAcid: bloodData.uricAcid,
-      hemoglobin: bloodData.hemoglobin,
-      bnp: bloodData.bnp,
+      hbA1c: bloodData.hbA1c === null ? '' : String(bloodData.hbA1c),
+      randomBloodSugar: bloodData.randomBloodSugar === null ? '' : String(bloodData.randomBloodSugar),
+      totalCholesterol: bloodData.totalCholesterol === null ? '' : String(bloodData.totalCholesterol),
+      triglycerides: bloodData.triglycerides === null ? '' : String(bloodData.triglycerides),
+      hdlCholesterol: bloodData.hdlCholesterol === null ? '' : String(bloodData.hdlCholesterol),
+      ldlCholesterol: bloodData.ldlCholesterol === null ? '' : String(bloodData.ldlCholesterol),
+      bun: bloodData.bun === null ? '' : String(bloodData.bun),
+      creatinine: bloodData.creatinine === null ? '' : String(bloodData.creatinine),
+      uricAcid: bloodData.uricAcid === null ? '' : String(bloodData.uricAcid),
+      hemoglobin: bloodData.hemoglobin === null ? '' : String(bloodData.hemoglobin),
+      bnp: bloodData.bnp === null ? '' : String(bloodData.bnp),
     });
     setCpxTests(bloodData.cpxTests || [{
       testDate: '',
       cpxRound: 1,
-      atOneMinBefore: null,
-      atDuring: null,
-      maxLoad: null,
-      loadWeight: null,
-      vo2: null,
-      mets: null,
-      heartRate: null,
-      systolicBloodPressure: null,
+      atOneMinBefore: '',
+      atDuring: '',
+      maxLoad: '',
+      loadWeight: '',
+      vo2: '',
+      mets: '',
+      heartRate: '',
+      systolicBloodPressure: '',
       findings: null,
-    }]);
+    }].map((t: any) => ({
+      ...t,
+      atOneMinBefore: t?.atOneMinBefore === null || t?.atOneMinBefore === undefined ? '' : String(t.atOneMinBefore),
+      atDuring: t?.atDuring === null || t?.atDuring === undefined ? '' : String(t.atDuring),
+      maxLoad: t?.maxLoad === null || t?.maxLoad === undefined ? '' : String(t.maxLoad),
+      loadWeight: t?.loadWeight === null || t?.loadWeight === undefined ? '' : String(t.loadWeight),
+      vo2: t?.vo2 === null || t?.vo2 === undefined ? '' : String(t.vo2),
+      mets: t?.mets === null || t?.mets === undefined ? '' : String(t.mets),
+      heartRate: t?.heartRate === null || t?.heartRate === undefined ? '' : String(t.heartRate),
+      systolicBloodPressure:
+        t?.systolicBloodPressure === null || t?.systolicBloodPressure === undefined ? '' : String(t.systolicBloodPressure),
+    })));
     setPageMode('edit');
   };
 
@@ -421,33 +503,44 @@ export default function BloodDataPage() {
     setRecordType('cpx');
     // 血液値は保持（画面では非表示だが将来の切替用）
     setBloodValues({
-      hbA1c: bloodData.hbA1c,
-      randomBloodSugar: bloodData.randomBloodSugar,
-      totalCholesterol: bloodData.totalCholesterol,
-      triglycerides: bloodData.triglycerides,
-      hdlCholesterol: bloodData.hdlCholesterol,
-      ldlCholesterol: bloodData.ldlCholesterol,
-      bun: bloodData.bun,
-      creatinine: bloodData.creatinine,
-      uricAcid: bloodData.uricAcid,
-      hemoglobin: bloodData.hemoglobin,
-      bnp: bloodData.bnp,
+      hbA1c: bloodData.hbA1c === null ? '' : String(bloodData.hbA1c),
+      randomBloodSugar: bloodData.randomBloodSugar === null ? '' : String(bloodData.randomBloodSugar),
+      totalCholesterol: bloodData.totalCholesterol === null ? '' : String(bloodData.totalCholesterol),
+      triglycerides: bloodData.triglycerides === null ? '' : String(bloodData.triglycerides),
+      hdlCholesterol: bloodData.hdlCholesterol === null ? '' : String(bloodData.hdlCholesterol),
+      ldlCholesterol: bloodData.ldlCholesterol === null ? '' : String(bloodData.ldlCholesterol),
+      bun: bloodData.bun === null ? '' : String(bloodData.bun),
+      creatinine: bloodData.creatinine === null ? '' : String(bloodData.creatinine),
+      uricAcid: bloodData.uricAcid === null ? '' : String(bloodData.uricAcid),
+      hemoglobin: bloodData.hemoglobin === null ? '' : String(bloodData.hemoglobin),
+      bnp: bloodData.bnp === null ? '' : String(bloodData.bnp),
     });
     setCpxTests(
       bloodData.cpxTests && bloodData.cpxTests.length > 0
-        ? bloodData.cpxTests
+        ? (bloodData.cpxTests as any).map((t: any) => ({
+            ...t,
+            atOneMinBefore: t?.atOneMinBefore === null || t?.atOneMinBefore === undefined ? '' : String(t.atOneMinBefore),
+            atDuring: t?.atDuring === null || t?.atDuring === undefined ? '' : String(t.atDuring),
+            maxLoad: t?.maxLoad === null || t?.maxLoad === undefined ? '' : String(t.maxLoad),
+            loadWeight: t?.loadWeight === null || t?.loadWeight === undefined ? '' : String(t.loadWeight),
+            vo2: t?.vo2 === null || t?.vo2 === undefined ? '' : String(t.vo2),
+            mets: t?.mets === null || t?.mets === undefined ? '' : String(t.mets),
+            heartRate: t?.heartRate === null || t?.heartRate === undefined ? '' : String(t.heartRate),
+            systolicBloodPressure:
+              t?.systolicBloodPressure === null || t?.systolicBloodPressure === undefined ? '' : String(t.systolicBloodPressure),
+          }))
         : [
             {
               testDate: bloodData.testDate,
               cpxRound: 1,
-              atOneMinBefore: null,
-              atDuring: null,
-              maxLoad: null,
-              loadWeight: null,
-              vo2: null,
-              mets: null,
-              heartRate: null,
-              systolicBloodPressure: null,
+              atOneMinBefore: '',
+              atDuring: '',
+              maxLoad: '',
+              loadWeight: '',
+              vo2: '',
+              mets: '',
+              heartRate: '',
+              systolicBloodPressure: '',
               findings: null,
             },
           ]
@@ -859,11 +952,18 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.hbA1c || ''}
+                    value={bloodValues.hbA1c}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.hbA1c');
-                      setBloodValues({ ...bloodValues, hbA1c: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, hbA1c: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.hbA1c);
+                      if (next !== bloodValues.hbA1c) setBloodValues({ ...bloodValues, hbA1c: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({ ...prev, 'bloodValues.hbA1c': '0より大きい〜1000 の範囲で入力してください' }));
+                      }
                     }}
                     placeholder="4.3～5.8"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -882,11 +982,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.randomBloodSugar || ''}
+                    value={bloodValues.randomBloodSugar}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.randomBloodSugar');
-                      setBloodValues({ ...bloodValues, randomBloodSugar: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, randomBloodSugar: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.randomBloodSugar);
+                      if (next !== bloodValues.randomBloodSugar) setBloodValues({ ...bloodValues, randomBloodSugar: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.randomBloodSugar': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="140未満"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -905,11 +1015,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.totalCholesterol || ''}
+                    value={bloodValues.totalCholesterol}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.totalCholesterol');
-                      setBloodValues({ ...bloodValues, totalCholesterol: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, totalCholesterol: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.totalCholesterol);
+                      if (next !== bloodValues.totalCholesterol) setBloodValues({ ...bloodValues, totalCholesterol: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.totalCholesterol': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="130～220"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -928,11 +1048,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.triglycerides || ''}
+                    value={bloodValues.triglycerides}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.triglycerides');
-                      setBloodValues({ ...bloodValues, triglycerides: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, triglycerides: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.triglycerides);
+                      if (next !== bloodValues.triglycerides) setBloodValues({ ...bloodValues, triglycerides: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.triglycerides': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="30～150"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -951,11 +1081,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.hdlCholesterol || ''}
+                    value={bloodValues.hdlCholesterol}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.hdlCholesterol');
-                      setBloodValues({ ...bloodValues, hdlCholesterol: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, hdlCholesterol: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.hdlCholesterol);
+                      if (next !== bloodValues.hdlCholesterol) setBloodValues({ ...bloodValues, hdlCholesterol: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.hdlCholesterol': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="40～100"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -974,11 +1114,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.ldlCholesterol || ''}
+                    value={bloodValues.ldlCholesterol}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.ldlCholesterol');
-                      setBloodValues({ ...bloodValues, ldlCholesterol: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, ldlCholesterol: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.ldlCholesterol);
+                      if (next !== bloodValues.ldlCholesterol) setBloodValues({ ...bloodValues, ldlCholesterol: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.ldlCholesterol': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="70～139"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -997,11 +1147,18 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.bun || ''}
+                    value={bloodValues.bun}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.bun');
-                      setBloodValues({ ...bloodValues, bun: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, bun: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.bun);
+                      if (next !== bloodValues.bun) setBloodValues({ ...bloodValues, bun: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({ ...prev, 'bloodValues.bun': '0より大きい〜1000 の範囲で入力してください' }));
+                      }
                     }}
                     placeholder="8～20"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -1020,11 +1177,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.creatinine || ''}
+                    value={bloodValues.creatinine}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.creatinine');
-                      setBloodValues({ ...bloodValues, creatinine: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, creatinine: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.creatinine);
+                      if (next !== bloodValues.creatinine) setBloodValues({ ...bloodValues, creatinine: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.creatinine': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="0.3～0.8"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -1043,11 +1210,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.uricAcid || ''}
+                    value={bloodValues.uricAcid}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.uricAcid');
-                      setBloodValues({ ...bloodValues, uricAcid: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, uricAcid: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.uricAcid);
+                      if (next !== bloodValues.uricAcid) setBloodValues({ ...bloodValues, uricAcid: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.uricAcid': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="2.6～6"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -1066,11 +1243,21 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.hemoglobin || ''}
+                    value={bloodValues.hemoglobin}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.hemoglobin');
-                      setBloodValues({ ...bloodValues, hemoglobin: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, hemoglobin: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.hemoglobin);
+                      if (next !== bloodValues.hemoglobin) setBloodValues({ ...bloodValues, hemoglobin: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          'bloodValues.hemoglobin': '0より大きい〜1000 の範囲で入力してください',
+                        }));
+                      }
                     }}
                     placeholder="12～18"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -1089,11 +1276,18 @@ export default function BloodDataPage() {
                     type="text"
                     inputMode="decimal"
                     onKeyDown={blockInvalidKeys}
-                    value={bloodValues.bnp || ''}
+                    value={bloodValues.bnp}
                     onChange={(e) => {
                       setFormError(null);
                       clearFieldError('bloodValues.bnp');
-                      setBloodValues({ ...bloodValues, bnp: toNullableNumber1000(e.target.value) });
+                      setBloodValues({ ...bloodValues, bnp: sanitizeDecimal1000(e.target.value, 3, 4) });
+                    }}
+                    onBlur={() => {
+                      const next = normalizeDecimalOnBlur(bloodValues.bnp);
+                      if (next !== bloodValues.bnp) setBloodValues({ ...bloodValues, bnp: next });
+                      if (!next) {
+                        setFieldErrors((prev) => ({ ...prev, 'bloodValues.bnp': '0より大きい〜1000 の範囲で入力してください' }));
+                      }
                     }}
                     placeholder="18以下"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
@@ -1145,12 +1339,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.atOneMinBefore || ''}
+                          value={cpx.atOneMinBefore}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.atOneMinBefore`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].atOneMinBefore = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].atOneMinBefore = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].atOneMinBefore);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.atOneMinBefore`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].atOneMinBefore = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1169,12 +1375,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.atDuring || ''}
+                          value={cpx.atDuring}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.atDuring`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].atDuring = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].atDuring = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].atDuring);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.atDuring`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].atDuring = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1193,12 +1411,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.maxLoad || ''}
+                          value={cpx.maxLoad}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.maxLoad`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].maxLoad = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].maxLoad = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].maxLoad);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.maxLoad`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].maxLoad = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1217,12 +1447,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.loadWeight || ''}
+                          value={cpx.loadWeight}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.loadWeight`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].loadWeight = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].loadWeight = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].loadWeight);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.loadWeight`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].loadWeight = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1241,12 +1483,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.vo2 || ''}
+                          value={cpx.vo2}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.vo2`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].vo2 = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].vo2 = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].vo2);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.vo2`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].vo2 = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1265,12 +1519,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.mets || ''}
+                          value={cpx.mets}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.mets`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].mets = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].mets = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].mets);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.mets`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].mets = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1289,12 +1555,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.heartRate || ''}
+                          value={cpx.heartRate}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.heartRate`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].heartRate = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].heartRate = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].heartRate);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.heartRate`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].heartRate = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
@@ -1313,12 +1591,24 @@ export default function BloodDataPage() {
                           type="text"
                           inputMode="decimal"
                           onKeyDown={blockInvalidKeys}
-                          value={cpx.systolicBloodPressure || ''}
+                          value={cpx.systolicBloodPressure}
                           onChange={(e) => {
                             setFormError(null);
                             clearFieldError(`cpxTests.${index}.systolicBloodPressure`);
                             const newCpxTests = [...cpxTests];
-                            newCpxTests[index].systolicBloodPressure = toNullableNumber1000(e.target.value);
+                            newCpxTests[index].systolicBloodPressure = sanitizeDecimal1000(e.target.value, 3, 4);
+                            setCpxTests(newCpxTests);
+                          }}
+                          onBlur={() => {
+                            const newCpxTests = [...cpxTests];
+                            const next = normalizeDecimalOnBlur(newCpxTests[index].systolicBloodPressure);
+                            if (!next) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                [`cpxTests.${index}.systolicBloodPressure`]: '0より大きい〜1000 の範囲で入力してください',
+                              }));
+                            }
+                            newCpxTests[index].systolicBloodPressure = next;
                             setCpxTests(newCpxTests);
                           }}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
