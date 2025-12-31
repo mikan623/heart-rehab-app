@@ -185,6 +185,7 @@ export default function CalendarPage() {
     time: string;
     record: any;
   } | null>(null);
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
   const [recentStamp, setRecentStamp] = useState<{ date: string; time: string } | null>(null);
 
   // 記録データを保存する状態を追加
@@ -510,17 +511,78 @@ export default function CalendarPage() {
   // 編集開始
   const startEditing = (date: string, time: string, record: any) => {
     setEditingRecord({ date, time, record: { ...record } });
+    setEditFieldErrors({});
     setShowDetail(false); // 詳細モーダルを閉じる
   };
 
   // 編集キャンセル
   const cancelEditing = () => {
     setEditingRecord(null);
+    setEditFieldErrors({});
+  };
+
+  const validateEditingRecord = (rec: any) => {
+    const errs: Record<string, string> = {};
+    const add = (k: string, msg: string) => {
+      if (!errs[k]) errs[k] = msg;
+    };
+    const sys = String(rec?.bloodPressure?.systolic ?? '').trim();
+    const dia = String(rec?.bloodPressure?.diastolic ?? '').trim();
+    const pulse = String(rec?.pulse ?? '').trim();
+    const weight = String(rec?.weight ?? '').trim();
+    const dur = String(rec?.exercise?.duration ?? '').trim();
+    const mealOther = String(rec?.meal?.other ?? '').trim();
+    const dailyLife = String(rec?.dailyLife ?? '').trim();
+
+    if (!sys) add('bloodPressure.systolic', '収縮期血圧（上）は必須です');
+    if (!dia) add('bloodPressure.diastolic', '拡張期血圧（下）は必須です');
+    if (!pulse) add('pulse', '脈拍は必須です');
+
+    const sysN = sys ? Number(sys) : NaN;
+    const diaN = dia ? Number(dia) : NaN;
+    const pulseN = pulse ? Number(pulse) : NaN;
+    if (sys && (!Number.isFinite(sysN) || sysN <= 0 || sysN >= 300)) {
+      add('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
+    }
+    if (dia && (!Number.isFinite(diaN) || diaN <= 0 || diaN >= 300)) {
+      add('bloodPressure.diastolic', '拡張期血圧（下）は 1〜299 mmHg の範囲で入力してください');
+    }
+    if (pulse && (!Number.isFinite(pulseN) || pulseN <= 0 || pulseN >= 300)) {
+      add('pulse', '脈拍は 1〜299 回/分 の範囲で入力してください');
+    }
+
+    if (weight) {
+      const w = Number(weight);
+      if (!Number.isFinite(w) || w <= 0 || w > 200) add('weight', '体重は 0より大きい〜200 kg の範囲で入力してください');
+    }
+    if (dur) {
+      const d = Number(dur);
+      if (!Number.isFinite(d) || d <= 0 || d > 1440) add('exercise.duration', '運動時間は 1〜1440 分の範囲で入力してください');
+    }
+    if (mealOther && mealOther.length > 200) add('meal.other', '食事内容（その他）は 200 文字以内で入力してください');
+    if (dailyLife && dailyLife.length > 400) add('dailyLife', '自覚症状やその他は 400 文字以内で入力してください');
+    return errs;
+  };
+
+  const clearEditFieldError = (key: string) => {
+    setEditFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   // 編集保存
   const saveEdit = async () => {
     if (!editingRecord) return;
+
+    const errs = validateEditingRecord(editingRecord.record);
+    if (Object.keys(errs).length > 0) {
+      setEditFieldErrors(errs);
+      alert('入力内容にエラーがあります。赤字の項目を確認してください。');
+      return;
+    }
     
     try {
       // 保存開始
@@ -596,6 +658,7 @@ export default function CalendarPage() {
       }
 
       setEditingRecord(null);
+      setEditFieldErrors({});
       
     } catch (error) {
       console.error('❌ カレンダー: 編集保存エラー:', error);
@@ -1090,39 +1153,63 @@ export default function CalendarPage() {
                         🩸 血圧
                       </label>
                       <div className="flex gap-1 md:gap-2 items-center min-w-0">
-                        <input
-                          type="number"
-                          value={editingRecord.record.bloodPressure?.systolic || ''}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              bloodPressure: {
-                                ...editingRecord.record.bloodPressure,
-                                systolic: e.target.value
-                              }
-                            }
-                          })}
-                          placeholder="120"
-                          className="flex-1 min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
-                        />
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="number"
+                            value={editingRecord.record.bloodPressure?.systolic || ''}
+                            onChange={(e) => {
+                              clearEditFieldError('bloodPressure.systolic');
+                              setEditingRecord({
+                                ...editingRecord,
+                                record: {
+                                  ...editingRecord.record,
+                                  bloodPressure: {
+                                    ...editingRecord.record.bloodPressure,
+                                    systolic: e.target.value
+                                  }
+                                }
+                              });
+                            }}
+                            placeholder="120"
+                            className={`w-full min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                              editFieldErrors['bloodPressure.systolic']
+                                ? 'border-red-400 focus:border-red-500'
+                                : 'border-orange-300 focus:border-orange-500'
+                            }`}
+                          />
+                          {editFieldErrors['bloodPressure.systolic'] && (
+                            <p className="mt-2 text-sm text-red-600">{editFieldErrors['bloodPressure.systolic']}</p>
+                          )}
+                        </div>
                         <span className="text-lg md:text-2xl font-bold flex-shrink-0">/</span>
-                        <input
-                          type="number"
-                          value={editingRecord.record.bloodPressure?.diastolic || ''}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              bloodPressure: {
-                                ...editingRecord.record.bloodPressure,
-                                diastolic: e.target.value
-                              }
-                            }
-                          })}
-                          placeholder="80"
-                          className="flex-1 min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
-                        />
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="number"
+                            value={editingRecord.record.bloodPressure?.diastolic || ''}
+                            onChange={(e) => {
+                              clearEditFieldError('bloodPressure.diastolic');
+                              setEditingRecord({
+                                ...editingRecord,
+                                record: {
+                                  ...editingRecord.record,
+                                  bloodPressure: {
+                                    ...editingRecord.record.bloodPressure,
+                                    diastolic: e.target.value
+                                  }
+                                }
+                              });
+                            }}
+                            placeholder="80"
+                            className={`w-full min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                              editFieldErrors['bloodPressure.diastolic']
+                                ? 'border-red-400 focus:border-red-500'
+                                : 'border-orange-300 focus:border-orange-500'
+                            }`}
+                          />
+                          {editFieldErrors['bloodPressure.diastolic'] && (
+                            <p className="mt-2 text-sm text-red-600">{editFieldErrors['bloodPressure.diastolic']}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1132,19 +1219,27 @@ export default function CalendarPage() {
                         💓 脈拍
                       </label>
                       <div className="flex gap-2 items-center">
-                        <input
-                          type="number"
-                          value={editingRecord.record.pulse || ''}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              pulse: e.target.value
-                            }
-                          })}
-                          placeholder="70"
-                          className="flex-1 px-3 py-2 md:px-4 md:py-3 text-base md:text-lg border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500"
-                        />
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            value={editingRecord.record.pulse || ''}
+                            onChange={(e) => {
+                              clearEditFieldError('pulse');
+                              setEditingRecord({
+                                ...editingRecord,
+                                record: {
+                                  ...editingRecord.record,
+                                  pulse: e.target.value
+                                }
+                              });
+                            }}
+                            placeholder="70"
+                            className={`w-full px-3 py-2 md:px-4 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                              editFieldErrors['pulse'] ? 'border-red-400 focus:border-red-500' : 'border-pink-300 focus:border-pink-500'
+                            }`}
+                          />
+                          {editFieldErrors['pulse'] && <p className="mt-2 text-sm text-red-600">{editFieldErrors['pulse']}</p>}
+                        </div>
                         <span className="text-base md:text-lg font-semibold text-gray-700 whitespace-nowrap">回/分</span>
                       </div>
                     </div>
@@ -1155,19 +1250,29 @@ export default function CalendarPage() {
                         ⚖️ 体重
                       </label>
                       <div className="flex gap-2 items-center">
-                        <input
-                          type="number"
-                          value={editingRecord.record.weight || ''}
-                          onChange={(e) => setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              weight: e.target.value
-                            }
-                          })}
-                          placeholder="65.5"
-                          className="flex-1 px-4 py-3 text-lg border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500"
-                        />
+                        <div className="flex-1">
+                          <input
+                            type="number"
+                            value={editingRecord.record.weight || ''}
+                            onChange={(e) => {
+                              clearEditFieldError('weight');
+                              setEditingRecord({
+                                ...editingRecord,
+                                record: {
+                                  ...editingRecord.record,
+                                  weight: e.target.value
+                                }
+                              });
+                            }}
+                            placeholder="65.5"
+                            className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                              editFieldErrors['weight']
+                                ? 'border-red-400 focus:border-red-500'
+                                : 'border-yellow-300 focus:border-yellow-500'
+                            }`}
+                          />
+                          {editFieldErrors['weight'] && <p className="mt-2 text-sm text-red-600">{editFieldErrors['weight']}</p>}
+                        </div>
                         <span className="text-lg font-semibold text-gray-700 min-w-fit">kg</span>
                       </div>
                     </div>
@@ -1190,7 +1295,7 @@ export default function CalendarPage() {
                               }
                             }
                           })}
-                          className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 bg-white"
                         >
                           <option value="">選択してください</option>
                           <option value="歩行">歩行</option>
@@ -1200,22 +1305,34 @@ export default function CalendarPage() {
                           <option value="その他">その他</option>
                         </select>
                         <div className="flex gap-2 items-center">
-                          <input
-                            type="number"
-                            value={editingRecord.record.exercise?.duration || ''}
-                            onChange={(e) => setEditingRecord({
-                              ...editingRecord,
-                              record: {
-                                ...editingRecord.record,
-                                exercise: {
-                                  ...editingRecord.record.exercise,
-                                  duration: e.target.value
-                                }
-                              }
-                            })}
-                            placeholder="30"
-                            className="flex-1 px-4 py-3 text-lg border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500"
-                          />
+                          <div className="flex-1">
+                            <input
+                              type="number"
+                              value={editingRecord.record.exercise?.duration || ''}
+                              onChange={(e) => {
+                                clearEditFieldError('exercise.duration');
+                                setEditingRecord({
+                                  ...editingRecord,
+                                  record: {
+                                    ...editingRecord.record,
+                                    exercise: {
+                                      ...editingRecord.record.exercise,
+                                      duration: e.target.value
+                                    }
+                                  }
+                                });
+                              }}
+                              placeholder="30"
+                              className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                                editFieldErrors['exercise.duration']
+                                  ? 'border-red-400 focus:border-red-500'
+                                  : 'border-green-300 focus:border-green-500'
+                              }`}
+                            />
+                            {editFieldErrors['exercise.duration'] && (
+                              <p className="mt-2 text-sm text-red-600">{editFieldErrors['exercise.duration']}</p>
+                            )}
+                          </div>
                           <span className="text-lg font-semibold text-gray-700">分</span>
                         </div>
                       </div>
@@ -1295,19 +1412,27 @@ export default function CalendarPage() {
                           <input
                             type="text"
                             value={editingRecord.record.meal?.other || ''}
-                            onChange={(e) => setEditingRecord({
-                              ...editingRecord,
-                              record: {
-                                ...editingRecord.record,
-                                meal: {
-                                  ...editingRecord.record.meal,
-                                  other: e.target.value
+                            onChange={(e) => {
+                              clearEditFieldError('meal.other');
+                              setEditingRecord({
+                                ...editingRecord,
+                                record: {
+                                  ...editingRecord.record,
+                                  meal: {
+                                    ...editingRecord.record.meal,
+                                    other: e.target.value
+                                  }
                                 }
-                              }
-                            })}
+                              });
+                            }}
                             placeholder="果物、乳製品など"
-                            className="w-full px-4 py-3 text-lg border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500"
+                            className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                              editFieldErrors['meal.other'] ? 'border-red-400 focus:border-red-500' : 'border-red-300 focus:border-red-500'
+                            }`}
                           />
+                          {editFieldErrors['meal.other'] && (
+                            <p className="mt-2 text-sm text-red-600">{editFieldErrors['meal.other']}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1337,17 +1462,27 @@ export default function CalendarPage() {
                       </label>
                       <textarea
                         value={editingRecord.record.dailyLife || ''}
-                        onChange={(e) => setEditingRecord({
-                          ...editingRecord,
-                          record: {
-                            ...editingRecord.record,
-                            dailyLife: e.target.value
-                          }
-                        })}
+                        onChange={(e) => {
+                          clearEditFieldError('dailyLife');
+                          setEditingRecord({
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              dailyLife: e.target.value
+                            }
+                          });
+                        }}
                         placeholder="気分、体調の変化、気になったことなど自由にお書きください"
                         rows={4}
-                        className="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500"
+                        className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
+                          editFieldErrors['dailyLife']
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-purple-300 focus:border-purple-500'
+                        }`}
                       />
+                      {editFieldErrors['dailyLife'] && (
+                        <p className="mt-2 text-sm text-red-600">{editFieldErrors['dailyLife']}</p>
+                      )}
                     </div>
 
                     {/* ボタン */}
