@@ -265,21 +265,21 @@ export async function POST(request: NextRequest) {
       addErr('pulse', '脈拍は 1〜299 回/分 の範囲で入力してください');
     }
 
-    // 体重: 任意、0〜200（小数OK）
+    // 体重: 任意、0より大きい〜200（小数OK） ※ 0（0.0含む）は不可
     const weightRaw = healthRecord?.weight;
     if (weightRaw !== null && weightRaw !== undefined && String(weightRaw).trim() !== '') {
       const weight = Number(weightRaw);
-      if (!Number.isFinite(weight) || weight < 0 || weight > 200) {
-        addErr('weight', '体重は 0〜200 kg の範囲で入力してください');
+      if (!Number.isFinite(weight) || weight <= 0 || weight > 200) {
+        addErr('weight', '体重は 0より大きい〜200 kg の範囲で入力してください');
       }
     }
 
-    // 運動時間: 任意、0〜1440
+    // 運動時間: 任意、1〜1440 ※ 0（0.0含む）は不可
     const durRaw = healthRecord?.exercise?.duration;
     if (durRaw !== null && durRaw !== undefined && String(durRaw).trim() !== '') {
       const dur = Number(durRaw);
-      if (!Number.isFinite(dur) || dur < 0 || dur > 1440) {
-        addErr('exercise.duration', '運動時間は 0〜1440 分の範囲で入力してください');
+      if (!Number.isFinite(dur) || dur <= 0 || dur > 1440) {
+        addErr('exercise.duration', '運動時間は 1〜1440 分の範囲で入力してください');
       }
     }
 
@@ -345,8 +345,14 @@ export async function POST(request: NextRequest) {
         data: {
           bloodPressureSystolic: parseInt(healthRecord.bloodPressure.systolic),
           bloodPressureDiastolic: parseInt(healthRecord.bloodPressure.diastolic),
-          pulse: healthRecord.pulse ? parseInt(healthRecord.pulse) : null,
-          weight: healthRecord.weight ? parseFloat(healthRecord.weight) : null,
+          pulse:
+            healthRecord.pulse !== null && healthRecord.pulse !== undefined && String(healthRecord.pulse).trim() !== ''
+              ? parseInt(healthRecord.pulse)
+              : null,
+          weight:
+            healthRecord.weight !== null && healthRecord.weight !== undefined && String(healthRecord.weight).trim() !== ''
+              ? parseFloat(healthRecord.weight)
+              : null,
           exercise: healthRecord.exercise || null,
           meal: healthRecord.meal || null,
           dailyLife: healthRecord.dailyLife || null,
@@ -363,8 +369,14 @@ export async function POST(request: NextRequest) {
           time: healthRecord.time,
           bloodPressureSystolic: parseInt(healthRecord.bloodPressure.systolic),
           bloodPressureDiastolic: parseInt(healthRecord.bloodPressure.diastolic),
-          pulse: healthRecord.pulse ? parseInt(healthRecord.pulse) : null,
-          weight: healthRecord.weight ? parseFloat(healthRecord.weight) : null,
+          pulse:
+            healthRecord.pulse !== null && healthRecord.pulse !== undefined && String(healthRecord.pulse).trim() !== ''
+              ? parseInt(healthRecord.pulse)
+              : null,
+          weight:
+            healthRecord.weight !== null && healthRecord.weight !== undefined && String(healthRecord.weight).trim() !== ''
+              ? parseFloat(healthRecord.weight)
+              : null,
           exercise: healthRecord.exercise || null,
           meal: healthRecord.meal || null,
           dailyLife: healthRecord.dailyLife || null,

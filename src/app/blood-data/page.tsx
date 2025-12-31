@@ -112,17 +112,20 @@ export default function BloodDataPage() {
       .replace(/[，,]/g, '.')
       .replace(/[。．]/g, '.');
 
-  const sanitizeDecimal1000 = (raw: string, maxDecimals = 3) => {
+  // NOTE:
+  // - 「最大値へ自動補正（クランプ）」はしない
+  // - 入力は「桁数上限で打ち止め」まで（範囲チェックは API で実施）
+  const sanitizeDecimal1000 = (raw: string, maxDecimals = 3, maxIntDigits = 4) => {
     const v0 = toHalfWidthNumberLike(String(raw ?? ''));
     const cleaned = v0.replace(/[^0-9.]/g, '');
     const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
-    const intPart = intPartRaw.replace(/^0+(?=\d)/, '');
+    const intPart = intPartRaw.replace(/^0+(?=\d)/, '').slice(0, maxIntDigits);
     const decPart = decPartRaw.slice(0, maxDecimals);
     const v = decPart.length ? `${intPart || '0'}.${decPart}` : (intPart || '');
     if (!v) return '';
     const n = Number(v);
     if (!Number.isFinite(n)) return '';
-    return String(Math.min(n, 1000));
+    return String(n);
   };
 
   const toNullableNumber1000 = (raw: string) => {
@@ -838,24 +841,9 @@ export default function BloodDataPage() {
               {fieldErrors['testDate'] && <p className="mt-2 text-sm text-red-600">{fieldErrors['testDate']}</p>}
             </div>
 
-            {(formError || Object.keys(fieldErrors).length > 0) && (
-              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                {formError && <div className="text-sm font-bold text-red-700 mb-2">{formError}</div>}
-                {Object.keys(fieldErrors).length > 0 && (
-                  <ul className="space-y-1">
-                    {Object.entries(fieldErrors).map(([k, msg]) => (
-                      <li key={k}>
-                        <button
-                          type="button"
-                          onClick={() => openSectionForErrorKey(k)}
-                          className="w-full text-left text-sm text-red-700 hover:underline"
-                        >
-                          <span className="font-bold">{labelForErrorKey(k)}:</span> {msg}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+            {formError && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {formError}
               </div>
             )}
 
@@ -878,8 +866,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, hbA1c: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="4.3～5.8"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.hbA1c'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.hbA1c'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.hbA1c']}</p>
+                  )}
                 </div>
 
                 {/* 随時血糖 */}
@@ -896,8 +889,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, randomBloodSugar: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="140未満"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.randomBloodSugar'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.randomBloodSugar'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.randomBloodSugar']}</p>
+                  )}
                 </div>
 
                 {/* 総コレステロール */}
@@ -914,8 +912,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, totalCholesterol: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="130～220"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.totalCholesterol'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.totalCholesterol'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.totalCholesterol']}</p>
+                  )}
                 </div>
 
                 {/* 中性脂肪 */}
@@ -932,8 +935,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, triglycerides: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="30～150"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.triglycerides'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.triglycerides'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.triglycerides']}</p>
+                  )}
                 </div>
 
                 {/* HDLコレステロール */}
@@ -950,8 +958,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, hdlCholesterol: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="40～100"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.hdlCholesterol'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.hdlCholesterol'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.hdlCholesterol']}</p>
+                  )}
                 </div>
 
                 {/* LDLコレステロール */}
@@ -968,8 +981,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, ldlCholesterol: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="70～139"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.ldlCholesterol'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.ldlCholesterol'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.ldlCholesterol']}</p>
+                  )}
                 </div>
 
                 {/* BUN */}
@@ -986,8 +1004,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, bun: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="8～20"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.bun'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.bun'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.bun']}</p>
+                  )}
                 </div>
 
                 {/* Cr (クレアチニン) */}
@@ -1004,8 +1027,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, creatinine: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="0.3～0.8"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.creatinine'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.creatinine'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.creatinine']}</p>
+                  )}
                 </div>
 
                 {/* 尿酸 */}
@@ -1022,8 +1050,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, uricAcid: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="2.6～6"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.uricAcid'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.uricAcid'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.uricAcid']}</p>
+                  )}
                 </div>
 
                 {/* ヘモグロビン */}
@@ -1040,8 +1073,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, hemoglobin: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="12～18"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.hemoglobin'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.hemoglobin'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.hemoglobin']}</p>
+                  )}
                 </div>
 
                 {/* BNP */}
@@ -1058,8 +1096,13 @@ export default function BloodDataPage() {
                       setBloodValues({ ...bloodValues, bnp: toNullableNumber1000(e.target.value) });
                     }}
                     placeholder="18以下"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      fieldErrors['bloodValues.bnp'] ? 'border-red-400' : 'border-gray-300'
+                    }`}
                   />
+                  {fieldErrors['bloodValues.bnp'] && (
+                    <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodValues.bnp']}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1110,8 +1153,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].atOneMinBefore = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.atOneMinBefore`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.atOneMinBefore`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.atOneMinBefore`]}</p>
+                        )}
                       </div>
 
                       {/* AT中 */}
@@ -1129,8 +1177,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].atDuring = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.atDuring`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.atDuring`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.atDuring`]}</p>
+                        )}
                       </div>
 
                       {/* 最大負荷時 */}
@@ -1148,8 +1201,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].maxLoad = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.maxLoad`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.maxLoad`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.maxLoad`]}</p>
+                        )}
                       </div>
 
                       {/* 負荷量(W) */}
@@ -1167,8 +1225,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].loadWeight = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.loadWeight`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.loadWeight`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.loadWeight`]}</p>
+                        )}
                       </div>
 
                       {/* VO2 */}
@@ -1186,8 +1249,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].vo2 = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.vo2`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.vo2`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.vo2`]}</p>
+                        )}
                       </div>
 
                       {/* Mets */}
@@ -1205,8 +1273,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].mets = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.mets`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.mets`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.mets`]}</p>
+                        )}
                       </div>
 
                       {/* 心拍数 */}
@@ -1224,8 +1297,13 @@ export default function BloodDataPage() {
                             newCpxTests[index].heartRate = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.heartRate`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.heartRate`] && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors[`cpxTests.${index}.heartRate`]}</p>
+                        )}
                       </div>
 
                       {/* 収縮期血圧 */}
@@ -1243,8 +1321,15 @@ export default function BloodDataPage() {
                             newCpxTests[index].systolicBloodPressure = toNullableNumber1000(e.target.value);
                             setCpxTests(newCpxTests);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm ${
+                            fieldErrors[`cpxTests.${index}.systolicBloodPressure`] ? 'border-red-400' : 'border-gray-300'
+                          }`}
                         />
+                        {fieldErrors[`cpxTests.${index}.systolicBloodPressure`] && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {fieldErrors[`cpxTests.${index}.systolicBloodPressure`]}
+                          </p>
+                        )}
                       </div>
 
                       {/* 所見 */}

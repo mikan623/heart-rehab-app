@@ -305,27 +305,33 @@ export default function Home() {
       .replace(/[，,]/g, '.')
       .replace(/[。．]/g, '.');
 
-  const sanitizeInt = (raw: string, opts: { max?: number; maxDigits?: number } = {}) => {
-    const { max = 999, maxDigits = 3 } = opts;
-    const v = toHalfWidthNumberLike(raw).replace(/\D/g, '').slice(0, maxDigits);
-    if (!v) return '';
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '';
-    return String(Math.min(n, max));
+  // NOTE:
+  // - 「最大値へ自動補正（クランプ）」はしない
+  // - 入力は「桁数上限で打ち止め」まで（範囲チェックは validateAll / API で実施）
+  const sanitizeInt = (raw: string, opts: { maxDigits?: number } = {}) => {
+    const { maxDigits = 3 } = opts;
+    const digits = toHalfWidthNumberLike(raw)
+      .replace(/\D/g, '')
+      .replace(/^0+(?=\d)/, '') // 先頭0整理（"0"は残す）
+      .slice(0, maxDigits);
+    return digits;
   };
 
-  const sanitizeDecimal = (raw: string, opts: { max?: number; maxDecimals?: number } = {}) => {
-    const { max = 200, maxDecimals = 2 } = opts;
+  const sanitizeDecimal = (
+    raw: string,
+    opts: { maxDecimals?: number; maxIntDigits?: number } = {}
+  ) => {
+    const { maxDecimals = 2, maxIntDigits = 3 } = opts;
     const v0 = toHalfWidthNumberLike(raw);
     const cleaned = v0.replace(/[^0-9.]/g, '');
     const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
-    const intPart = intPartRaw.replace(/^0+(?=\d)/, ''); // 先頭0整理
+    const intPart = intPartRaw
+      .replace(/^0+(?=\d)/, '') // 先頭0整理（"0"は残す）
+      .slice(0, maxIntDigits);
     const decPart = decPartRaw.slice(0, maxDecimals);
-    const v = decPart.length ? `${intPart || '0'}.${decPart}` : (intPart || '');
-    if (!v) return '';
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '';
-    return String(Math.min(n, max));
+    // 小数だけ入力されるケース: ".5" -> "0.5"
+    const v = decPart.length ? `${intPart || '0'}.${decPart}` : intPart;
+    return v;
   };
 
   const clearFieldError = (key: string) => {
@@ -385,12 +391,12 @@ export default function Home() {
 
     if (weight) {
       const w = Number(weight);
-      if (!Number.isFinite(w) || w < 0 || w > 200) add('weight', '体重は 0〜200 kg の範囲で入力してください');
+      if (!Number.isFinite(w) || w <= 0 || w > 200) add('weight', '体重は 0より大きい〜200 kg の範囲で入力してください');
     }
 
     if (dur) {
       const d = Number(dur);
-      if (!Number.isFinite(d) || d < 0 || d > 1440) add('exercise.duration', '運動時間は 0〜1440 分の範囲で入力してください');
+      if (!Number.isFinite(d) || d <= 0 || d > 1440) add('exercise.duration', '運動時間は 1〜1440 分の範囲で入力してください');
     }
 
     // 文字数制限
@@ -1221,24 +1227,7 @@ export default function Home() {
               {formError}
             </div>
           )}
-          {Object.keys(fieldErrors).length > 0 && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-              <div className="text-sm font-bold text-red-700 mb-2">入力エラー（修正が必要な項目）</div>
-              <ul className="space-y-1">
-                {Object.entries(fieldErrors).map(([k, msg]) => (
-                  <li key={k}>
-                    <button
-                      type="button"
-                      onClick={() => openSectionForErrorKey(k)}
-                      className="w-full text-left text-sm text-red-700 hover:underline"
-                    >
-                      <span className="font-bold">{labelForFieldErrorKey(k)}:</span> {msg}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* エラー列挙（上部まとめ表示）は廃止し、各入力欄の直下に表示する */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2 pb-4 md:pb-2 border-b md:border-b-0 border-gray-200">
             <h2 className="text-2xl md:text-4xl font-bold md:font-bold text-gray-800">
               健康記録
@@ -1411,14 +1400,14 @@ export default function Home() {
                   value={healthRecord?.bloodPressure?.systolic || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
                     clearFieldError('bloodPressure.systolic');
                       setHealthRecord({
                         ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
                       });
                   }}
-                  placeholder="0"
+                  placeholder="1〜299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
@@ -1442,14 +1431,14 @@ export default function Home() {
                   value={healthRecord?.bloodPressure?.diastolic || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
                     clearFieldError('bloodPressure.diastolic');
                       setHealthRecord({
                         ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
                       });
                   }}
-                  placeholder="0"
+                  placeholder="1〜299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
@@ -1505,11 +1494,11 @@ export default function Home() {
                 value={healthRecord?.pulse || ''}
                 onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { max: 299, maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
                     clearFieldError('pulse');
                     setHealthRecord({ ...healthRecord, pulse: value });
                   }}
-                  placeholder="0"
+                  placeholder="1〜299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['pulse']
                       ? 'border-red-400 focus:border-red-500'
@@ -1569,11 +1558,11 @@ export default function Home() {
                   value={healthRecord?.weight || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeDecimal(e.target.value, { max: 200, maxDecimals: 2 });
+                    const value = sanitizeDecimal(e.target.value, { maxIntDigits: 3, maxDecimals: 2 });
                     clearFieldError('weight');
                     setHealthRecord({ ...healthRecord, weight: value });
                   }}
-                  placeholder="0"
+                  placeholder="0.1〜200"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['weight'] ? 'border-red-400 focus:border-red-500' : 'border-yellow-300 focus:border-yellow-500'
                   }`}
@@ -1582,7 +1571,7 @@ export default function Home() {
                 {fieldErrors['weight'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-500">0〜200 kg（小数OK・最大2桁）</p>
+                  <p className="mt-2 text-xs text-gray-500">0より大きい〜200 kg（小数OK・最大2桁）</p>
                 )}
               </div>
               <span className="text-xl text-gray-600 font-semibold">kg</span>
@@ -1653,20 +1642,20 @@ export default function Home() {
                   <div className="flex-1">
                     <input
                       type="number"
-                      min={0}
+                      min={1}
                       inputMode="numeric"
                       onKeyDown={blockInvalidKeysInt}
                       value={healthRecord?.exercise?.duration || ''}
                       onChange={(e) => {
                         setFormError(null);
-                        const value = sanitizeInt(e.target.value, { max: 1440, maxDigits: 4 });
+                        const value = sanitizeInt(e.target.value, { maxDigits: 4 });
                         clearFieldError('exercise.duration');
                           setHealthRecord({
                             ...healthRecord,
                           exercise: { ...healthRecord?.exercise, duration: value },
                           });
                       }}
-                      placeholder="0"
+                      placeholder="1〜1440"
                       className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                         fieldErrors['exercise.duration']
                           ? 'border-red-400 focus:border-red-500'
@@ -1677,7 +1666,7 @@ export default function Home() {
                     {fieldErrors['exercise.duration'] ? (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors['exercise.duration']}</p>
                     ) : (
-                      <p className="mt-2 text-xs text-gray-500">0〜1440 分（整数）</p>
+                      <p className="mt-2 text-xs text-gray-500">1〜1440 分（整数）</p>
                     )}
                   </div>
                   <span className="text-xl text-gray-600 font-semibold">分</span>
