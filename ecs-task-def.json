@@ -1,0 +1,48 @@
+{
+  "family": "heart-rehab-web-prod",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::920004594871:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::920004594871:role/heart-rehab-web-prod-task-role",
+  "containerDefinitions": [
+    {
+      "name": "web",
+      "image": "REPLACED_BY_GITHUB_ACTIONS",
+      "essential": true,
+      "portMappings": [{ "containerPort": 3002, "protocol": "tcp" }],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "3002" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:DATABASE_URL-mh9Bpx"
+        },
+        {
+          "name": "NEXT_PUBLIC_LIFF_ID",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:NEXT_PUBLIC_LIFF_ID-3I1fZs"
+        },
+        {
+          "name": "LINE_CHANNEL_ACCESS_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:LINE_CHANNEL_ACCESS_TOKEN-jmvhwG"
+        },
+        {
+          "name": "LINE_CHANNEL_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:LINE_CHANNEL_SECRET-jrXGDG"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-group": "/ecs/heart-rehab-web-prod",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+

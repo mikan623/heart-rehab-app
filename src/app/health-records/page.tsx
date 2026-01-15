@@ -1622,7 +1622,7 @@ export default function Home() {
                     const value = sanitizeInt(e.target.value, { maxDigits: 3 });
                     clearFieldError('pulse');
                     setHealthRecord({ ...healthRecord, pulse: value });
-                  }}
+                }}
                   placeholder="1〜299"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['pulse']
@@ -1630,7 +1630,7 @@ export default function Home() {
                       : 'border-pink-300 focus:border-pink-500'
                   }`}
                   style={{ WebkitAppearance: 'textfield' as any }}
-                />
+              />
                 {fieldErrors['pulse'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>
                 ) : (

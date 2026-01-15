@@ -576,7 +576,7 @@ export default function CalendarPage() {
   // 編集保存
   const saveEdit = async () => {
     if (!editingRecord) return;
-
+    
     const errs = validateEditingRecord(editingRecord.record);
     if (Object.keys(errs).length > 0) {
       setEditFieldErrors(errs);
@@ -1154,23 +1154,23 @@ export default function CalendarPage() {
                       </label>
                       <div className="flex gap-1 md:gap-2 items-center min-w-0">
                         <div className="flex-1 min-w-0">
-                          <input
-                            type="number"
-                            value={editingRecord.record.bloodPressure?.systolic || ''}
+                        <input
+                          type="number"
+                          value={editingRecord.record.bloodPressure?.systolic || ''}
                             onChange={(e) => {
                               clearEditFieldError('bloodPressure.systolic');
                               setEditingRecord({
-                                ...editingRecord,
-                                record: {
-                                  ...editingRecord.record,
-                                  bloodPressure: {
-                                    ...editingRecord.record.bloodPressure,
-                                    systolic: e.target.value
-                                  }
-                                }
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              bloodPressure: {
+                                ...editingRecord.record.bloodPressure,
+                                systolic: e.target.value
+                              }
+                            }
                               });
                             }}
-                            placeholder="120"
+                          placeholder="120"
                             className={`w-full min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
                               editFieldErrors['bloodPressure.systolic']
                                 ? 'border-red-400 focus:border-red-500'
@@ -1183,23 +1183,23 @@ export default function CalendarPage() {
                         </div>
                         <span className="text-lg md:text-2xl font-bold flex-shrink-0">/</span>
                         <div className="flex-1 min-w-0">
-                          <input
-                            type="number"
-                            value={editingRecord.record.bloodPressure?.diastolic || ''}
+                        <input
+                          type="number"
+                          value={editingRecord.record.bloodPressure?.diastolic || ''}
                             onChange={(e) => {
                               clearEditFieldError('bloodPressure.diastolic');
                               setEditingRecord({
-                                ...editingRecord,
-                                record: {
-                                  ...editingRecord.record,
-                                  bloodPressure: {
-                                    ...editingRecord.record.bloodPressure,
-                                    diastolic: e.target.value
-                                  }
-                                }
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              bloodPressure: {
+                                ...editingRecord.record.bloodPressure,
+                                diastolic: e.target.value
+                              }
+                            }
                               });
                             }}
-                            placeholder="80"
+                          placeholder="80"
                             className={`w-full min-w-0 px-2 md:px-4 py-2 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
                               editFieldErrors['bloodPressure.diastolic']
                                 ? 'border-red-400 focus:border-red-500'
@@ -1220,24 +1220,24 @@ export default function CalendarPage() {
                       </label>
                       <div className="flex gap-2 items-center">
                         <div className="flex-1">
-                          <input
-                            type="number"
-                            value={editingRecord.record.pulse || ''}
+                        <input
+                          type="number"
+                          value={editingRecord.record.pulse || ''}
                             onChange={(e) => {
                               clearEditFieldError('pulse');
                               setEditingRecord({
-                                ...editingRecord,
-                                record: {
-                                  ...editingRecord.record,
-                                  pulse: e.target.value
-                                }
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              pulse: e.target.value
+                            }
                               });
                             }}
-                            placeholder="70"
+                          placeholder="70"
                             className={`w-full px-3 py-2 md:px-4 md:py-3 text-base md:text-lg border-2 rounded-lg focus:outline-none bg-white ${
                               editFieldErrors['pulse'] ? 'border-red-400 focus:border-red-500' : 'border-pink-300 focus:border-pink-500'
                             }`}
-                          />
+                        />
                           {editFieldErrors['pulse'] && <p className="mt-2 text-sm text-red-600">{editFieldErrors['pulse']}</p>}
                         </div>
                         <span className="text-base md:text-lg font-semibold text-gray-700 whitespace-nowrap">回/分</span>
@@ -1251,26 +1251,26 @@ export default function CalendarPage() {
                       </label>
                       <div className="flex gap-2 items-center">
                         <div className="flex-1">
-                          <input
-                            type="number"
-                            value={editingRecord.record.weight || ''}
+                        <input
+                          type="number"
+                          value={editingRecord.record.weight || ''}
                             onChange={(e) => {
                               clearEditFieldError('weight');
                               setEditingRecord({
-                                ...editingRecord,
-                                record: {
-                                  ...editingRecord.record,
-                                  weight: e.target.value
-                                }
+                            ...editingRecord,
+                            record: {
+                              ...editingRecord.record,
+                              weight: e.target.value
+                            }
                               });
                             }}
-                            placeholder="65.5"
+                          placeholder="65.5"
                             className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
                               editFieldErrors['weight']
                                 ? 'border-red-400 focus:border-red-500'
                                 : 'border-yellow-300 focus:border-yellow-500'
                             }`}
-                          />
+                        />
                           {editFieldErrors['weight'] && <p className="mt-2 text-sm text-red-600">{editFieldErrors['weight']}</p>}
                         </div>
                         <span className="text-lg font-semibold text-gray-700 min-w-fit">kg</span>
@@ -1306,29 +1306,29 @@ export default function CalendarPage() {
                         </select>
                         <div className="flex gap-2 items-center">
                           <div className="flex-1">
-                            <input
-                              type="number"
-                              value={editingRecord.record.exercise?.duration || ''}
+                          <input
+                            type="number"
+                            value={editingRecord.record.exercise?.duration || ''}
                               onChange={(e) => {
                                 clearEditFieldError('exercise.duration');
                                 setEditingRecord({
-                                  ...editingRecord,
-                                  record: {
-                                    ...editingRecord.record,
-                                    exercise: {
-                                      ...editingRecord.record.exercise,
-                                      duration: e.target.value
-                                    }
-                                  }
+                              ...editingRecord,
+                              record: {
+                                ...editingRecord.record,
+                                exercise: {
+                                  ...editingRecord.record.exercise,
+                                  duration: e.target.value
+                                }
+                              }
                                 });
                               }}
-                              placeholder="30"
+                            placeholder="30"
                               className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none bg-white ${
                                 editFieldErrors['exercise.duration']
                                   ? 'border-red-400 focus:border-red-500'
                                   : 'border-green-300 focus:border-green-500'
                               }`}
-                            />
+                          />
                             {editFieldErrors['exercise.duration'] && (
                               <p className="mt-2 text-sm text-red-600">{editFieldErrors['exercise.duration']}</p>
                             )}
@@ -1415,14 +1415,14 @@ export default function CalendarPage() {
                             onChange={(e) => {
                               clearEditFieldError('meal.other');
                               setEditingRecord({
-                                ...editingRecord,
-                                record: {
-                                  ...editingRecord.record,
-                                  meal: {
-                                    ...editingRecord.record.meal,
-                                    other: e.target.value
-                                  }
+                              ...editingRecord,
+                              record: {
+                                ...editingRecord.record,
+                                meal: {
+                                  ...editingRecord.record.meal,
+                                  other: e.target.value
                                 }
+                              }
                               });
                             }}
                             placeholder="果物、乳製品など"
@@ -1465,11 +1465,11 @@ export default function CalendarPage() {
                         onChange={(e) => {
                           clearEditFieldError('dailyLife');
                           setEditingRecord({
-                            ...editingRecord,
-                            record: {
-                              ...editingRecord.record,
-                              dailyLife: e.target.value
-                            }
+                          ...editingRecord,
+                          record: {
+                            ...editingRecord.record,
+                            dailyLife: e.target.value
+                          }
                           });
                         }}
                         placeholder="気分、体調の変化、気になったことなど自由にお書きください"

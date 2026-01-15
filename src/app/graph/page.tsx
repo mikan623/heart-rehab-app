@@ -487,7 +487,7 @@ export default function GraphPage() {
             pointRadius: 5,
             pointBackgroundColor: colorForSlotArray,
             pointBorderColor: colorForSlotArray,
-            borderWidth: 2,
+        borderWidth: 2,
             spanGaps: true,
           },
         ]
@@ -542,7 +542,7 @@ export default function GraphPage() {
               tension: 0.25,
               pointRadius: 4,
               pointBackgroundColor: 'rgb(236, 72, 153)',
-              borderWidth: 2,
+        borderWidth: 2,
             },
           ]
         : activeMetric === 'pulse'
@@ -568,19 +568,19 @@ export default function GraphPage() {
               tension: 0.3,
               pointRadius: 5,
               pointBackgroundColor: 'rgb(20, 184, 166)',
-              borderWidth: 2,
+        borderWidth: 2,
             },
           ]
         : [
             {
               label: '体重 (kg)',
               data: emptyWeekLabels.map(() => 0),
-              borderColor: 'rgb(168, 85, 247)',
-              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+        borderColor: 'rgb(168, 85, 247)',
+        backgroundColor: 'rgba(168, 85, 247, 0.1)',
               tension: 0.3,
               pointRadius: 5,
               pointBackgroundColor: 'rgb(168, 85, 247)',
-              borderWidth: 2,
+        borderWidth: 2,
             },
             ...(targetWeight !== null
               ? [
@@ -841,7 +841,7 @@ export default function GraphPage() {
               { key: 'noon', label: '昼', cls: 'bg-blue-500 border-blue-500 text-white hover:bg-blue-600' },
               { key: 'night', label: '夜', cls: 'bg-purple-500 border-purple-500 text-white hover:bg-purple-600' },
             ].map((s) => (
-              <button
+                <button
                 key={s.key}
                 onClick={() => setActiveSlot(s.key as any)}
                 className={`w-full px-2 md:px-5 py-2 rounded-full text-sm md:text-lg font-extrabold border transition ${
@@ -849,7 +849,7 @@ export default function GraphPage() {
                 }`}
               >
                 {s.label}
-              </button>
+                </button>
             ))}
             </div>
           </div>

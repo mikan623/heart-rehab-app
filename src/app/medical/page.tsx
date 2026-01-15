@@ -518,7 +518,7 @@ const MedicalPage: React.FC = () => {
                               ? '招待中…'
                               : '招待する'}
                       </button>
-                      <button
+                    <button
                       type="button"
                       onClick={() => handleSelectPatient(patient)}
                         className="w-full sm:w-auto inline-flex items-center justify-center px-3 py-2 rounded-xl border border-pink-300 text-pink-600 text-xs md:text-sm font-bold hover:bg-pink-50"
@@ -832,7 +832,7 @@ const MedicalPage: React.FC = () => {
                                   ))}
                                 </div>
                               </div>
-                            )}
+                    )}
                   </div>
                 ))}
               </div>
