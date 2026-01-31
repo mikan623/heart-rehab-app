@@ -19,6 +19,10 @@ FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
+# Build-time env for Next.js public variables
+ARG NEXT_PUBLIC_LIFF_ID
+ENV NEXT_PUBLIC_LIFF_ID=$NEXT_PUBLIC_LIFF_ID
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
