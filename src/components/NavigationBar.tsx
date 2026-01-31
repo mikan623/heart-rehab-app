@@ -472,7 +472,7 @@ export default function NavigationBar() {
       // PDFを作成
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-       orientation: 'portrait',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
