@@ -128,8 +128,9 @@ export default function LandingPage() {
 
               // 📧 LINE メールアドレス取得（あれば）
               let lineEmail = '';
+              let liffIdToken: string | null = null;
               try {
-                const liffIdToken = await liffSdk.getIDToken();
+                liffIdToken = await liffSdk.getIDToken();
                 if (liffIdToken) {
                   const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
                   lineEmail = decodedToken.email || '';
@@ -151,6 +152,7 @@ export default function LandingPage() {
                   userId: profile.userId,
                   displayName: profile.displayName,
                   email: lineEmail || undefined,  // LINE メールアドレスがあればそれを使用
+                  idToken: liffIdToken || undefined,
                   role:
                     typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
                       ? 'medical'

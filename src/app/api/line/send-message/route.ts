@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, message } = await request.json();
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
+    await ensurePrismaConnection();
+
+    const { lineUserId, message } = await request.json();
 
     // サーバーサイド環境変数からアクセストークンを取得
     const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -12,14 +25,27 @@ export async function POST(request: NextRequest) {
     }
 
     // バリデーション
-    if (!userId || !message) {
-      return NextResponse.json({ error: 'userId and message are required' }, { status: 400 });
+    if (!lineUserId || !message) {
+      return NextResponse.json({ error: 'lineUserId and message are required' }, { status: 400 });
     }
 
-    console.log('📱 LINE Bot メッセージ送信:', { userId, message });
+    const familyMember = await prisma.familyMember.findFirst({
+      where: {
+        userId: auth.userId,
+        lineUserId,
+        isRegistered: true,
+      },
+      select: { id: true },
+    });
+
+    if (!familyMember) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    console.log('📱 LINE Bot メッセージ送信:', { lineUserId, messageLength: message.length });
 
     const requestBody = {
-      to: userId,
+      to: lineUserId,
       messages: [
         {
           type: 'text',
@@ -32,9 +58,6 @@ export async function POST(request: NextRequest) {
       endpoint: 'https://api.line.me/v2/bot/message/push',
       method: 'POST',
       body: requestBody,
-      token_length: accessToken?.length || 0,
-      token_first_20: accessToken?.substring(0, 20) || 'N/A',
-      token_last_20: accessToken?.substring(accessToken.length - 20) || 'N/A',
     });
 
     const response = await fetch('https://api.line.me/v2/bot/message/push', {

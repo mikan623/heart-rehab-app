@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 利用者側：未読数（招待pending + messagesLastSeen以降のコメント）をまとめて返す
 // GET: ?patientId=...&since=UnixMs
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json(
@@ -17,14 +23,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const patientId = searchParams.get('patientId');
+    const patientId = auth.userId;
     const sinceStr = searchParams.get('since') || '0';
     const sinceMs = Number(sinceStr);
     const since = Number.isFinite(sinceMs) && sinceMs > 0 ? new Date(sinceMs) : new Date(0);
-
-    if (!patientId) {
-      return NextResponse.json({ error: 'patientId is required' }, { status: 400 });
-    }
 
     const patient = await prisma.user.findUnique({
       where: { id: patientId },

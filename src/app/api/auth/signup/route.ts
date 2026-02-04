@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { createAuthToken, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,7 +72,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(
+    const sessionToken = createAuthToken({
+      userId: user.id,
+      role: role === 'medical' ? 'medical' : 'patient',
+    });
+
+    const response = NextResponse.json(
       { 
         message: '登録が完了しました',
         user: {
@@ -83,6 +89,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+    setAuthCookie(response, sessionToken);
+    return response;
   } catch (error) {
     console.error('登録エラー:', error);
     return NextResponse.json(

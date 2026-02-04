@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // プロフィール取得
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Prismaが無効の場合は早期終了
     if (!prisma) {
       return NextResponse.json({ 
@@ -14,12 +20,7 @@ export async function GET(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    const userId = auth.userId;
     
     console.log('🔍 Fetching profile for userId:', userId);
     
@@ -58,6 +59,11 @@ export async function GET(request: NextRequest) {
 // プロフィール保存・更新
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Prismaが無効の場合は早期終了
     if (!prisma) {
       return NextResponse.json({ 
@@ -68,16 +74,16 @@ export async function POST(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { userId, profile } = await request.json();
+    const { userId: bodyUserId, profile } = await request.json();
+    const userId = auth.userId;
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
     console.log('💾 Saving profile for userId:', userId);
     console.log('📝 Profile data:', profile);
     
     // バリデーション
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-    
     // ユーザーが存在するかチェック、存在しない場合は作成
     let user = await prisma.user.findUnique({
       where: { id: userId }

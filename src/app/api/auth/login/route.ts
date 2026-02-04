@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { createAuthToken, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,9 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ローカルストレージに保存するセッション情報
-    const sessionToken = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
-
     // ロールは「トップで選択した値」をSupabaseへ保存して永続化する
     // ただし、誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
     const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
@@ -76,7 +74,10 @@ export async function POST(request: NextRequest) {
       effectiveRole = 'patient';
     }
 
-    return NextResponse.json(
+    // 改ざん耐性のあるトークンを発行
+    const sessionToken = createAuthToken({ userId: user.id, role: effectiveRole });
+
+    const response = NextResponse.json(
       {
         message: 'ログインに成功しました',
         user: {
@@ -90,6 +91,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
+    setAuthCookie(response, sessionToken);
+    return response;
   } catch (error) {
     console.error('ログインエラー:', error);
     return NextResponse.json(

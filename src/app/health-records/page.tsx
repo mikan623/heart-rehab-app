@@ -773,9 +773,6 @@ export default function Home() {
   // LINE Messaging API関連の状態と機能
   const [lineConnected, setLineConnected] = useState(false);
   
-  // LINE Messaging API設定
-  const LINE_CHANNEL_ACCESS_TOKEN = process.env.NEXT_PUBLIC_LINE_ACCESS_TOKEN;
-
   // LINE Messaging APIで家族にメッセージを送信
   const sendLineMessageToFamily = async (memberId: string, message: string) => {
     try {
@@ -785,9 +782,8 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: memberId,
+          lineUserId: memberId,
           message: message,
-          accessToken: LINE_CHANNEL_ACCESS_TOKEN,
         }),
       });
 

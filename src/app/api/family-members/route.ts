@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 家族メンバー一覧取得
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         familyMembers: [],
@@ -13,12 +19,7 @@ export async function GET(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    const userId = auth.userId;
     
     console.log('🔍 Fetching family members for userId:', userId);
     
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest) {
 // 家族メンバー追加・更新
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         error: 'Database not available',
@@ -53,15 +59,14 @@ export async function POST(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { userId, familyMember } = await request.json();
+    const { userId: bodyUserId, familyMember } = await request.json();
+    const userId = auth.userId;
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
     console.log('💾 Saving family member for userId:', userId);
     console.log('📝 Family member data:', familyMember);
-    
-    // バリデーション
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
     
     // ✅ 修正：初期追加時は name・relationship が空でもOK
     // （ユーザーが後から入力する）
@@ -169,6 +174,11 @@ export async function POST(request: NextRequest) {
 // 家族メンバー更新
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         error: 'Database not available',
@@ -186,9 +196,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
     }
     
+    const existing = await prisma.familyMember.findUnique({
+      where: { id: memberId },
+      select: { id: true, userId: true },
+    });
+    if (!existing || existing.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const updatedMember = await prisma.familyMember.update({
       where: { id: memberId },
-      data: updates
+      data: updates,
     });
     
     console.log('✅ Family member updated successfully');
@@ -210,6 +228,11 @@ export async function PATCH(request: NextRequest) {
 // 家族メンバー削除
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         error: 'Database not available',
@@ -228,8 +251,16 @@ export async function DELETE(request: NextRequest) {
     
     console.log('🗑️ Deleting family member:', memberId);
     
+    const existing = await prisma.familyMember.findUnique({
+      where: { id: memberId },
+      select: { id: true, userId: true },
+    });
+    if (!existing || existing.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await prisma.familyMember.delete({
-      where: { id: memberId }
+      where: { id: memberId },
     });
     
     console.log('✅ Family member deleted successfully');

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // GET /api/reminder-settings?userId=...
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = auth.userId;
 
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
@@ -50,15 +50,21 @@ export async function GET(request: NextRequest) {
 // Body: { userId, reminderEnabled, reminderTime }
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { userId, reminderEnabled, reminderTime } = body as {
+    const { userId: bodyUserId, reminderEnabled, reminderTime } = body as {
       userId?: string;
       reminderEnabled?: boolean;
       reminderTime?: string;
     };
+    const userId = auth.userId;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const connected = await ensurePrismaConnection();

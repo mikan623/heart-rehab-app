@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 /**
  * LINE 連携状態を取得
@@ -7,6 +8,11 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
  */
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         lineConnected: false,
@@ -16,12 +22,7 @@ export async function GET(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    const userId = auth.userId;
     
     console.log('🔍 LINE 連携状態を取得:', userId);
     
@@ -60,6 +61,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json({ 
         error: 'Database not available',
@@ -69,14 +75,13 @@ export async function POST(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { userId, lineConnected, lineUserId } = await request.json();
+    const { userId: bodyUserId, lineConnected, lineUserId } = await request.json();
+    const userId = auth.userId;
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
     console.log('💾 LINE 連携状態を更新:', { userId, lineConnected, lineUserId });
-    
-    // バリデーション
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
     
     // ユーザーが存在するかチェック
     let user = await prisma.user.findUnique({

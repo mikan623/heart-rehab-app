@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 利用者側：血液/CPXへの医療コメント通知一覧
 // GET: ?patientId=...
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json(
@@ -16,11 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const patientId = searchParams.get('patientId');
-    if (!patientId) {
-      return NextResponse.json({ error: 'patientId is required' }, { status: 400 });
-    }
+    const patientId = auth.userId;
 
     const patient = await prisma.user.findUnique({
       where: { id: patientId },

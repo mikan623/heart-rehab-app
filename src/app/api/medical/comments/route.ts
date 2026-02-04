@@ -1,38 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 医療従事者：承認済み患者の健康記録にコメント投稿
 // POST: { providerId, patientId, healthRecordId, content }
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
     const body = await request.json();
-    const providerId = body?.providerId as string | undefined;
+    const providerId = auth.userId;
     const patientId = body?.patientId as string | undefined;
     const healthRecordId = body?.healthRecordId as string | undefined;
     const content = (body?.content as string | undefined)?.trim();
 
-    if (!providerId || !patientId || !healthRecordId || !content) {
+    if (!patientId || !healthRecordId || !content) {
       return NextResponse.json(
-        { error: 'providerId, patientId, healthRecordId, content are required' },
+        { error: 'patientId, healthRecordId, content are required' },
         { status: 400 }
       );
     }
     if (content.length > 2000) {
       return NextResponse.json({ error: 'content is too long' }, { status: 400 });
-    }
-
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { role: true },
-    });
-    if (!provider || provider.role !== 'medical') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const access = await prisma.medicalInvite.findUnique({

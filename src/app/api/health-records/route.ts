@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,11 @@ interface HealthRecordResponse {
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Prisma接続確認
     const connected = await ensurePrismaConnection();
     
@@ -35,15 +41,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
-    }
+    const userId = auth.userId;
     
     console.log('🔍 Fetching records for userId:', userId);
     
@@ -222,9 +220,18 @@ async function notifyFamilyMembers(userId: string, savedRecord: any) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
-    
-    const { userId, healthRecord } = await request.json();
+
+    const { userId: bodyUserId, healthRecord } = await request.json();
+    const userId = auth.userId;
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
     console.log('💾 Saving health record for userId:', userId);
     console.log('📝 Health record data:', healthRecord);
@@ -436,6 +443,11 @@ export async function POST(request: NextRequest) {
 // 健康記録削除
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     
     // ⚠️ データベースが接続できない場合は503を返す
@@ -449,24 +461,24 @@ export async function DELETE(request: NextRequest) {
     
     const { searchParams } = new URL(request.url);
     const recordId = searchParams.get('recordId');
-    const userId = searchParams.get('userId');
+    const userId = auth.userId;
     const date = searchParams.get('date');
     const time = searchParams.get('time');
     
     console.log('🗑️ Deleting health record:', { recordId, userId, date, time });
     
-    // バリデーション
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-    
     let deletedRecord;
     
     if (recordId) {
       // recordIdが指定されている場合（特定のレコードを削除）
-      deletedRecord = await prisma.healthRecord.delete({
-        where: { id: recordId }
+      const record = await prisma.healthRecord.findUnique({
+        where: { id: recordId },
+        select: { id: true, userId: true, date: true, time: true },
       });
+      if (!record || record.userId !== userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      deletedRecord = await prisma.healthRecord.delete({ where: { id: recordId } });
       console.log('✅ Deleted record by ID:', deletedRecord.id);
     } else if (date && time) {
       // dateとtimeが指定されている場合（同じ日付・時間のレコードを削除）

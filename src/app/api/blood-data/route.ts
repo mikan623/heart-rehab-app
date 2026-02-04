@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
-    }
+    const userId = auth.userId;
     
     // 血液データを取得
     const bloodDataList = await prisma?.bloodData.findMany({
@@ -42,6 +40,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     
     if (!connected || !prisma) {
@@ -49,13 +52,14 @@ export async function POST(request: NextRequest) {
     }
     
     const data = await request.json();
-    const { mode, userId, testDate, bloodValues, cpxTests } = data as {
+    const { mode, userId: bodyUserId, testDate, bloodValues, cpxTests } = data as {
       mode?: 'blood' | 'cpx';
       userId: string;
       testDate: string;
       bloodValues?: any;
       cpxTests?: any[];
     };
+    const userId = auth.userId;
 
     const fieldErrors: Record<string, string> = {};
     const addErr = (k: string, msg: string) => {
@@ -76,11 +80,8 @@ export async function POST(request: NextRequest) {
       return n;
     };
     
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // バリデーション（>1000 を禁止、小数OK）
