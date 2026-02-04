@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma, { ensurePrismaConnection } from "@/lib/prisma";
+import { getAuthContext } from "@/lib/server-auth";
 
 // 招待リンク作成（患者側）
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!prisma) {
       return NextResponse.json(
         { error: "Database not available" },
@@ -13,28 +19,18 @@ export async function POST(request: NextRequest) {
 
     await ensurePrismaConnection();
 
-    const { patientId } = await request.json();
+    const patientId = auth.userId;
 
-    if (!patientId) {
-      return NextResponse.json(
-        { error: "patientId is required" },
-        { status: 400 }
-      );
-    }
-
-    // ユーザーが存在しなければ作成（他のAPIと同じ挙動）
-    let user = await prisma.user.findUnique({
+    // 認証済みユーザーのみ招待を作成できる
+    const user = await prisma.user.findUnique({
       where: { id: patientId },
     });
 
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: patientId,
-          email: `${patientId}@example.com`,
-          name: `User ${patientId}`,
-        },
-      });
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
 
     const now = new Date();

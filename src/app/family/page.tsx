@@ -302,9 +302,6 @@ export default function FamilyPage() {
   // LINE Messaging API関連の状態と機能
   const [lineConnected, setLineConnected] = useState(false);
   
-  // LINE Messaging API設定
-  const LINE_CHANNEL_ACCESS_TOKEN = process.env.NEXT_PUBLIC_LINE_ACCESS_TOKEN;
-
   // 家族用招待QRコードを生成（家族メンバー共通）
   const generateFamilyInviteQr = async () => {
     try {
@@ -318,7 +315,7 @@ export default function FamilyPage() {
       const response = await fetch('/api/family-invites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId: currentUserId })
+        body: JSON.stringify({})
       });
 
       if (!response.ok) {
@@ -359,9 +356,8 @@ export default function FamilyPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: memberId,
+          lineUserId: memberId,
           message: message,
-          accessToken: LINE_CHANNEL_ACCESS_TOKEN,
         }),
       });
 

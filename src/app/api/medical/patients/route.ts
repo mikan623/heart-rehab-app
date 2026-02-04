@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     // Prisma 接続確認
     const connected = await ensurePrismaConnection();
 

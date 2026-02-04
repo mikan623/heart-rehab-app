@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 本人用招待コードを生成するヘルパー
 function generateSelfLinkCode(length: number = 8): string {
@@ -14,12 +15,11 @@ function generateSelfLinkCode(length: number = 8): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = auth.userId;
 
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {

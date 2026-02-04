@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 医療従事者：承認済み患者の血液/CPXにコメント投稿
 // POST: { providerId, patientId, kind: "blood" | "cpx", targetId, content }
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
     const body = await request.json();
-    const providerId = body?.providerId as string | undefined;
+    const providerId = auth.userId;
     const patientId = body?.patientId as string | undefined;
     const kind = body?.kind as 'blood' | 'cpx' | undefined;
     const targetId = body?.targetId as string | undefined;
     const content = (body?.content as string | undefined)?.trim();
 
-    if (!providerId || !patientId || !kind || !targetId || !content) {
+    if (!patientId || !kind || !targetId || !content) {
       return NextResponse.json(
-        { error: 'providerId, patientId, kind, targetId, content are required' },
+        { error: 'patientId, kind, targetId, content are required' },
         { status: 400 }
       );
     }
     if (content.length > 2000) {
       return NextResponse.json({ error: 'content is too long' }, { status: 400 });
-    }
-
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { role: true },
-    });
-    if (!provider || provider.role !== 'medical') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const access = await prisma.medicalInvite.findUnique({

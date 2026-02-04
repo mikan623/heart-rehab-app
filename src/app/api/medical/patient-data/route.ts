@@ -1,31 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 医療従事者専用：承認済み患者のデータを取得
 // GET: ?providerId=...&patientId=...
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
     const { searchParams } = new URL(request.url);
-    const providerId = searchParams.get('providerId');
     const patientId = searchParams.get('patientId');
 
-    if (!providerId || !patientId) {
-      return NextResponse.json({ error: 'providerId and patientId are required' }, { status: 400 });
+    if (!patientId) {
+      return NextResponse.json({ error: 'patientId is required' }, { status: 400 });
     }
 
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { role: true },
-    });
-    if (!provider || provider.role !== 'medical') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const providerId = auth.userId;
 
     const access = await prisma.medicalInvite.findUnique({
       where: { providerId_patientId: { providerId, patientId } },
