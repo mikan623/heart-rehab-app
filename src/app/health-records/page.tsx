@@ -1163,11 +1163,17 @@ export default function Home() {
     -moz-appearance: textfield;
   }
 
-  /* 他のinputはappearanceをリセット */
-  .line-app-container input:not([type="number"]),
+  /* 他のinputはappearanceをリセット（checkboxは除外） */
+  .line-app-container input:not([type="number"]):not([type="checkbox"]),
   .line-app-container select,
   .line-app-container textarea {
     -webkit-appearance: none;
+  }
+
+  /* チェックボックスは表示を維持 */
+  .line-app-container input[type="checkbox"] {
+    -webkit-appearance: checkbox;
+    appearance: checkbox;
   }
 
   .line-app-container button {
