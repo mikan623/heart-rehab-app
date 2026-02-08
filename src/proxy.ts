@@ -72,7 +72,7 @@ async function verifyJwt(token: string, secret: string) {
   return null;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!pathname.startsWith('/api/')) {
     return NextResponse.next();
@@ -112,4 +112,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/api/:path*'],
 };
-
