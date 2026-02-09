@@ -19,19 +19,23 @@
       "secrets": [
         {
           "name": "DATABASE_URL",
-          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:prod/heart-rehab/DATABASE_URL-uvHZyy:DATABASE_URL::"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:DATABASE_URL-mh9Bpx"
         },
         {
           "name": "NEXT_PUBLIC_LIFF_ID",
-          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:prod/heart-rehab/DATABASE_URL-uvHZyy:NEXT_PUBLIC_LIFF_ID::"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:NEXT_PUBLIC_LIFF_ID-3I1fZs"
         },
         {
           "name": "LINE_CHANNEL_ACCESS_TOKEN",
-          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:prod/heart-rehab/DATABASE_URL-uvHZyy:LINE_CHANNEL_ACCESS_TOKEN::"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:LINE_CHANNEL_ACCESS_TOKEN-jmvhwG"
         },
         {
           "name": "LINE_CHANNEL_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:prod/heart-rehab/DATABASE_URL-uvHZyy:LINE_CHANNEL_SECRET::"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:LINE_CHANNEL_SECRET-jrXGDG"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:prod/heart-rehab/JWT_SECRET-5KrNoo"
         }
       ],
       "logConfiguration": {
