@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
 
 
@@ -611,7 +612,7 @@ export default function CalendarPage() {
       console.log('💾 カレンダー: 編集した記録をデータベースに保存中...', { userId: currentUserId, date, time });
       
       // データベースに保存
-      const response = await fetch('/api/health-records', {
+      const response = await apiFetch('/api/health-records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getCurrentUserId, getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -225,7 +226,7 @@ export default function Home() {
 
       try {
         setPrintBloodDataStatus('loading');
-        const res = await fetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
+        const res = await apiFetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) {
           setPrintBloodDataList([]);
           setPrintBloodDataStatus('error');
@@ -776,7 +777,7 @@ export default function Home() {
   // LINE Messaging APIで家族にメッセージを送信
   const sendLineMessageToFamily = async (memberId: string, message: string) => {
     try {
-      const response = await fetch('/api/line/send-message', {
+      const response = await apiFetch('/api/line/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -881,7 +882,7 @@ export default function Home() {
       const timeKey = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
 
       // データベースに保存
-      const response = await fetch('/api/health-records', {
+      const response = await apiFetch('/api/health-records', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

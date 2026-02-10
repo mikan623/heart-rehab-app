@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { setLineLoggedInDB, setLineLogin } from '@/lib/auth';
+import { apiFetch } from '@/lib/api';
 import { buildLiffUrl, isLikelyLineInAppBrowser } from '@/lib/liffUrl';
 
 export default function LandingPage() {
@@ -145,7 +146,7 @@ export default function LandingPage() {
               
               // 🆕 Supabase にユーザー情報を保存（users テーブル）
               // メールアドレスを users テーブルに保存する
-              const setupRes = await fetch('/api/auth/line-user-setup', {
+              const setupRes = await apiFetch('/api/auth/line-user-setup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -176,12 +177,12 @@ export default function LandingPage() {
 
               // 🆕 プロフィール情報を Supabase(profiles) に初回保存
               try {
-                const res = await fetch(`/api/profiles?userId=${profile.userId}`);
+                const res = await apiFetch(`/api/profiles?userId=${profile.userId}`);
                 if (res.ok) {
                   const data = await res.json();
                   if (!data.profile) {
                     isNewProfile = true;
-                    await fetch('/api/profiles', {
+                    await apiFetch('/api/profiles', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -266,7 +267,7 @@ export default function LandingPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, role: loginRole }),
@@ -304,7 +305,7 @@ export default function LandingPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await apiFetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name, role: loginRole }),

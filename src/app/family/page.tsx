@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { buildLiffUrl } from "@/lib/liffUrl";
 
 // 家族メンバーの型定義
@@ -42,7 +43,7 @@ export default function FamilyPage() {
   const fetchSelfLinkCode = async (userId: string) => {
     try {
       if (!userId) return;
-      const res = await fetch(`/api/self-link-code?userId=${encodeURIComponent(userId)}`);
+      const res = await apiFetch(`/api/self-link-code?userId=${encodeURIComponent(userId)}`);
       if (!res.ok) {
         console.error('❌ self-link-code 取得失敗:', res.status);
         return;
@@ -98,7 +99,7 @@ export default function FamilyPage() {
       // currentUserId が分かったら DB から正式な値や本人コードを取得
       if (!currentUserId) return;
       try {
-        const res = await fetch(`/api/reminder-settings?userId=${encodeURIComponent(currentUserId)}`);
+        const res = await apiFetch(`/api/reminder-settings?userId=${encodeURIComponent(currentUserId)}`);
         if (res.ok) {
           const data = await res.json();
           setReminderEnabled(data.reminderEnabled ?? false);
@@ -129,7 +130,7 @@ export default function FamilyPage() {
     const saveToDb = async () => {
       if (!currentUserId) return;
       try {
-        await fetch('/api/reminder-settings', {
+        await apiFetch('/api/reminder-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -159,7 +160,7 @@ export default function FamilyPage() {
         if (session) {
           console.log('📧 メールログイン検出: 家族メンバーをDBから取得');
           try {
-            const response = await fetch(`/api/family-members?userId=${session.userId}`);
+            const response = await apiFetch(`/api/family-members?userId=${session.userId}`);
             if (response.ok) {
               const data = await response.json();
               console.log('✅ 家族メンバーをデータベースから取得(メールログイン):', data.familyMembers.length);
@@ -242,7 +243,7 @@ export default function FamilyPage() {
               }
               
               // 🆕 データベースから家族メンバーを取得
-              const response = await fetch(`/api/family-members?userId=${userId}`);
+              const response = await apiFetch(`/api/family-members?userId=${userId}`);
               
               if (response.ok) {
                 const data = await response.json();
@@ -312,7 +313,7 @@ export default function FamilyPage() {
 
       setGeneratingInvite(true);
 
-      const response = await fetch('/api/family-invites', {
+      const response = await apiFetch('/api/family-invites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
@@ -350,7 +351,7 @@ export default function FamilyPage() {
   // LINE Messaging APIで家族にメッセージを送信
   const sendLineMessageToFamily = async (memberId: string, message: string) => {
     try {
-      const response = await fetch('/api/line/send-message', {
+      const response = await apiFetch('/api/line/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -415,7 +416,7 @@ export default function FamilyPage() {
       // 新規メンバーかどうかで POST/PATCH を分ける
       if (id.length <= 15) {
         // 新規メンバー → POST
-        const response = await fetch('/api/family-members', {
+        const response = await apiFetch('/api/family-members', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -439,7 +440,7 @@ export default function FamilyPage() {
         }
       } else {
         // 既存メンバー → PATCH
-        const response = await fetch('/api/family-members', {
+        const response = await apiFetch('/api/family-members', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -529,7 +530,7 @@ export default function FamilyPage() {
       // データベースのIDかチェック（cuidの形式）
       if (id.length > 15) {
         // データベースから削除
-        const response = await fetch(`/api/family-members?memberId=${id}`, {
+        const response = await apiFetch(`/api/family-members?memberId=${id}`, {
           method: 'DELETE'
         });
         

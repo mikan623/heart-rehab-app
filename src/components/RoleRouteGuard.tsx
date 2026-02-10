@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 
 function getRoleFromLocalStorage(): "patient" | "medical" | null {
   if (typeof window === "undefined") return null;
@@ -48,7 +49,7 @@ export default function RoleRouteGuard() {
       if (!userId) return;
 
       try {
-        const res = await fetch(`/api/auth/role?userId=${encodeURIComponent(userId)}`);
+        const res = await apiFetch(`/api/auth/role?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
         const data = await res.json();
         const r = data?.role === "medical" ? "medical" : "patient";

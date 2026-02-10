@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -23,7 +24,7 @@ export default function ContactPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/contact", {
+      const res = await apiFetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, category, message }),

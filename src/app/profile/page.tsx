@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 
 // LIFF型定義を追加
 declare global {
@@ -264,7 +265,7 @@ export default function ProfilePage() {
   
             // 🆕 データベースからプロフィール取得を試みる
             try {
-              const response = await fetch(`/api/profiles?userId=${liffProfile.userId}`);
+              const response = await apiFetch(`/api/profiles?userId=${liffProfile.userId}`);
               
               if (response.ok) {
                 const data = await response.json();
@@ -367,7 +368,7 @@ export default function ProfilePage() {
       const userId = profile.userId || 'user-1';
       console.log('💾 プロフィールをデータベースに保存中...', { userId });
       
-      const response = await fetch('/api/profiles', {
+      const response = await apiFetch('/api/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

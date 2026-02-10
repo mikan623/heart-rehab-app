@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import NavigationBar from "@/components/NavigationBar";
 import { readJsonOrThrow } from "@/lib/readJson";
 
@@ -232,7 +233,7 @@ export default function GraphPage() {
         const userId = getCurrentUserId();
         if (!userId) return;
 
-        const res = await fetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
+        const res = await apiFetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
           const data = await readJsonOrThrow(res);
           const records = Array.isArray(data.records) ? data.records : [];
@@ -274,7 +275,7 @@ export default function GraphPage() {
 
         // プロフィール（目標体重）を取得
         try {
-          const profileRes = await fetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
+          const profileRes = await apiFetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
           if (profileRes.ok) {
             const profileData = await readJsonOrThrow(profileRes);
             const twRaw = profileData?.profile?.targetWeight;
