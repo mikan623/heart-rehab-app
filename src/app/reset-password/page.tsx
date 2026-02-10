@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -22,7 +23,7 @@ export default function ResetPasswordPage() {
 
     try {
       // メールアドレスがシステムに存在するか確認
-      const response = await fetch('/api/auth/check-email', {
+      const response = await apiFetch('/api/auth/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -61,7 +62,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await apiFetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import NavigationBar from '@/components/NavigationBar';
 import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
+import { apiFetch } from '@/lib/api';
 // （デスクトップナビは NavigationBar に統一）
 
 // （デスクトップナビは NavigationBar に統一）
@@ -93,6 +94,38 @@ export default function BloodDataPage() {
   const [pageMode, setPageMode] = useState<'list' | 'new' | 'edit'>('list');
   const [recordType, setRecordType] = useState<'blood' | 'cpx' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const createEmptyCpxRow = (overrides: Partial<CPXTestForm> = {}): CPXTestForm => ({
+    testDate: '',
+    cpxRound: 1,
+    atOneMinBefore: '',
+    atDuring: '',
+    maxLoad: '',
+    loadWeight: '',
+    vo2: '',
+    mets: '',
+    heartRate: '',
+    systolicBloodPressure: '',
+    findings: null,
+    ...overrides,
+  });
+
+  const normalizeCpxTests = (tests: BloodData['cpxTests'] | undefined): CPXTestForm[] =>
+    (tests || []).map((t) => ({
+      id: t.id,
+      testDate: t.testDate || '',
+      cpxRound: t.cpxRound ?? 1,
+      atOneMinBefore: t.atOneMinBefore === null || t.atOneMinBefore === undefined ? '' : String(t.atOneMinBefore),
+      atDuring: t.atDuring === null || t.atDuring === undefined ? '' : String(t.atDuring),
+      maxLoad: t.maxLoad === null || t.maxLoad === undefined ? '' : String(t.maxLoad),
+      loadWeight: t.loadWeight === null || t.loadWeight === undefined ? '' : String(t.loadWeight),
+      vo2: t.vo2 === null || t.vo2 === undefined ? '' : String(t.vo2),
+      mets: t.mets === null || t.mets === undefined ? '' : String(t.mets),
+      heartRate: t.heartRate === null || t.heartRate === undefined ? '' : String(t.heartRate),
+      systolicBloodPressure:
+        t.systolicBloodPressure === null || t.systolicBloodPressure === undefined ? '' : String(t.systolicBloodPressure),
+      findings: t.findings ?? null,
+    }));
 
   // 入力フォーム
   const [testDate, setTestDate] = useState<string>('');
@@ -322,7 +355,7 @@ export default function BloodDataPage() {
     if (!userId) return;
 
     try {
-      const response = await fetch(`/api/blood-data?userId=${userId}`);
+      const response = await apiFetch(`/api/blood-data?userId=${userId}`);
       const data = await response.json();
       setBloodDataList(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -469,30 +502,8 @@ export default function BloodDataPage() {
       hemoglobin: bloodData.hemoglobin === null ? '' : String(bloodData.hemoglobin),
       bnp: bloodData.bnp === null ? '' : String(bloodData.bnp),
     });
-    setCpxTests(bloodData.cpxTests || [{
-      testDate: '',
-      cpxRound: 1,
-      atOneMinBefore: '',
-      atDuring: '',
-      maxLoad: '',
-      loadWeight: '',
-      vo2: '',
-      mets: '',
-      heartRate: '',
-      systolicBloodPressure: '',
-      findings: null,
-    }].map((t: any) => ({
-      ...t,
-      atOneMinBefore: t?.atOneMinBefore === null || t?.atOneMinBefore === undefined ? '' : String(t.atOneMinBefore),
-      atDuring: t?.atDuring === null || t?.atDuring === undefined ? '' : String(t.atDuring),
-      maxLoad: t?.maxLoad === null || t?.maxLoad === undefined ? '' : String(t.maxLoad),
-      loadWeight: t?.loadWeight === null || t?.loadWeight === undefined ? '' : String(t.loadWeight),
-      vo2: t?.vo2 === null || t?.vo2 === undefined ? '' : String(t.vo2),
-      mets: t?.mets === null || t?.mets === undefined ? '' : String(t.mets),
-      heartRate: t?.heartRate === null || t?.heartRate === undefined ? '' : String(t.heartRate),
-      systolicBloodPressure:
-        t?.systolicBloodPressure === null || t?.systolicBloodPressure === undefined ? '' : String(t.systolicBloodPressure),
-    })));
+    const normalized = normalizeCpxTests(bloodData.cpxTests);
+    setCpxTests(normalized.length > 0 ? normalized : [createEmptyCpxRow()]);
     setPageMode('edit');
   };
 
@@ -515,35 +526,11 @@ export default function BloodDataPage() {
       hemoglobin: bloodData.hemoglobin === null ? '' : String(bloodData.hemoglobin),
       bnp: bloodData.bnp === null ? '' : String(bloodData.bnp),
     });
+    const normalizedCpx = normalizeCpxTests(bloodData.cpxTests);
     setCpxTests(
-      bloodData.cpxTests && bloodData.cpxTests.length > 0
-        ? (bloodData.cpxTests as any).map((t: any) => ({
-            ...t,
-            atOneMinBefore: t?.atOneMinBefore === null || t?.atOneMinBefore === undefined ? '' : String(t.atOneMinBefore),
-            atDuring: t?.atDuring === null || t?.atDuring === undefined ? '' : String(t.atDuring),
-            maxLoad: t?.maxLoad === null || t?.maxLoad === undefined ? '' : String(t.maxLoad),
-            loadWeight: t?.loadWeight === null || t?.loadWeight === undefined ? '' : String(t.loadWeight),
-            vo2: t?.vo2 === null || t?.vo2 === undefined ? '' : String(t.vo2),
-            mets: t?.mets === null || t?.mets === undefined ? '' : String(t.mets),
-            heartRate: t?.heartRate === null || t?.heartRate === undefined ? '' : String(t.heartRate),
-            systolicBloodPressure:
-              t?.systolicBloodPressure === null || t?.systolicBloodPressure === undefined ? '' : String(t.systolicBloodPressure),
-          }))
-        : [
-            {
-              testDate: bloodData.testDate,
-              cpxRound: 1,
-              atOneMinBefore: '',
-              atDuring: '',
-              maxLoad: '',
-              loadWeight: '',
-              vo2: '',
-              mets: '',
-              heartRate: '',
-              systolicBloodPressure: '',
-              findings: null,
-            },
-          ]
+      normalizedCpx.length > 0
+        ? normalizedCpx
+        : [createEmptyCpxRow({ testDate: bloodData.testDate, cpxRound: 1 })]
     );
     setPageMode('edit');
   };
@@ -551,7 +538,7 @@ export default function BloodDataPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('この検査データを削除しますか？（運動負荷試験も一緒に削除されます）')) return;
     try {
-      const res = await fetch(`/api/blood-data?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/blood-data?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('delete failed');
       await fetchBloodDataList();
     } catch (e) {
@@ -563,7 +550,7 @@ export default function BloodDataPage() {
   const handleDeleteCPX = async (cpxId: string) => {
     if (!confirm('この運動負荷試験（CPX）を削除しますか？')) return;
     try {
-      const res = await fetch(`/api/blood-data?cpxId=${encodeURIComponent(cpxId)}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/blood-data?cpxId=${encodeURIComponent(cpxId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('delete failed');
       await fetchBloodDataList();
     } catch (e) {
@@ -574,19 +561,7 @@ export default function BloodDataPage() {
 
   const handleAddCPXRow = () => {
     const nextRound = Math.max(...cpxTests.map(t => t.cpxRound), 0) + 1;
-    setCpxTests([...cpxTests, {
-      testDate: '',
-      cpxRound: nextRound,
-      atOneMinBefore: null,
-      atDuring: null,
-      maxLoad: null,
-      loadWeight: null,
-      vo2: null,
-      mets: null,
-      heartRate: null,
-      systolicBloodPressure: null,
-      findings: null,
-    }]);
+    setCpxTests([...cpxTests, createEmptyCpxRow({ testDate: '', cpxRound: nextRound })]);
   };
 
   const handleRemoveCPXRow = (index: number) => {

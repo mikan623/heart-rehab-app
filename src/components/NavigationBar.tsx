@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { clearLineLogin, clearSession, getCurrentUserId } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
 
 // 学ぶアイコン
@@ -72,7 +73,7 @@ export default function NavigationBar() {
       let lastErr: any = null;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-          const res = await fetch(url, { ...init, cache: 'no-store' });
+          const res = await apiFetch(url, { ...init, cache: 'no-store' });
           const data = await res.json().catch(() => ({}));
           if (res.ok) return { ok: true as const, status: res.status, data };
           // 一時障害はリトライ
@@ -193,7 +194,7 @@ export default function NavigationBar() {
         
         // 🆕 データベースから健康記録を取得（エラーハンドリング強化）
         try {
-          const healthResponse = await fetch(`/api/health-records?userId=${userId}`);
+          const healthResponse = await apiFetch(`/api/health-records?userId=${userId}`);
           if (healthResponse.ok) {
             const healthData = await healthResponse.json();
             console.log('✅ 健康記録をデータベースから取得');
@@ -235,7 +236,7 @@ export default function NavigationBar() {
         
         // 🆕 データベースからプロフィールを取得（エラーハンドリング強化）
         try {
-          const profileResponse = await fetch(`/api/profiles?userId=${userId}`);
+          const profileResponse = await apiFetch(`/api/profiles?userId=${userId}`);
           if (profileResponse.ok) {
             const profileData = await profileResponse.json();
             if (profileData.profile) {
@@ -274,7 +275,7 @@ export default function NavigationBar() {
 
         // 🆕 血液検査/CPX を取得（エラーハンドリング強化）
         try {
-          const bloodRes = await fetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
+          const bloodRes = await apiFetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
           if (bloodRes.ok) {
             const data = await bloodRes.json();
             bloodDataList = Array.isArray(data) ? data : [];

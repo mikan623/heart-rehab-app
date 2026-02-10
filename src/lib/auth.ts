@@ -1,3 +1,5 @@
+import { apiFetch } from '@/lib/api';
+
 /**
  * 認証ユーティリティ
  */
@@ -71,7 +73,7 @@ export async function setLineLoggedInDB(userId: string, isLoggedIn: boolean, lin
       return false;
     }
 
-    const response = await fetch('/api/auth/line-connection', {
+    const response = await apiFetch('/api/auth/line-connection', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -104,7 +106,7 @@ export async function getLineLoggedInDB(userId: string): Promise<boolean> {
       return false;
     }
 
-    const response = await fetch(`/api/auth/line-connection?userId=${encodeURIComponent(userId)}`);
+    const response = await apiFetch(`/api/auth/line-connection?userId=${encodeURIComponent(userId)}`);
 
     if (response.ok) {
       const data = await response.json();

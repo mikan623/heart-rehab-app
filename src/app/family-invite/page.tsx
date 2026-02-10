@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -78,7 +79,7 @@ export default function FamilyInvitePage() {
         }
 
         // 招待情報取得
-        const res = await fetch(`/api/family-invites?familyInviteId=${id}`);
+        const res = await apiFetch(`/api/family-invites?familyInviteId=${id}`);
         if (!res.ok) {
           setError("この招待リンクは無効か、期限切れです。");
           setLoading(false);
@@ -110,7 +111,7 @@ export default function FamilyInvitePage() {
 
     try {
       // 家族メンバーとして登録（Messaging API の userId はまだ保存しない）
-      const res = await fetch("/api/family-members", {
+      const res = await apiFetch("/api/family-members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ export default function FamilyInvitePage() {
 
       // 招待を使用済みに更新（任意）
       if (inviteId) {
-        await fetch("/api/family-invites", {
+        await apiFetch("/api/family-invites", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ inviteId }),

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { clearLineLogin, clearSession, getCurrentUserId } from '@/lib/auth';
+import { apiFetch } from '@/lib/api';
 
 interface Patient {
   userId: string;
@@ -189,7 +190,7 @@ const MedicalPage: React.FC = () => {
       setSelectedPatient(null);
       setRecords([]);
 
-      const res = await fetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
+      const res = await apiFetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
       const data = await res.json();
 
       if (!res.ok) {
@@ -202,7 +203,7 @@ const MedicalPage: React.FC = () => {
       // 招待ステータスをマージ（承認済/招待中表示）
       if (providerId) {
         try {
-          const invRes = await fetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`, { cache: 'no-store' });
+          const invRes = await apiFetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`, { cache: 'no-store' });
           const invData = await invRes.json();
           if (invRes.ok) {
             const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
