@@ -37,10 +37,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
     }
 
+    const safeCount = async (fn: () => Promise<number>) => {
+      try {
+        return await fn();
+      } catch (err: any) {
+        // 旧スキーマなどでテーブルが無い場合は未読0として扱う
+        if (err?.code === 'P2021' || err?.code === 'P2022') {
+          return 0;
+        }
+        throw err;
+      }
+    };
+
     const [pendingInvites, unreadHealthComments, unreadLabComments] = await Promise.all([
-      prisma.medicalInvite.count({ where: { patientId, status: 'pending' } }),
-      prisma.medicalComment.count({ where: { patientId, createdAt: { gt: since } } }),
-      prisma.medicalLabComment.count({ where: { patientId, createdAt: { gt: since } } }),
+      safeCount(() => prisma.medicalInvite.count({ where: { patientId, status: 'pending' } })),
+      safeCount(() => prisma.medicalComment.count({ where: { patientId, createdAt: { gt: since } } })),
+      safeCount(() => prisma.medicalLabComment.count({ where: { patientId, createdAt: { gt: since } } })),
     ]);
 
     const total = pendingInvites + unreadHealthComments + unreadLabComments;
