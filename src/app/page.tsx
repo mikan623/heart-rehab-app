@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { setLineLoggedInDB, setLineLogin } from '@/lib/auth';
+import { setLineLoggedInDB, setLineLogin, setSession } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { buildLiffUrl, isLikelyLineInAppBrowser } from '@/lib/liffUrl';
 
@@ -170,6 +170,13 @@ export default function LandingPage() {
                     'loginRole',
                     localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient'
                   );
+                }
+                if (setupData?.sessionToken) {
+                  setSession({
+                    userId: profile.userId,
+                    userName: profile.displayName || '',
+                    sessionToken: setupData.sessionToken,
+                  });
                 }
               } catch {
                 // ignore
