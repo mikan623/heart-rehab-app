@@ -113,15 +113,16 @@ export async function POST(request: NextRequest) {
       role: (user as any).role === 'medical' ? 'medical' : 'patient',
     });
 
-    const response = NextResponse.json({ 
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         authType: user.authType,
-        role: (user as any).role || 'patient'
-      }
+        role: (user as any).role || 'patient',
+      },
+      sessionToken,
     });
     setAuthCookie(response, sessionToken);
     return response;
