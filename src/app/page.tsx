@@ -160,6 +160,11 @@ export default function LandingPage() {
                       : 'patient',
                 })
               });
+              if (!setupRes.ok) {
+                const errorData = await setupRes.json().catch(() => ({}));
+                console.error('❌ LINE ユーザーセットアップ失敗:', errorData);
+                throw new Error(errorData?.error || 'LINE ユーザーセットアップに失敗しました');
+              }
               console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
               try {
                 const setupData = await setupRes.json();

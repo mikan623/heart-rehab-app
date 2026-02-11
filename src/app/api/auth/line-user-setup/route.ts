@@ -27,13 +27,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // LINE ID Token を検証（ある場合のみ）
+    // LINE ID Token を必須にして検証（セキュリティ強化）
+    if (!idToken) {
+      return NextResponse.json({ error: 'LINE ID token is required' }, { status: 401 });
+    }
+
     let verifiedUserId = userId as string;
-    if (idToken) {
-      const lineChannelId = process.env.LINE_LOGIN_CHANNEL_ID;
-      if (!lineChannelId) {
-        return NextResponse.json({ error: 'LINE_LOGIN_CHANNEL_ID is not set' }, { status: 500 });
-      }
+    const lineChannelId = process.env.LINE_LOGIN_CHANNEL_ID || process.env.LINE_CHANNEL_ID;
+    if (!lineChannelId) {
+      return NextResponse.json({ error: 'LINE_LOGIN_CHANNEL_ID is not set' }, { status: 500 });
+    }
 
       const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/verify', {
         method: 'POST',
@@ -55,7 +58,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'LINE user mismatch' }, { status: 401 });
       }
       if (verifyData?.sub) verifiedUserId = verifyData.sub;
-    }
     
     // ユーザーが存在するかチェック
     let user = await prisma.user.findUnique({
