@@ -59,6 +59,17 @@ export async function POST(request: NextRequest) {
       }
       if (verifyData?.sub) verifiedUserId = verifyData.sub;
     
+    // メールアドレス重複を避ける（LINEログインはメール必須ではない）
+    let safeEmail = email as string | undefined;
+    if (safeEmail) {
+      const existingEmailUser = await prisma.user.findUnique({
+        where: { email: safeEmail },
+      });
+      if (existingEmailUser && existingEmailUser.id !== verifiedUserId) {
+        safeEmail = `${verifiedUserId}@line.local`;
+      }
+    }
+
     // ユーザーが存在するかチェック
     let user = await prisma.user.findUnique({
       where: { id: verifiedUserId }
@@ -70,7 +81,7 @@ export async function POST(request: NextRequest) {
       user = await prisma.user.create({
         data: {
           id: verifiedUserId,
-          email: email || `${verifiedUserId}@line.local`,
+          email: safeEmail || `${verifiedUserId}@line.local`,
           name: displayName || 'User',
           authType: 'line',  // LINE ログイン初回時は authType = "line"
           role: role === 'medical' ? 'medical' : 'patient',
@@ -82,7 +93,8 @@ export async function POST(request: NextRequest) {
       console.log('🔄 既存ユーザー更新:', verifiedUserId);
       
       const shouldUpdateEmail =
-        !user.email || user.email.includes('@line.local') || user.email.includes('@example.com');
+        !!safeEmail &&
+        (!user.email || user.email.includes('@line.local') || user.email.includes('@example.com'));
       const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
       const currentRole = (user as any).role === 'medical' ? 'medical' : (user as any).role === 'patient' ? 'patient' : null;
       // 誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
@@ -91,22 +103,39 @@ export async function POST(request: NextRequest) {
       const shouldUpdateRole = shouldUpgradeToMedical || shouldInitToPatient;
 
       if (shouldUpdateEmail || shouldUpdateRole) {
-        user = await prisma.user.update({
-          where: { id: verifiedUserId },
-          data: {
-            ...(shouldUpdateEmail
-              ? {
-                  email: email || user.email,
-                  name: displayName || user.name,
-                }
-              : {}),
-            ...(shouldUpdateRole
-              ? { role: shouldUpgradeToMedical ? 'medical' : shouldInitToPatient ? 'patient' : requestedRole }
-              : {}),
-            // ⚠️ authType は変更しない（既存の認証タイプを保持）
-          },
-        });
-        console.log('✅ 既存ユーザーを更新:', user.id);
+        try {
+          user = await prisma.user.update({
+            where: { id: verifiedUserId },
+            data: {
+              ...(shouldUpdateEmail
+                ? {
+                    email: safeEmail || user.email,
+                    name: displayName || user.name,
+                  }
+                : {}),
+              ...(shouldUpdateRole
+                ? { role: shouldUpgradeToMedical ? 'medical' : shouldInitToPatient ? 'patient' : requestedRole }
+                : {}),
+              // ⚠️ authType は変更しない（既存の認証タイプを保持）
+            },
+          });
+          console.log('✅ 既存ユーザーを更新:', user.id);
+        } catch (err: any) {
+          // email の一意制約エラー時は email 更新を諦めて継続
+          if (err?.code === 'P2002' && err?.meta?.target?.includes('email')) {
+            user = await prisma.user.update({
+              where: { id: verifiedUserId },
+              data: {
+                ...(shouldUpdateRole
+                  ? { role: shouldUpgradeToMedical ? 'medical' : shouldInitToPatient ? 'patient' : requestedRole }
+                  : {}),
+              },
+            });
+            console.warn('⚠️ email 重複のため email 更新をスキップ');
+          } else {
+            throw err;
+          }
+        }
       }
     }
     

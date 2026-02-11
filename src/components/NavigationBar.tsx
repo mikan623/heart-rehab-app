@@ -587,7 +587,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/health-records', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'health-records' ? 'click-animate' : ''}`}>
-          <HealthRecordIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(health_rocords).jpg" alt="健康記録" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">健康記録</span>
         </button>
         <button 
@@ -596,7 +596,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/calendar', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'calendar' ? 'click-animate' : ''}`}>
-          <CalendarIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(calendar).jpg" alt="カレンダー" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">カレンダー</span>
         </button>
         <button 
@@ -605,7 +605,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/learn', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'learn' ? 'click-animate' : ''}`}>
-          <LearnIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(learn).png" alt="学ぶ" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">学ぶ</span>
         </button>
         <button 
@@ -614,7 +614,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/blood-data', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'test' ? 'click-animate' : ''}`}>
-          <TestIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(test).jpg" alt="検査" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">検査</span>
         </button>
         <button 
@@ -623,7 +623,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/graph', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'graph' ? 'click-animate' : ''}`}>
-          <GraphIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(graph).jpg" alt="グラフ" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">グラフ</span>
         </button>
         <button 
@@ -632,7 +632,7 @@ export default function NavigationBar() {
             setTimeout(() => window.location.href = '/family', 150);
           }}
           className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'family' ? 'click-animate' : ''}`}>
-          <FamilyIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(family).jpg" alt="家族" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">家族</span>
         </button>
           </>
@@ -650,7 +650,7 @@ export default function NavigationBar() {
             setShowSettingsMenu(!showSettingsMenu);
           }}
           className={`relative flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'menu' ? 'click-animate' : ''}`}>
-          <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
+          <img src="/Navigationbar(menu).jpg" alt="メニュー" className="w-5 h-5 md:w-6 md:h-6" />
           <span className="text-[10px] md:text-xs">メニュー</span>
           {loginRole !== 'medical' && unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-bold">
