@@ -316,20 +316,12 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    // ユーザーが存在するかチェック、存在しない場合は作成
-    let user = await prisma.user.findUnique({
-      where: { id: userId }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
-    
     if (!user) {
-      console.log('👤 Creating new user:', userId);
-      user = await prisma.user.create({
-        data: {
-          id: userId,
-          email: `${userId}@example.com`,
-          name: `User ${userId}`
-        }
-      });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     // 🆕 既存のレコードをチェック（同じ日付・時間のレコード）

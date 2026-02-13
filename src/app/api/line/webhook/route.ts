@@ -69,7 +69,10 @@ export async function POST(request: NextRequest) {
                 try {
                   const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'x-internal-secret': channelSecret,
+                    },
                     body: JSON.stringify({
                       replyToken: event.replyToken,
                       message: successMessage,
@@ -110,9 +113,12 @@ export async function POST(request: NextRequest) {
                   'これ以降、このLINEアカウントにご自身の健康記録が自動で届きます。';
 
                 try {
-                  const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-internal-secret': channelSecret,
+                  },
                     body: JSON.stringify({
                       replyToken: event.replyToken,
                       message: selfSuccessMessage,
@@ -143,9 +149,12 @@ export async function POST(request: NextRequest) {
             '✅ 健康記録を受け取りました！\n\n今日も記録をありがとうございます。\n心臓ちゃんが応援しています💖';
           
           try {
-            const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+          const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-secret': channelSecret,
+            },
               body: JSON.stringify({
                 replyToken: event.replyToken,
                 message: replyMessage,
@@ -171,9 +180,12 @@ export async function POST(request: NextRequest) {
         const welcomeMessage = `👋 心臓リハビリ手帳へようこそ！\n\n健康記録の入力をサポートします。\n毎日の血圧、脈拍、体重を記録して、一緒に健康管理を頑張りましょう💖`;
         
         try {
-          const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const replyResponse = await fetch('https://heart-rehab-app.vercel.app/api/line/reply-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-secret': channelSecret,
+          },
             body: JSON.stringify({
               replyToken: event.replyToken,
               message: welcomeMessage,

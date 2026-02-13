@@ -84,25 +84,16 @@ export async function POST(request: NextRequest) {
     console.log('📝 Profile data:', profile);
     
     // バリデーション
-    // ユーザーが存在するかチェック、存在しない場合は作成
-    let user = await prisma.user.findUnique({
-      where: { id: userId }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
     });
-    
     if (!user) {
-      console.log('👤 Creating new user:', userId);
-      user = await prisma.user.create({
-        data: {
-          id: userId,
-          // LINE ログイン時に取得したメールがあればそれを優先して保存
-          email: profile.email || `${userId}@example.com`,
-          name: profile.displayName || `User ${userId}`
-        }
-      });
-    } else if (profile.email || profile.displayName) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (profile.email || profile.displayName) {
       // 既存ユーザーの場合も、メールや名前が渡ってきたら更新
       // ⚠️ authType は変更しない（LINE連携時に authType を保持する）
-      user = await prisma.user.update({
+      await prisma.user.update({
         where: { id: userId },
         data: {
           email: profile.email || user.email,

@@ -76,17 +76,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ユーザーが存在しない場合は作成
-    let user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: userId,
-          email: `${userId}@example.com`,
-          name: 'User',
-          authType: 'line',
-        },
-      });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const updated = await prisma.user.update({

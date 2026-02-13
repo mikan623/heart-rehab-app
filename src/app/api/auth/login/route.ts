@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
-import { createAuthToken, setAuthCookie } from '@/lib/server-auth';
+import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ユーザーを検索
-    const user: any = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -60,17 +60,16 @@ export async function POST(request: NextRequest) {
 
     // ロールは「トップで選択した値」をSupabaseへ保存して永続化する
     // ただし、誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
-    const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
-    const currentRole: 'patient' | 'medical' =
-      user?.role === 'medical' ? 'medical' : user?.role === 'patient' ? 'patient' : 'patient';
-    let effectiveRole: 'patient' | 'medical' = currentRole;
+    const requestedRole: AuthRole | null = isAuthRole(role) ? role : null;
+    const currentRole: AuthRole = user?.role === 'medical' ? 'medical' : 'patient';
+    let effectiveRole: AuthRole = currentRole;
 
     if (requestedRole === 'medical' && currentRole !== 'medical') {
-      await (prisma as any).user.update({ where: { id: user.id }, data: { role: 'medical' } });
+      await prisma.user.update({ where: { id: user.id }, data: { role: 'medical' } });
       effectiveRole = 'medical';
     } else if (!user?.role && requestedRole === 'patient') {
       // roleカラム導入直後などで未設定の場合は patient を保存しておく
-      await (prisma as any).user.update({ where: { id: user.id }, data: { role: 'patient' } });
+      await prisma.user.update({ where: { id: user.id }, data: { role: 'patient' } });
       effectiveRole = 'patient';
     }
 

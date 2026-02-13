@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
-import { createAuthToken, setAuthCookie } from '@/lib/server-auth';
+import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 
 /**
  * LINE ログイン時にユーザー情報をセットアップ
@@ -78,13 +78,14 @@ export async function POST(request: NextRequest) {
     if (!user) {
       console.log('👤 Creating new LINE user:', verifiedUserId);
       // 新規ユーザーの場合は作成（authType は "line" がデフォルト）
+      const createdRole: AuthRole = isAuthRole(role) ? role : 'patient';
       user = await prisma.user.create({
         data: {
           id: verifiedUserId,
           email: safeEmail || `${verifiedUserId}@line.local`,
           name: displayName || 'User',
           authType: 'line',  // LINE ログイン初回時は authType = "line"
-          role: role === 'medical' ? 'medical' : 'patient',
+          role: createdRole,
         }
       });
       console.log('✅ LINE ユーザーを作成:', user.id);
@@ -95,8 +96,8 @@ export async function POST(request: NextRequest) {
       const shouldUpdateEmail =
         !!safeEmail &&
         (!user.email || user.email.includes('@line.local') || user.email.includes('@example.com'));
-      const requestedRole = role === 'medical' ? 'medical' : role === 'patient' ? 'patient' : null;
-      const currentRole = (user as any).role === 'medical' ? 'medical' : (user as any).role === 'patient' ? 'patient' : null;
+      const requestedRole: AuthRole | null = isAuthRole(role) ? role : null;
+      const currentRole: AuthRole | null = isAuthRole(user.role) ? user.role : null;
       // 誤操作で medical → patient に降格しない（medical は固定 / upgrade のみ）
       const shouldUpgradeToMedical = requestedRole === 'medical' && currentRole !== 'medical';
       const shouldInitToPatient = !currentRole && requestedRole === 'patient';
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     
     const sessionToken = createAuthToken({
       userId: user.id,
-      role: (user as any).role === 'medical' ? 'medical' : 'patient',
+      role: user.role === 'medical' ? 'medical' : 'patient',
     });
 
     const response = NextResponse.json({
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         authType: user.authType,
-        role: (user as any).role || 'patient',
+        role: isAuthRole(user.role) ? user.role : 'patient',
       },
       sessionToken,
     });

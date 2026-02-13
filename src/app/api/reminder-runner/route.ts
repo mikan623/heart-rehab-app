@@ -13,8 +13,12 @@ export async function GET(request: NextRequest) {
     // 任意: 簡易なトークンチェック（Vercel の Cron から呼ぶときに ?token=... を付ける想定）
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
+    const headerToken = request.headers.get('x-cron-secret');
     const secret = process.env.REMINDER_CRON_SECRET;
-    if (secret && token !== secret) {
+    if (!secret) {
+      return NextResponse.json({ error: 'REMINDER_CRON_SECRET is not set' }, { status: 500 });
+    }
+    if (token !== secret && headerToken !== secret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

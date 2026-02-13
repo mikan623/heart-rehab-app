@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma, { ensurePrismaConnection } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/server-auth";
+import { AuthRole, getAuthContext, isAuthRole } from "@/lib/server-auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,12 +42,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const userId = auth.userId;
-    const role = body?.role as string | undefined;
+    const role = body?.role as AuthRole | undefined;
     if (!role) {
       return NextResponse.json({ error: "role is required" }, { status: 400 });
     }
 
-    if (role !== "patient" && role !== "medical") {
+    if (!isAuthRole(role)) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 

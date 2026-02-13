@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 患者（利用者）側：招待を承認/拒否
 // POST: { patientId, inviteId, action } action: "accept" | "decline"
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json(
@@ -23,6 +29,9 @@ export async function POST(request: NextRequest) {
 
     if (!patientId || !inviteId || (action !== 'accept' && action !== 'decline')) {
       return NextResponse.json({ error: 'patientId, inviteId, and action are required' }, { status: 400 });
+    }
+    if (patientId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const patient = await prisma.user.findUnique({
