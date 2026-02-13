@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const internalSecret = process.env.LINE_CHANNEL_SECRET;
+    const providedSecret = request.headers.get('x-internal-secret');
+    if (!internalSecret || providedSecret !== internalSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { replyToken, message } = await request.json();
 
     // サーバーサイド環境変数からアクセストークンを取得

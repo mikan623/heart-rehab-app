@@ -83,22 +83,12 @@ export async function POST(request: NextRequest) {
     
     console.log('💾 LINE 連携状態を更新:', { userId, lineConnected, lineUserId });
     
-    // ユーザーが存在するかチェック
-    let user = await prisma.user.findUnique({
-      where: { id: userId }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
-    
     if (!user) {
-      console.log('👤 ユーザーが見つかりません、作成します:', userId);
-      // ユーザーが存在しない場合は作成
-      user = await prisma.user.create({
-        data: {
-          id: userId,
-          email: `${userId}@example.com`,
-          name: 'User',
-          authType: 'line'
-        }
-      });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     // LINE 連携状態を更新

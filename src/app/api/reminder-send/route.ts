@@ -3,8 +3,19 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 
 // ⏰ Vercel Cron から叩かれる想定のエンドポイント
 // 例: 毎分 / 毎5分 で実行し、現在時刻(Asia/Tokyo)と一致するユーザーにだけ送信
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+    const headerToken = request.headers.get('x-cron-secret');
+    const secret = process.env.REMINDER_CRON_SECRET;
+    if (!secret) {
+      return NextResponse.json({ success: false, reason: 'REMINDER_CRON_SECRET is not set' }, { status: 500 });
+    }
+    if (token !== secret && headerToken !== secret) {
+      return NextResponse.json({ success: false, reason: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       console.warn('⚠️ Database not available for reminder-send');

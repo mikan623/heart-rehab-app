@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import { getAuthContext } from '@/lib/server-auth';
 
 // 医療従事者が患者へ招待を作成 / 一覧取得
 // GET: ?providerId=... [&patientId=...]
@@ -9,6 +10,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json(
@@ -24,12 +33,7 @@ export async function GET(request: NextRequest) {
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
-
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { role: true },
-    });
-    if (!provider || provider.role !== 'medical') {
+    if (providerId !== auth.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,6 +74,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.role !== 'medical') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json(
@@ -85,12 +97,7 @@ export async function POST(request: NextRequest) {
     if (!providerId || !patientId) {
       return NextResponse.json({ error: 'providerId and patientId are required' }, { status: 400 });
     }
-
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { role: true },
-    });
-    if (!provider || provider.role !== 'medical') {
+    if (providerId !== auth.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

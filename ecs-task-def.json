@@ -40,6 +40,10 @@
         {
           "name": "LINE_LOGIN_CHANNEL_ID",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:LINE_LOGIN_CHANNEL_ID-MoyG1s"
+        },
+        {
+          "name": "REMINDER_CRON_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:REMINDER_CRON_SECRET-9dBGDn"
         }
       ],
       "logConfiguration": {

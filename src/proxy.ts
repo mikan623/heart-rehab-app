@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = new Set([
+  // 認証系（ログイン前に必要）
   '/api/auth/login',
   '/api/auth/signup',
   '/api/auth/check-email',
   '/api/auth/reset-password',
   '/api/auth/line-user-setup',
+  // LINE Webhook / 返信（署名・内部シークレットで保護）
   '/api/line/webhook',
   '/api/line/reply-message',
+  // 招待リンク・問い合わせ（ログイン前に利用）
   '/api/family-invites',
   '/api/contact',
+  // ヘルスチェック
   '/api/test',
+  // Cron実行（トークン必須）
   '/api/reminder-runner',
   '/api/reminder-send',
 ]);

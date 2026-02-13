@@ -8,6 +8,10 @@ export interface AuthContext {
   role: AuthRole;
 }
 
+export function isAuthRole(value: unknown): value is AuthRole {
+  return value === 'patient' || value === 'medical';
+}
+
 const AUTH_COOKIE_NAME = 'auth_token';
 const JWT_ALG = 'HS256';
 const JWT_TYP = 'JWT';

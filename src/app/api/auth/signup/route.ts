@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
-import { createAuthToken, setAuthCookie } from '@/lib/server-auth';
+import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,14 +53,15 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // ユーザーを作成
-    const user: any = await (prisma as any).user.create({
+    const roleValue: AuthRole = isAuthRole(role) ? role : 'patient';
+    const user = await prisma.user.create({
       data: {
         id: email, // メールアドレスを ID として使用
         email,
         name,
         password: hashedPassword,
         authType: 'email',
-        role: role === 'medical' ? 'medical' : 'patient',
+        role: roleValue,
       },
     });
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = createAuthToken({
       userId: user.id,
-      role: role === 'medical' ? 'medical' : 'patient',
+      role: roleValue,
     });
 
     const response = NextResponse.json(
