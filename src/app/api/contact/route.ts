@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const saved = await (prisma as any).contactMessage.create({
+    const saved = await prisma.contactMessage.create({
       data: {
         name,
         email,
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     console.log("📩 お問い合わせ受信:", saved.id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ お問い合わせ処理エラー:", error);
     return NextResponse.json(
       { error: "お問い合わせの送信に失敗しました。" },

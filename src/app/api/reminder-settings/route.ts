@@ -37,10 +37,11 @@ export async function GET(request: NextRequest) {
       reminderEnabled: user.reminderEnabled ?? false,
       reminderTime: user.reminderTime || '21:00',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Reminder settings GET error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 },
     );
   }
@@ -95,10 +96,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, user: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Reminder settings POST error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 },
     );
   }

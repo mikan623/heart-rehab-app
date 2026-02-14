@@ -31,8 +31,12 @@ export default function ContactPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "送信に失敗しました。時間をおいて再度お試しください。");
+        const data = (await res.json().catch(() => ({}))) as unknown;
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as { error?: string }).error
+            : undefined;
+        throw new Error(errorMessage || "送信に失敗しました。時間をおいて再度お試しください。");
       }
 
       setSuccess("お問い合わせを送信しました。担当者よりご連絡いたします。");
@@ -40,8 +44,9 @@ export default function ContactPage() {
       setEmail("");
       setCategory("general");
       setMessage("");
-    } catch (err: any) {
-      setError(err.message || "送信に失敗しました。");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "送信に失敗しました。";
+      setError(message);
     } finally {
       setLoading(false);
     }

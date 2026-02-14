@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
+import type { HealthRecord, Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,8 +16,8 @@ interface HealthRecordResponse {
   };
   pulse: number | null;
   weight: number | null;
-  exercise: any;
-  meal: any;
+  exercise: Prisma.JsonValue | null;
+  meal: Prisma.JsonValue | null;
   dailyLife: string | null;
   medicationTaken: boolean | null;
   createdAt: Date;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     console.log('📊 Found records:', records.length);
     
     // レスポンス形式を整形
-    const formattedRecords: HealthRecordResponse[] = records.map((record: any) => ({
+    const formattedRecords: HealthRecordResponse[] = records.map((record) => ({
       id: record.id,
       date: record.date,
       time: record.time,
@@ -73,10 +74,12 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ records: formattedRecords }, { headers: { 'Cache-Control': 'no-store' } });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = typeof error === 'object' && error && 'code' in error ? (error as { code?: string }).code : undefined;
     console.error('❌ Health Records API Error:', {
-      message: error.message,
-      code: error.code,
+      message,
+      code,
       timestamp: new Date().toISOString(),
     });
     
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
 }
 
 // 家族・本人にLINEメッセージを送信するヘルパー
-async function notifyFamilyMembers(userId: string, savedRecord: any) {
+async function notifyFamilyMembers(userId: string, savedRecord: HealthRecord) {
   try {
     if (!prisma || !process.env.LINE_CHANNEL_ACCESS_TOKEN) {
       console.log('⚠️ LINE通知スキップ: PrismaまたはLINE_CHANNEL_ACCESS_TOKENが未設定');
@@ -410,10 +413,12 @@ export async function POST(request: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = typeof error === 'object' && error && 'code' in error ? (error as { code?: string }).code : undefined;
     console.error('❌ Health record creation error:', {
-      message: error.message,
-      code: error.code,
+      message,
+      code,
       details: error
     });
     
@@ -503,15 +508,17 @@ export async function DELETE(request: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
     console.error('❌ Health Records API Error:', {
-      message: error.message,
-      stack: error.stack,
+      message,
+      stack,
       timestamp: new Date().toISOString(),
     });
     
     // Prismaエラーの詳細処理
-    if (error.code === 'P2002') {
+    if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === 'P2002') {
       return NextResponse.json(
         { error: 'この日時の記録は既に存在します。' },
         { status: 409 }

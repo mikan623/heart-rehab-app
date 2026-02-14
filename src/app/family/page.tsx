@@ -17,6 +17,23 @@ interface FamilyMember {
   isRegistered: boolean; // string から boolean に変更
 }
 
+const normalizeFamilyMembers = (raw: unknown): FamilyMember[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((member) => {
+      const m = member as Partial<FamilyMember> & { isRegistered?: boolean | string };
+      return {
+        id: typeof m.id === 'string' ? m.id : '',
+        name: typeof m.name === 'string' ? m.name : '',
+        email: typeof m.email === 'string' ? m.email : '',
+        relationship: typeof m.relationship === 'string' ? m.relationship : '',
+        lineUserId: typeof m.lineUserId === 'string' ? m.lineUserId : undefined,
+        isRegistered: m.isRegistered === true || m.isRegistered === 'true',
+      };
+    })
+    .filter((m) => m.id || m.name || m.email);
+};
+
 export default function FamilyPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -169,11 +186,8 @@ export default function FamilyPage() {
               console.error('データベース取得エラー(メールログイン)、localStorageから読み込み');
               const savedFamily = localStorage.getItem('familyMembers');
               if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily);
-                const convertedFamily = parsedFamily.map((member: any) => ({
-                  ...member,
-                  isRegistered: member.isRegistered === 'true' || member.isRegistered === true
-                }));
+                const parsedFamily = JSON.parse(savedFamily) as unknown;
+                const convertedFamily = normalizeFamilyMembers(parsedFamily);
                 setFamilyMembers(convertedFamily);
               }
             }
@@ -194,11 +208,8 @@ export default function FamilyPage() {
               // LIFFが使えない/未設定の場合はフォールバックでlocalStorageから読み込み
               const savedFamily = localStorage.getItem('familyMembers');
               if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily);
-                const convertedFamily = parsedFamily.map((member: any) => ({
-                  ...member,
-                  isRegistered: member.isRegistered === 'true' || member.isRegistered === true
-                }));
+                const parsedFamily = JSON.parse(savedFamily) as unknown;
+                const convertedFamily = normalizeFamilyMembers(parsedFamily);
                 setFamilyMembers(convertedFamily);
               } else {
                 setFamilyMembers([]);
@@ -254,11 +265,8 @@ export default function FamilyPage() {
                 // フォールバック: localStorageから読み込み
                 const savedFamily = localStorage.getItem('familyMembers');
                 if (savedFamily) {
-                  const parsedFamily = JSON.parse(savedFamily);
-                  const convertedFamily = parsedFamily.map((member: any) => ({
-                    ...member,
-                    isRegistered: member.isRegistered === 'true' || member.isRegistered === true
-                  }));
+                  const parsedFamily = JSON.parse(savedFamily) as unknown;
+                  const convertedFamily = normalizeFamilyMembers(parsedFamily);
                   setFamilyMembers(convertedFamily);
                 }
               }
@@ -268,11 +276,8 @@ export default function FamilyPage() {
             // エラー時はlocalStorageから読み込み
             const savedFamily = localStorage.getItem('familyMembers');
             if (savedFamily) {
-              const parsedFamily = JSON.parse(savedFamily);
-              const convertedFamily = parsedFamily.map((member: any) => ({
-                ...member,
-                isRegistered: member.isRegistered === 'true' || member.isRegistered === true
-              }));
+              const parsedFamily = JSON.parse(savedFamily) as unknown;
+              const convertedFamily = normalizeFamilyMembers(parsedFamily);
               setFamilyMembers(convertedFamily);
             }
           }
@@ -280,11 +285,8 @@ export default function FamilyPage() {
           // LIFFが使えない場合（ローカル環境）
           const savedFamily = localStorage.getItem('familyMembers');
           if (savedFamily) {
-            const parsedFamily = JSON.parse(savedFamily);
-            const convertedFamily = parsedFamily.map((member: any) => ({
-              ...member,
-              isRegistered: member.isRegistered === 'true' || member.isRegistered === true
-            }));
+            const parsedFamily = JSON.parse(savedFamily) as unknown;
+            const convertedFamily = normalizeFamilyMembers(parsedFamily);
             setFamilyMembers(convertedFamily);
           } else {
             setFamilyMembers([]);

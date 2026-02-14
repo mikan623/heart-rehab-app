@@ -103,10 +103,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, sent: successCount });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ reminder-send error:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      { success: false, error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 },
     );
   }

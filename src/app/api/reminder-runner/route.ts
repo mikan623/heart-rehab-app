@@ -183,13 +183,14 @@ export async function GET(request: NextRequest) {
       matchedUsers: users.length,
       sent: sentCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Reminder runner error:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',
         details:
-          process.env.NODE_ENV === 'development' ? error?.message : undefined,
+          process.env.NODE_ENV === 'development' ? message : undefined,
       },
       { status: 500 }
     );

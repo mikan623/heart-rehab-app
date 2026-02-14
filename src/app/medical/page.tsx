@@ -22,8 +22,8 @@ interface HealthRecord {
   };
   pulse: number | null;
   weight: number | null;
-  exercise: any;
-  meal: any;
+  exercise: { type?: string; duration?: string } | null;
+  meal: { staple?: string[]; mainDish?: string[]; sideDish?: string[]; other?: string } | null;
   dailyLife: string | null;
   medicationTaken: boolean | null;
   createdAt: string;
@@ -59,6 +59,20 @@ interface BloodData {
   }[];
   createdAt: string;
 }
+
+type InviteStatus = 'pending' | 'accepted' | 'declined';
+
+type InvitesResponse = {
+  invites?: Array<{ patientId?: string; status?: InviteStatus }>;
+  error?: string;
+};
+
+type PatientsResponse = {
+  patients?: Patient[];
+  error?: string;
+};
+
+type ApiErrorResponse = { error?: string };
 
 interface CPXTest {
   id: string;
@@ -111,9 +125,9 @@ const MedicalPage: React.FC = () => {
     try {
       clearSession();
       clearLineLogin();
-      if (typeof window !== 'undefined' && (window as any).liff) {
+      if (typeof window !== 'undefined' && window.liff) {
         try {
-          const liff = (window as any).liff;
+          const liff = window.liff;
           if (liff?.isLoggedIn && typeof liff.isLoggedIn === 'function' && liff.isLoggedIn()) {
             liff.logout();
           }
@@ -150,11 +164,11 @@ const MedicalPage: React.FC = () => {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
-    let lastErr: any = null;
+    let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = await res.json().catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as unknown;
         if (res.ok) return { ok: true as const, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
@@ -191,7 +205,7 @@ const MedicalPage: React.FC = () => {
       setRecords([]);
 
       const res = await apiFetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
-      const data = await res.json();
+      const data = (await res.json()) as PatientsResponse;
 
       if (!res.ok) {
         setError(data.error || '患者検索に失敗しました');
@@ -204,10 +218,10 @@ const MedicalPage: React.FC = () => {
       if (providerId) {
         try {
           const invRes = await apiFetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`, { cache: 'no-store' });
-          const invData = await invRes.json();
+          const invData = (await invRes.json()) as InvitesResponse;
           if (invRes.ok) {
             const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
-            (invData?.invites || []).forEach((inv: any) => {
+            (invData.invites || []).forEach((inv) => {
               if (inv?.patientId) map[inv.patientId] = inv.status;
             });
             setInviteStatusByPatientId(map);
@@ -246,7 +260,11 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        setError((data as any)?.error || '招待の作成に失敗しました');
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as ApiErrorResponse).error
+            : undefined;
+        setError(errorMessage || '招待の作成に失敗しました');
         return;
       }
       alert('招待を送信しました。利用者側が承認すると閲覧できます。');
@@ -329,7 +347,11 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        alert((data as any)?.error || 'コメント送信に失敗しました');
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as ApiErrorResponse).error
+            : undefined;
+        alert(errorMessage || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');
@@ -377,7 +399,11 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        alert((data as any)?.error || 'コメント送信に失敗しました');
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as ApiErrorResponse).error
+            : undefined;
+        alert(errorMessage || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');
@@ -607,9 +633,9 @@ const MedicalPage: React.FC = () => {
                     </p>
                     {record.exercise && (
                       <p className="text-gray-800">
-                        🏃‍♀️ 運動: {(record.exercise as any).type || '-'}{' '}
-                        {(record.exercise as any).duration
-                          ? `(${(record.exercise as any).duration})`
+                        🏃‍♀️ 運動: {record.exercise?.type || '-'}{' '}
+                        {record.exercise?.duration
+                          ? `(${record.exercise.duration})`
                           : ''}
                       </p>
                     )}
@@ -617,12 +643,11 @@ const MedicalPage: React.FC = () => {
                       <p className="text-gray-800">
                         🍽 食事:{' '}
                         {[
-                          (record.meal as any).staple,
-                          (record.meal as any).mainDish,
-                          (record.meal as any).sideDish,
-                          (record.meal as any).other,
+                          ...(record.meal?.staple ?? []),
+                          ...(record.meal?.mainDish ?? []),
+                          ...(record.meal?.sideDish ?? []),
+                          record.meal?.other ?? '',
                         ]
-                          .flat()
                           .filter(Boolean)
                           .join('、') || '-'}
                       </p>

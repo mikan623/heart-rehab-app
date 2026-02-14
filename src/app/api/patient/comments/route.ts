@@ -75,19 +75,19 @@ export async function GET(request: NextRequest) {
           date: c.healthRecord.date,
           time: c.healthRecord.time,
           bloodPressure: {
-            systolic: (c.healthRecord as any).bloodPressureSystolic,
-            diastolic: (c.healthRecord as any).bloodPressureDiastolic,
+            systolic: c.healthRecord.bloodPressureSystolic,
+            diastolic: c.healthRecord.bloodPressureDiastolic,
           },
-          pulse: (c.healthRecord as any).pulse ?? null,
-          weight: (c.healthRecord as any).weight ?? null,
-          exercise: (c.healthRecord as any).exercise ?? null,
-          meal: (c.healthRecord as any).meal ?? null,
-          dailyLife: (c.healthRecord as any).dailyLife ?? null,
-          medicationTaken: (c.healthRecord as any).medicationTaken ?? null,
+          pulse: c.healthRecord.pulse ?? null,
+          weight: c.healthRecord.weight ?? null,
+          exercise: c.healthRecord.exercise ?? null,
+          meal: c.healthRecord.meal ?? null,
+          dailyLife: c.healthRecord.dailyLife ?? null,
+          medicationTaken: c.healthRecord.medicationTaken ?? null,
         },
       })),
     }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/patient/comments GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }

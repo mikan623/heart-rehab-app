@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+type BloodValueKey =
+  | 'hbA1c'
+  | 'randomBloodSugar'
+  | 'totalCholesterol'
+  | 'triglycerides'
+  | 'hdlCholesterol'
+  | 'ldlCholesterol'
+  | 'bun'
+  | 'creatinine'
+  | 'uricAcid'
+  | 'hemoglobin'
+  | 'bnp';
+
+type BloodValuesInput = Partial<Record<BloodValueKey, unknown>>;
+
+type CpxTestInput = {
+  cpxRound?: unknown;
+  atOneMinBefore?: unknown;
+  atDuring?: unknown;
+  maxLoad?: unknown;
+  loadWeight?: unknown;
+  vo2?: unknown;
+  mets?: unknown;
+  heartRate?: unknown;
+  systolicBloodPressure?: unknown;
+  findings?: unknown;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const auth = getAuthContext(request);
@@ -56,8 +84,8 @@ export async function POST(request: NextRequest) {
       mode?: 'blood' | 'cpx';
       userId: string;
       testDate: string;
-      bloodValues?: any;
-      cpxTests?: any[];
+      bloodValues?: BloodValuesInput;
+      cpxTests?: CpxTestInput[];
     };
     const userId = auth.userId;
 
@@ -66,7 +94,7 @@ export async function POST(request: NextRequest) {
       if (!fieldErrors[k]) fieldErrors[k] = msg;
     };
     // 0（0.0含む）は入力不可。小数OK、1〜1000 の範囲。
-    const parseNum1to1000 = (v: any, key: string): number | null => {
+    const parseNum1to1000 = (v: unknown, key: string): number | null => {
       if (v === null || v === undefined || String(v).trim() === '') return null;
       const n = Number(v);
       if (!Number.isFinite(n)) {
@@ -102,7 +130,7 @@ export async function POST(request: NextRequest) {
       for (const k of keys) parseNum1to1000(bloodValues?.[k], `bloodValues.${k}`);
     }
     if (Array.isArray(cpxTests)) {
-      cpxTests.forEach((cpx: any, idx: number) => {
+      cpxTests.forEach((cpx: CpxTestInput, idx: number) => {
         // cpxRound は整数
         const round = cpx?.cpxRound;
         if (round !== null && round !== undefined && String(round).trim() !== '') {
@@ -206,8 +234,8 @@ export async function PUT(request: NextRequest) {
       mode?: 'blood' | 'cpx';
       id: string;
       testDate: string;
-      bloodValues?: any;
-      cpxTests?: any[];
+      bloodValues?: BloodValuesInput;
+      cpxTests?: CpxTestInput[];
     };
 
     const fieldErrors: Record<string, string> = {};
@@ -215,7 +243,7 @@ export async function PUT(request: NextRequest) {
       if (!fieldErrors[k]) fieldErrors[k] = msg;
     };
     // 0（0.0含む）は入力不可。小数OK、1〜1000 の範囲。
-    const parseNum1to1000 = (v: any, key: string): number | null => {
+    const parseNum1to1000 = (v: unknown, key: string): number | null => {
       if (v === null || v === undefined || String(v).trim() === '') return null;
       const n = Number(v);
       if (!Number.isFinite(n)) {
@@ -254,7 +282,7 @@ export async function PUT(request: NextRequest) {
       for (const k of keys) parseNum1to1000(bloodValues?.[k], `bloodValues.${k}`);
     }
     if (Array.isArray(cpxTests)) {
-      cpxTests.forEach((cpx: any, idx: number) => {
+      cpxTests.forEach((cpx: CpxTestInput, idx: number) => {
         const round = cpx?.cpxRound;
         if (round !== null && round !== undefined && String(round).trim() !== '') {
           const n = Number(round);

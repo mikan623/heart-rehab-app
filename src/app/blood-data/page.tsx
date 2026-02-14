@@ -457,9 +457,13 @@ export default function BloodDataPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (response.status === 400 && (data as any)?.fieldErrors) {
-          const fe = (data as any).fieldErrors as Record<string, string>;
+        const data = (await response.json().catch(() => ({}))) as unknown;
+        const fieldErrors =
+          typeof data === 'object' && data && 'fieldErrors' in data
+            ? (data as { fieldErrors?: Record<string, string> }).fieldErrors
+            : undefined;
+        if (response.status === 400 && fieldErrors) {
+          const fe = fieldErrors;
           setFormError('入力内容にエラーがあります。赤字の項目を確認してください。');
           setFieldErrors(fe);
           const firstKey = Object.keys(fe)[0];
@@ -467,7 +471,11 @@ export default function BloodDataPage() {
           setSaveStatus('idle');
           return;
         }
-        throw new Error((data as any)?.error || '保存に失敗しました');
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as { error?: string }).error
+            : undefined;
+        throw new Error(errorMessage || '保存に失敗しました');
       }
 
       setSaveStatus('saved');

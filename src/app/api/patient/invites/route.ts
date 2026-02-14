@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         },
       })),
     }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/patient/invites GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }

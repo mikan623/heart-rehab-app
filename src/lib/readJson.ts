@@ -1,4 +1,4 @@
-export async function readJsonOrThrow<T = any>(res: Response): Promise<T> {
+export async function readJsonOrThrow<T = unknown>(res: Response): Promise<T> {
   const contentType = res.headers.get('content-type') || '';
   const text = await res.text();
 
@@ -12,8 +12,9 @@ export async function readJsonOrThrow<T = any>(res: Response): Promise<T> {
   if (contentType.includes('application/json')) {
     try {
       return JSON.parse(text) as T;
-    } catch (e) {
-      throw new Error(`JSON parse failed (content-type: ${contentType}, status: ${res.status}): ${(e as any)?.message || e}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`JSON parse failed (content-type: ${contentType}, status: ${res.status}): ${message}`);
     }
   }
 
@@ -22,7 +23,7 @@ export async function readJsonOrThrow<T = any>(res: Response): Promise<T> {
   throw new Error(`Expected JSON but got non-JSON (content-type: ${contentType || 'unknown'}, status: ${res.status}): ${head}`);
 }
 
-export async function readJsonOrNull<T = any>(res: Response): Promise<T | null> {
+export async function readJsonOrNull<T = unknown>(res: Response): Promise<T | null> {
   try {
     return await readJsonOrThrow<T>(res);
   } catch {

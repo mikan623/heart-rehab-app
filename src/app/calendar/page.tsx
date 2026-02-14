@@ -5,6 +5,7 @@ import NavigationBar from "@/components/NavigationBar";
 import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
+import type { Liff, LiffProfile } from "@/types/liff";
 
 
 // 健康記録の型定義
@@ -23,12 +24,21 @@ interface HealthRecord {
   medicationTaken?: boolean;
 }
 
-// LIFFの型定義
-declare global {
-  interface Window {
-    liff: any;
-  }
-}
+type SavedRecords = Record<string, Record<string, HealthRecord>>;
+
+type ApiHealthRecord = {
+  date: string;
+  time: string;
+  bloodPressure: { systolic: number | string; diastolic: number | string };
+  pulse?: number | null;
+  weight?: number | null;
+  exercise?: { type?: string; duration?: string } | null;
+  meal?: { staple?: string[]; mainDish?: string[]; sideDish?: string[]; other?: string } | null;
+  dailyLife?: string | null;
+  medicationTaken?: boolean | null;
+};
+
+type HealthRecordsResponse = { records: ApiHealthRecord[] };
 
 export default function CalendarPage() {
   const router = useRouter();
@@ -86,7 +96,7 @@ export default function CalendarPage() {
     return [];
   };
 
-  const formatMealText = (meal: any) => {
+  const formatMealText = (meal: HealthRecord['meal'] | null | undefined) => {
     if (!meal) return '';
     const staple = convertStringToArray(meal.staple).filter(Boolean).join('、');
     const mainDish = convertStringToArray(meal.mainDish).filter(Boolean).join('、');
@@ -102,8 +112,8 @@ export default function CalendarPage() {
   };
 
   // 食事選択のハンドラー関数
-  const handleMealChange = (category: 'staple' | 'mainDish' | 'sideDish', item: string, checked: boolean, record: any) => {
-    const currentMeal = record.meal || { staple: [], mainDish: [], sideDish: [], other: '' };
+  const handleMealChange = (category: 'staple' | 'mainDish' | 'sideDish', item: string, checked: boolean, record: HealthRecord) => {
+    const currentMeal: HealthRecord['meal'] = record.meal || { staple: [], mainDish: [], sideDish: [], other: '' };
     
     return {
       ...record,
@@ -184,13 +194,13 @@ export default function CalendarPage() {
   const [editingRecord, setEditingRecord] = useState<{
     date: string;
     time: string;
-    record: any;
+    record: HealthRecord;
   } | null>(null);
   const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
   const [recentStamp, setRecentStamp] = useState<{ date: string; time: string } | null>(null);
 
   // 記録データを保存する状態を追加
-  const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: any}}>({});
+  const [savedRecords, setSavedRecords] = useState<SavedRecords>({});
   const [isLoading, setIsLoading] = useState(true);
   
   // 保存状態を管理
@@ -201,17 +211,17 @@ export default function CalendarPage() {
   const [showDetail, setShowDetail] = useState(false);
 
   // LIFF関連の状態を追加
-  const [liff, setLiff] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [liff, setLiff] = useState<Liff | null>(null);
+  const [user, setUser] = useState<LiffProfile | null>(null);
   const [isLiffReady, setIsLiffReady] = useState(false);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
-    let lastErr: any = null;
+    let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = await res.json().catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as unknown;
         if (res.ok) return { ok: true as const, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
@@ -354,7 +364,10 @@ export default function CalendarPage() {
       try {
         const { ok, data } = await fetchJsonWithRetry(`/api/profiles?userId=${encodeURIComponent(userId)}`);
         if (ok) {
-          const hRaw = (data as any)?.profile?.height;
+          const hRaw =
+            typeof data === 'object' && data && 'profile' in data
+              ? (data as { profile?: { height?: unknown } }).profile?.height
+              : undefined;
           const h =
             hRaw === null || hRaw === undefined || hRaw === ''
               ? null
@@ -385,9 +398,13 @@ export default function CalendarPage() {
         console.log('Fetched data:', data);
         
         // データベースの形式をカレンダー表示用に変換
-        const formattedRecords: {[key: string]: {[key: string]: any}} = {};
+        const formattedRecords: SavedRecords = {};
+        const records =
+          typeof data === 'object' && data && 'records' in data && Array.isArray((data as HealthRecordsResponse).records)
+            ? (data as HealthRecordsResponse).records
+            : [];
         
-        (data as any).records.forEach((record: any) => {
+        records.forEach((record: ApiHealthRecord) => {
           const dateKey = record.date.split('T')[0]; // YYYY-MM-DD形式
           const timeKey = record.time;
           
@@ -395,16 +412,18 @@ export default function CalendarPage() {
             formattedRecords[dateKey] = {};
           }
           
+          const systolic = record.bloodPressure?.systolic;
+          const diastolic = record.bloodPressure?.diastolic;
           formattedRecords[dateKey][timeKey] = {
             bloodPressure: {
-              systolic: record.bloodPressure.systolic,
-              diastolic: record.bloodPressure.diastolic
+              systolic: systolic === null || systolic === undefined ? '' : String(systolic),
+              diastolic: diastolic === null || diastolic === undefined ? '' : String(diastolic)
             },
-            pulse: record.pulse,
-            weight: record.weight,
-            exercise: record.exercise,
-            meal: record.meal,
-            dailyLife: record.dailyLife,
+            pulse: record.pulse === null || record.pulse === undefined ? '' : String(record.pulse),
+            weight: record.weight === null || record.weight === undefined ? '' : String(record.weight),
+            exercise: record.exercise || { type: '', duration: '' },
+            meal: record.meal || { staple: [], mainDish: [], sideDish: [], other: '' },
+            dailyLife: record.dailyLife || '',
             medicationTaken: record.medicationTaken || false
           };
         });
@@ -412,7 +431,11 @@ export default function CalendarPage() {
         console.log('Formatted records:', formattedRecords);
         setSavedRecords(formattedRecords);
       } else {
-        console.error('Failed to fetch health records:', status, (data as any)?.error);
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as { error?: string }).error
+            : undefined;
+        console.error('Failed to fetch health records:', status, errorMessage);
       }
     } catch (error) {
       console.error('Error fetching health records:', error);
@@ -510,7 +533,7 @@ export default function CalendarPage() {
   };
 
   // 編集開始
-  const startEditing = (date: string, time: string, record: any) => {
+  const startEditing = (date: string, time: string, record: HealthRecord) => {
     setEditingRecord({ date, time, record: { ...record } });
     setEditFieldErrors({});
     setShowDetail(false); // 詳細モーダルを閉じる
@@ -522,7 +545,7 @@ export default function CalendarPage() {
     setEditFieldErrors({});
   };
 
-  const validateEditingRecord = (rec: any) => {
+  const validateEditingRecord = (rec: HealthRecord) => {
     const errs: Record<string, string> = {};
     const add = (k: string, msg: string) => {
       if (!errs[k]) errs[k] = msg;
@@ -1046,7 +1069,7 @@ export default function CalendarPage() {
                               {(() => {
                                 const wRaw = (record as HealthRecord).weight;
                                 const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
-                                const bmi = calcBmi(Number.isFinite(w as any) ? (w as any) : null, heightCm);
+                                const bmi = calcBmi(Number.isFinite(w) ? w : null, heightCm);
                                 if (bmi === null) return null;
                                 return (
                                   <p className="text-gray-700"><span className="font-semibold">BMI:</span> {bmi}</p>
@@ -1558,7 +1581,7 @@ export default function CalendarPage() {
                         {(() => {
                           const wRaw = record.weight;
                           const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
-                          const bmi = calcBmi(Number.isFinite(w as any) ? (w as any) : null, heightCm);
+                          const bmi = calcBmi(Number.isFinite(w) ? w : null, heightCm);
                           if (bmi === null) return null;
                           return <p><strong>BMI:</strong> {bmi}</p>;
                         })()}

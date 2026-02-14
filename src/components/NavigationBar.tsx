@@ -6,6 +6,78 @@ import { clearLineLogin, clearSession, getCurrentUserId } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { HealthRecordIcon, CalendarIcon, ProfileIcon, GraphIcon, FamilyIcon, SettingsIcon, TestIcon } from './NavIcons';
 
+type StoredUser = {
+  userId: string;
+  displayName: string;
+};
+
+type HealthRecordPrintable = {
+  bloodPressure: { systolic: string; diastolic: string };
+  pulse: string;
+  weight: string;
+  exercise: { type: string; duration: string };
+  meal: { staple: string; mainDish: string; sideDish: string; other: string };
+  dailyLife: string;
+};
+
+type SavedRecords = Record<string, Record<string, HealthRecordPrintable>>;
+
+type ProfilePrintable = {
+  displayName?: string;
+  age?: string | number | null;
+  gender?: string | null;
+  targetWeight?: string | number | null;
+  diseases?: string[] | null;
+  medications?: string | null;
+  physicalFunction?: string | null;
+  emergencyContact?: string | null;
+};
+
+type BloodDataItem = {
+  testDate?: string | Date | null;
+  hbA1c?: unknown;
+  randomBloodSugar?: unknown;
+  totalCholesterol?: unknown;
+  triglycerides?: unknown;
+  hdlCholesterol?: unknown;
+  ldlCholesterol?: unknown;
+  bun?: unknown;
+  creatinine?: unknown;
+  uricAcid?: unknown;
+  hemoglobin?: unknown;
+  bnp?: unknown;
+  cpxTests?: CpxTestItem[];
+};
+
+type CpxTestItem = {
+  testDate?: string | Date | null;
+  cpxRound?: unknown;
+  loadWeight?: unknown;
+  vo2?: unknown;
+  mets?: unknown;
+  heartRate?: unknown;
+  systolicBloodPressure?: unknown;
+  maxLoad?: unknown;
+  atOneMinBefore?: unknown;
+  atDuring?: unknown;
+  findings?: unknown;
+};
+
+type HealthRecordApi = {
+  date: string;
+  time: string;
+  bloodPressure: { systolic: number | string; diastolic: number | string };
+  pulse?: number | null;
+  weight?: number | null;
+  exercise?: { type?: string; duration?: string } | null;
+  meal?: { staple?: string; mainDish?: string; sideDish?: string; other?: string } | null;
+  dailyLife?: string | null;
+};
+
+type HealthRecordsResponse = { records: HealthRecordApi[] };
+
+type UnreadCountResponse = { total?: number };
+
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -16,7 +88,7 @@ const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 export default function NavigationBar() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'medical' | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<StoredUser | null>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -70,11 +142,11 @@ export default function NavigationBar() {
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
-      let lastErr: any = null;
+      let lastErr: unknown = null;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const res = await apiFetch(url, { ...init, cache: 'no-store' });
-          const data = await res.json().catch(() => ({}));
+          const data = (await res.json().catch(() => ({}))) as unknown;
           if (res.ok) return { ok: true as const, status: res.status, data };
           // 一時障害はリトライ
           if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
@@ -103,7 +175,11 @@ export default function NavigationBar() {
           `/api/patient/unread-count?patientId=${encodeURIComponent(uid)}&since=${encodeURIComponent(String(lastSeen))}`
         );
         if (!ok) return;
-        setUnreadCount(Number((data as any)?.total) || 0);
+        const total =
+          typeof data === 'object' && data && 'total' in data
+            ? Number((data as UnreadCountResponse).total)
+            : 0;
+        setUnreadCount(Number.isFinite(total) ? total : 0);
       } catch (e) {
         console.log('⚠️ NavigationBar: 未読数取得に失敗（無視）', e);
       }
@@ -156,10 +232,10 @@ export default function NavigationBar() {
       printContent.style.lineHeight = '1.4';
       
       // 🆕 データベースから健康記録を取得
-      let saved: any = {};
-      let profile: any = {};
+      let saved: SavedRecords = {};
+      let profile: ProfilePrintable = {};
       let liffDisplayName = '';
-      let bloodDataList: any[] = [];
+      let bloodDataList: BloodDataItem[] = [];
       
       try {
         // ユーザーIDを取得（メール/セッションログイン → LIFF → デフォルト の優先順）
@@ -196,11 +272,11 @@ export default function NavigationBar() {
         try {
           const healthResponse = await apiFetch(`/api/health-records?userId=${userId}`);
           if (healthResponse.ok) {
-            const healthData = await healthResponse.json();
+            const healthData = (await healthResponse.json()) as HealthRecordsResponse;
             console.log('✅ 健康記録をデータベースから取得');
             
             // データベースの形式をPDF用に変換
-            healthData.records.forEach((record: any) => {
+            healthData.records.forEach((record: HealthRecordApi) => {
               const dateKey = record.date.split('T')[0];
               const timeKey = record.time;
               
@@ -227,18 +303,18 @@ export default function NavigationBar() {
             });
           } else {
             console.log('❌ 健康記録取得失敗（ステータス:', healthResponse.status, '）、localStorageを使用');
-            saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+            saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
           }
         } catch (healthError) {
           console.log('❌ 健康記録取得エラー:', healthError, '、localStorageを使用');
-          saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+          saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
         }
         
         // 🆕 データベースからプロフィールを取得（エラーハンドリング強化）
         try {
           const profileResponse = await apiFetch(`/api/profiles?userId=${userId}`);
           if (profileResponse.ok) {
-            const profileData = await profileResponse.json();
+            const profileData = (await profileResponse.json()) as { profile?: ProfilePrintable | null };
             if (profileData.profile) {
               console.log('✅ プロフィールをデータベースから取得');
               profile = {
@@ -253,21 +329,21 @@ export default function NavigationBar() {
               };
             } else {
               console.log('❌ プロフィールなし、localStorageを使用');
-              profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+              profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
               if (liffDisplayName && !profile.displayName) {
                 profile.displayName = liffDisplayName; // ✅ LINE名をセット
               }
             }
           } else {
             console.log('❌ プロフィール取得失敗（ステータス:', profileResponse.status, '）、localStorageを使用');
-            profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+            profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
             if (liffDisplayName && !profile.displayName) {
               profile.displayName = liffDisplayName; // ✅ LINE名をセット
             }
           }
         } catch (profileError) {
           console.log('❌ プロフィール取得エラー:', profileError, '、localStorageを使用');
-          profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+          profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
           if (liffDisplayName && !profile.displayName) {
             profile.displayName = liffDisplayName; // ✅ LINE名をセット
           }
@@ -277,8 +353,8 @@ export default function NavigationBar() {
         try {
           const bloodRes = await apiFetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
           if (bloodRes.ok) {
-            const data = await bloodRes.json();
-            bloodDataList = Array.isArray(data) ? data : [];
+            const data = (await bloodRes.json()) as unknown;
+            bloodDataList = Array.isArray(data) ? (data as BloodDataItem[]) : [];
             console.log('✅ 血液検査/CPX をデータベースから取得:', bloodDataList.length);
           } else {
             console.log('❌ 血液検査/CPX 取得失敗（ステータス:', bloodRes.status, '）');
@@ -290,14 +366,14 @@ export default function NavigationBar() {
         }
       } catch (error) {
         console.error('データベースからの取得エラー、localStorageを使用:', error);
-        saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
-        profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+        saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
+        profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
         bloodDataList = [];
       }
 
-      const hasValue = (v: any) => !(v === null || v === undefined || v === '');
-      const fmt = (v: any) => (hasValue(v) ? String(v) : '');
-      const hasAnyBloodValue = (b: any) =>
+      const hasValue = (v: unknown) => !(v === null || v === undefined || v === '');
+      const fmt = (v: unknown) => (hasValue(v) ? String(v) : '');
+      const hasAnyBloodValue = (b: BloodDataItem) =>
         b?.hbA1c != null ||
         b?.randomBloodSugar != null ||
         b?.totalCholesterol != null ||
@@ -311,11 +387,11 @@ export default function NavigationBar() {
         b?.bnp != null;
 
       const bloodOnly = (bloodDataList || []).filter(hasAnyBloodValue);
-      const cpxFlat = (bloodDataList || []).flatMap((b: any) =>
-        (b?.cpxTests || []).map((c: any) => ({ c, parentDate: b.testDate }))
+      const cpxFlat = (bloodDataList || []).flatMap((b: BloodDataItem) =>
+        (b?.cpxTests || []).map((c: CpxTestItem) => ({ c, parentDate: b.testDate }))
       );
 
-      const buildFieldGrid = (pairs: Array<{ label: string; value: any; suffix?: string }>) => {
+      const buildFieldGrid = (pairs: Array<{ label: string; value: unknown; suffix?: string }>) => {
         const items = pairs
           .filter((p) => hasValue(p.value) && String(p.value).trim() !== '')
           .map((p) => `<div>${p.label}: ${fmt(p.value)}${p.suffix ?? ''}</div>`)
@@ -330,7 +406,7 @@ export default function NavigationBar() {
           ? `<div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 16px;">未登録</div>`
           : bloodOnly
               .map(
-                (b: any) => `
+                (b: BloodDataItem) => `
                   <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;">
                     <div style="font-weight: bold; margin-bottom: 6px;">検査日: ${fmt(b.testDate)}</div>
                     ${buildFieldGrid([
@@ -356,7 +432,7 @@ export default function NavigationBar() {
           ? `<div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 16px;">未登録</div>`
           : cpxFlat
               .map(
-                ({ c, parentDate }: any) => `
+                ({ c, parentDate }: { c: CpxTestItem; parentDate?: BloodDataItem['testDate'] }) => `
                   <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 12px;">
                     <div style="font-weight: bold; margin-bottom: 6px;">
                       検査日: ${fmt(c?.testDate || parentDate)} / CPX #${fmt(c?.cpxRound)}

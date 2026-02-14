@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // healthRecords を既存の /api/health-records と同じ形に整形
-    const formattedRecords = records.map((record: any) => ({
+    const formattedRecords = records.map((record) => ({
       id: record.id,
       date: record.date,
       time: record.time,
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       dailyLife: record.dailyLife,
       medicationTaken: record.medicationTaken,
       createdAt: record.createdAt,
-      medicalComments: (record.medicalComments || []).map((c: any) => ({
+      medicalComments: (record.medicalComments || []).map((c) => ({
         id: c.id,
         content: c.content,
         createdAt: c.createdAt,
@@ -100,17 +100,17 @@ export async function GET(request: NextRequest) {
     }));
 
     // CPXにもコメント履歴を付与する（返信用）
-    const formattedBlood = (bloodDataList as any[]).map((b) => ({
+    const formattedBlood = bloodDataList.map((b) => ({
       ...b,
-      labComments: (b.labComments || []).map((c: any) => ({
+      labComments: (b.labComments || []).map((c) => ({
         id: c.id,
         content: c.content,
         createdAt: c.createdAt,
         provider: { id: c.provider?.id, name: c.provider?.name ?? null, email: c.provider?.email },
       })),
-      cpxTests: (b.cpxTests || []).map((cpx: any) => ({
+      cpxTests: (b.cpxTests || []).map((cpx) => ({
         ...cpx,
-        labComments: (cpx.labComments || []).map((c: any) => ({
+        labComments: (cpx.labComments || []).map((c) => ({
           id: c.id,
           content: c.content,
           createdAt: c.createdAt,
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ records: formattedRecords, bloodDataList: formattedBlood });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/medical/patient-data GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

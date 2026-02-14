@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { setLineLoggedInDB, setLineLogin, setSession } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { buildLiffUrl, isLikelyLineInAppBrowser } from '@/lib/liffUrl';
+import type { Liff } from '@/types/liff';
 
 export default function LandingPage() {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [liff, setLiff] = useState<any>(null);
+  const [liff, setLiff] = useState<Liff | null>(null);
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'medical'>('patient');
@@ -72,10 +73,10 @@ export default function LandingPage() {
       }
     }
 
-    const waitForLiff = async (timeoutMs = 3500, intervalMs = 50) => {
+    const waitForLiff = async (timeoutMs = 3500, intervalMs = 50): Promise<Liff | null> => {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
-        if (typeof window !== 'undefined' && (window as any).liff) return (window as any).liff;
+        if (typeof window !== 'undefined' && window.liff) return window.liff;
         await new Promise((r) => setTimeout(r, intervalMs));
       }
       return null;

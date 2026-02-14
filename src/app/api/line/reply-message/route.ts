@@ -61,11 +61,12 @@ export async function POST(request: NextRequest) {
       });
       throw new Error(`LINE Reply API request failed: ${response.status} ${errorData}`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ LINE Reply API Error:', error);
     return NextResponse.json({ 
       error: 'Failed to send reply',
-      details: error?.message 
+      details: message 
     }, { status: 500 });
   }
 }

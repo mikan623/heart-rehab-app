@@ -121,9 +121,10 @@ export async function POST(request: NextRequest) {
             },
           });
           console.log('✅ 既存ユーザーを更新:', user.id);
-        } catch (err: any) {
+        } catch (err: unknown) {
           // email の一意制約エラー時は email 更新を諦めて継続
-          if (err?.code === 'P2002' && err?.meta?.target?.includes('email')) {
+          const errMeta = err as { code?: string; meta?: { target?: string[] } };
+          if (errMeta.code === 'P2002' && Array.isArray(errMeta.meta?.target) && errMeta.meta?.target.includes('email')) {
             user = await prisma.user.update({
               where: { id: verifiedUserId },
               data: {
@@ -159,11 +160,12 @@ export async function POST(request: NextRequest) {
     setAuthCookie(response, sessionToken);
     return response;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ LINE ユーザーセットアップエラー:', error);
     return NextResponse.json({ 
       error: 'Failed to setup LINE user',
-      details: error.message,
+      details: message,
       success: false
     }, { status: 500 });
   }
