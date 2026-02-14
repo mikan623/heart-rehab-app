@@ -33,11 +33,12 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ familyMembers });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Family members fetch error:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch family members',
-      details: error.message 
+      details: message 
     }, { status: 500 });
   }
 }
@@ -145,11 +146,12 @@ export async function POST(request: NextRequest) {
       familyMember: savedFamilyMember
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Family member save error:', error);
 
     // 一意制約違反（保険）
-    if (error.code === 'P2002') {
+    if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === 'P2002') {
       return NextResponse.json(
         { error: '同じ家族情報が既に登録されています。' },
         { status: 409 }
@@ -158,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       error: 'Failed to save family member',
-      details: error.message 
+      details: message 
     }, { status: 500 });
   }
 }
@@ -208,11 +210,12 @@ export async function PATCH(request: NextRequest) {
       familyMember: updatedMember
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Family member update error:', error);
     return NextResponse.json({ 
       error: 'Failed to update family member',
-      details: error.message 
+      details: message 
     }, { status: 500 });
   }
 }
@@ -259,11 +262,12 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json({ success: true });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Family member delete error:', error);
     return NextResponse.json({ 
       error: 'Failed to delete family member',
-      details: error.message 
+      details: message 
     }, { status: 500 });
   }
 }

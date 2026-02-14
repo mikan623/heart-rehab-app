@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7日後
 
-    const invite = await (prisma as any).familyInvite.create({
+    const invite = await prisma.familyInvite.create({
       data: {
         patientId,
         expiresAt,
@@ -47,10 +47,11 @@ export async function POST(request: NextRequest) {
       inviteId: invite.id,
       expiresAt: invite.expiresAt,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("❌ FamilyInvite POST error:", error);
     return NextResponse.json(
-      { error: "Failed to create invite", details: error?.message },
+      { error: "Failed to create invite", details: message },
       { status: 500 }
     );
   }
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const invite = await (prisma as any).familyInvite.findUnique({
+    const invite = await prisma.familyInvite.findUnique({
       where: { id: inviteId },
       include: {
         patient: {
@@ -105,10 +106,11 @@ export async function GET(request: NextRequest) {
       used: invite.used,
       isExpired,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("❌ FamilyInvite GET error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch invite", details: error?.message },
+      { error: "Failed to fetch invite", details: message },
       { status: 500 }
     );
   }
@@ -135,16 +137,17 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updated = await (prisma as any).familyInvite.update({
+    const updated = await prisma.familyInvite.update({
       where: { id: inviteId },
       data: { used: true },
     });
 
     return NextResponse.json({ success: true, inviteId: updated.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("❌ FamilyInvite PATCH error:", error);
     return NextResponse.json(
-      { error: "Failed to update invite", details: error?.message },
+      { error: "Failed to update invite", details: message },
       { status: 500 }
     );
   }

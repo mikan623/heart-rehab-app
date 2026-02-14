@@ -4,20 +4,7 @@ import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-
-// LIFF型定義を追加
-declare global {
-  interface Window {
-    liff: any;
-  }
-}
-
-interface LiffProfile {
-  userId: string;
-  displayName: string;
-  pictureUrl?: string;
-  statusMessage?: string;
-}
+import type { Liff, LiffProfile } from "@/types/liff";
 
 interface UserProfile {
   userId: string;
@@ -57,8 +44,8 @@ export default function ProfilePage() {
   // 🆕 追加：LINEアプリ最適化用の状態
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
-  const [liff, setLiff] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [liff, setLiff] = useState<Liff | null>(null);
+  const [user, setUser] = useState<LiffProfile | null>(null);
   
   // （プロフィール画面での「LINE連携」機能は廃止。LINEログイン自体は維持）
   

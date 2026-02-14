@@ -81,10 +81,12 @@ export async function GET(request: NextRequest) {
     console.log('📋 Patients found:', patients.length);
 
     return NextResponse.json({ patients });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
     console.error('❌ Medical patients search API error:', {
-      message: error?.message,
-      stack: error?.stack,
+      message,
+      stack,
     });
 
     return NextResponse.json(

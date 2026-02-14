@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
+import type { AuthSession } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import NavigationBar from "@/components/NavigationBar";
 import { readJsonOrThrow } from "@/lib/readJson";
@@ -18,6 +19,7 @@ import {
   Legend,
   Filler, 
 } from 'chart.js';
+import type { Chart, ChartData, ChartOptions, Plugin, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
 ChartJS.register(
@@ -40,6 +42,18 @@ interface HealthRecord {
   dailyLife?: string;
 }
 
+type HealthRecordApi = {
+  date?: string;
+  time?: string;
+  bloodPressure?: { systolic?: number | string; diastolic?: number | string };
+  pulse?: number | string | null;
+  weight?: number | string | null;
+  medicationTaken?: boolean | null;
+  dailyLife?: string | null;
+};
+
+type HealthRecordsResponse = { records?: HealthRecordApi[] };
+
 interface WeekData {
   labels: string[]; // X軸ラベル ('12/20 09:00', '12/20 10:00'...)
   bloodPressureSystolic: Array<number | null>;
@@ -61,7 +75,7 @@ export default function GraphPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savedRecords, setSavedRecords] = useState<{ [key: string]: { [key: string]: HealthRecord } }>({});
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthSession | null>(null);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [heightCm, setHeightCm] = useState<number | null>(null);
   const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight' | 'bmi'>('bloodPressure');
@@ -97,9 +111,9 @@ export default function GraphPage() {
   };
 
   // 正常範囲の薄塗り（血圧・脈拍）
-  const normalRangePlugin = {
+  const normalRangePlugin: Plugin<'line'> = {
     id: 'normalRange',
-    beforeDraw: (chart: any) => {
+    beforeDraw: (chart: Chart) => {
       if (!chart?.scales?.y || !chart?.chartArea) return;
       if (activeMetric !== 'bloodPressure' && activeMetric !== 'pulse') return;
 
@@ -134,12 +148,12 @@ export default function GraphPage() {
     return `${baseKey}_local`;
   };
 
-  const loadLocalRecords = (overrideUserId?: string) => {
+  const loadLocalRecords = (overrideUserId?: string): { [date: string]: { [time: string]: HealthRecord } } => {
     if (typeof window === 'undefined') return {};
     try {
       const raw = localStorage.getItem(localStorageKey('healthRecords', overrideUserId));
       if (!raw) return {};
-      return JSON.parse(raw);
+      return JSON.parse(raw) as { [date: string]: { [time: string]: HealthRecord } };
     } catch {
       return {};
     }
@@ -235,19 +249,24 @@ export default function GraphPage() {
 
         const res = await apiFetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
-          const data = await readJsonOrThrow(res);
+          const data = await readJsonOrThrow<HealthRecordsResponse>(res);
           const records = Array.isArray(data.records) ? data.records : [];
 
           // 日付→時刻→記録 のマップに整形
           const grouped: { [date: string]: { [time: string]: HealthRecord } } = {};
-          records.forEach((r: any) => {
+          records.forEach((r: HealthRecordApi) => {
             const date = normalizeDateKey(r.date);
             const time = r.time || '08:00';
             if (!grouped[date]) grouped[date] = {};
+            const systolic = r.bloodPressure?.systolic;
+            const diastolic = r.bloodPressure?.diastolic;
             grouped[date][time] = {
-              bloodPressure: r.bloodPressure || { systolic: '', diastolic: '' },
-              pulse: r.pulse?.toString?.() || '',
-              weight: r.weight?.toString?.() || '',
+              bloodPressure: {
+                systolic: systolic === null || systolic === undefined ? '' : String(systolic),
+                diastolic: diastolic === null || diastolic === undefined ? '' : String(diastolic),
+              },
+              pulse: r.pulse === null || r.pulse === undefined ? '' : String(r.pulse),
+              weight: r.weight === null || r.weight === undefined ? '' : String(r.weight),
               medicationTaken: r.medicationTaken ?? false,
               dailyLife: r.dailyLife || '',
             };
@@ -255,11 +274,11 @@ export default function GraphPage() {
 
           // ローカルストレージのバックアップもマージ
           const localSaved = loadLocalRecords(userId);
-          Object.entries(localSaved).forEach(([dateKey, times]: any) => {
+          Object.entries(localSaved).forEach(([dateKey, times]) => {
             const normalizedDate = normalizeDateKey(dateKey);
             if (!normalizedDate) return;
             if (!grouped[normalizedDate]) grouped[normalizedDate] = {};
-            Object.entries(times).forEach(([timeKey, entry]: any) => {
+            Object.entries(times).forEach(([timeKey, entry]) => {
               grouped[normalizedDate][timeKey] = {
                 bloodPressure: entry.bloodPressure || { systolic: '', diastolic: '' },
                 pulse: entry.pulse?.toString?.() || '',
@@ -350,11 +369,11 @@ export default function GraphPage() {
       if (!dayRecords) continue;
 
       const timeKeys = Object.keys(dayRecords)
-        .filter((k) => !!(dayRecords as any)[k])
+        .filter((k) => !!dayRecords[k])
         .sort((a, b) => String(a).localeCompare(String(b)));
 
       for (const timeKey of timeKeys) {
-        const record: any = (dayRecords as any)[timeKey];
+        const record = dayRecords[timeKey];
         if (!record) continue;
 
         const displayTime = timeKey === 'morning' ? '08:00' : timeKey;
@@ -433,7 +452,7 @@ export default function GraphPage() {
       ? arr.map((v, idx) => (activeSlot === 'all' || weekData.points[idx].slot === activeSlot ? v : null))
       : arr;
 
-  const lineChartData = hasPoints && weekData ? {
+  const lineChartData: ChartData<'line'> | null = hasPoints && weekData ? {
     labels: weekData.labels,
     datasets: activeMetric === 'bloodPressure'
       ? [
@@ -520,7 +539,7 @@ export default function GraphPage() {
         ]
   } : null;
 
-  const emptyLineData = !hasPoints && weekData ? {
+  const emptyLineData: ChartData<'line'> | null = !hasPoints && weekData ? {
     labels: emptyWeekLabels,
     datasets:
       activeMetric === 'bloodPressure'
@@ -600,7 +619,7 @@ export default function GraphPage() {
           ],
   } : null;
 
-  const chartOptions = {
+  const chartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -609,11 +628,11 @@ export default function GraphPage() {
       },
       tooltip: {
         callbacks: {
-          title: (items: any[]) => {
+          title: (items: TooltipItem<'line'>[]) => {
             if (!items?.length) return '';
             return items[0].label || '';
           },
-          label: (ctx: any) => {
+          label: (ctx: TooltipItem<'line'>) => {
             if (!weekData) return '';
             const idx = ctx.dataIndex;
             if (activeMetric === 'bloodPressure') {
@@ -821,9 +840,9 @@ export default function GraphPage() {
             <div className="h-64">
               <Line
                 key={`chart-${activeMetric}`}
-                data={(lineChartData || emptyLineData) as any}
-                options={chartOptions as any}
-                plugins={[normalRangePlugin as any]}
+                data={lineChartData || emptyLineData}
+                options={chartOptions}
+                plugins={[normalRangePlugin]}
                 />
               </div>
             </div>
@@ -836,15 +855,15 @@ export default function GraphPage() {
         >
           <div className="text-lg md:text-xl font-extrabold text-gray-800 mb-3">表示</div>
           <div className="grid grid-cols-4 gap-2 md:flex md:flex-nowrap md:gap-3 md:overflow-x-auto md:whitespace-nowrap">
-            {[
+            {([
               { key: 'all', label: 'すべて', cls: 'bg-gray-700 border-gray-700 text-white hover:bg-gray-800' },
               { key: 'morning', label: '朝', cls: 'bg-green-500 border-green-500 text-white hover:bg-green-600' },
               { key: 'noon', label: '昼', cls: 'bg-blue-500 border-blue-500 text-white hover:bg-blue-600' },
               { key: 'night', label: '夜', cls: 'bg-purple-500 border-purple-500 text-white hover:bg-purple-600' },
-            ].map((s) => (
+            ] as const).map((s) => (
                 <button
                 key={s.key}
-                onClick={() => setActiveSlot(s.key as any)}
+                onClick={() => setActiveSlot(s.key)}
                 className={`w-full px-2 md:px-5 py-2 rounded-full text-sm md:text-lg font-extrabold border transition ${
                   activeSlot === s.key ? s.cls : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                 }`}
@@ -871,7 +890,7 @@ export default function GraphPage() {
             
             if (!dayRecord) return null;
 
-            const record = (dayRecord as any)[p.timeKey] || Object.values(dayRecord)[0];
+            const record = dayRecord[p.timeKey] || Object.values(dayRecord)[0];
             if (!record) return null;
 
             const slotLabel = p.slot === 'morning' ? '朝' : p.slot === 'noon' ? '昼' : '夜';

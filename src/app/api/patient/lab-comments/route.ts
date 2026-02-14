@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      comments: comments.map((c: any) => ({
+      comments: comments.map((c) => ({
         id: c.id,
         createdAt: c.createdAt,
         content: c.content,
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
           : null,
       })),
     }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/patient/lab-comments GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }

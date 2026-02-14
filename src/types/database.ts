@@ -32,8 +32,8 @@ export interface HealthRecord {
   bloodPressureDiastolic: number;
   pulse?: number;
   weight?: number;
-  exercise?: any;
-  meal?: any;
+  exercise?: unknown;
+  meal?: unknown;
   dailyLife?: string;
   createdAt: Date;
   updatedAt: Date;

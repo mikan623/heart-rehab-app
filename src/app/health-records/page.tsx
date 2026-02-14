@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import type { Liff, LiffProfile } from "@/types/liff";
 
 // 健康記録の型定義
 type EditSection =
@@ -34,6 +35,13 @@ interface HealthRecord {
   medicationTaken: boolean;
   medicationTimes: { morning: boolean; noon: boolean; night: boolean };
 }
+
+type SavedRecords = Record<string, Record<string, HealthRecord>>;
+
+type FamilyMember = {
+  lineUserId?: string;
+  isRegistered?: boolean | string;
+};
 
 type PrintBloodData = {
   id: string;
@@ -66,13 +74,6 @@ type PrintCPXTest = {
   systolicBloodPressure: number | null;
   findings: string | null;
 };
-
-// LIFFの型定義を追加
-declare global {
-  interface Window {
-    liff: any;
-  }
-}
 
 // 食事ガイドデータ
 const MEAL_GUIDE = [
@@ -191,10 +192,10 @@ export default function Home() {
     
     // 印刷用テーブル行を生成
     try {
-      const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+      const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
       const rows: React.ReactNode[] = [];
-      Object.entries(saved).forEach(([date, times]: any) => {
-        Object.entries(times).forEach(([time, record]: any) => {
+      Object.entries(saved).forEach(([date, times]) => {
+        Object.entries(times).forEach(([time, record]) => {
           if (!record) return;
           rows.push(
             <tr key={`${date}-${time}`}>
@@ -422,11 +423,11 @@ export default function Home() {
 
     const sys = healthRecord?.bloodPressure?.systolic?.trim?.() ?? '';
     const dia = healthRecord?.bloodPressure?.diastolic?.trim?.() ?? '';
-    const pulse = (healthRecord as any)?.pulse?.trim?.() ?? '';
-    const weight = (healthRecord as any)?.weight?.trim?.() ?? '';
-    const dur = (healthRecord as any)?.exercise?.duration?.trim?.() ?? '';
-    const mealOther = String((healthRecord as any)?.meal?.other ?? '');
-    const dailyLife = String((healthRecord as any)?.dailyLife ?? '');
+    const pulse = healthRecord.pulse?.trim?.() ?? '';
+    const weight = healthRecord.weight?.trim?.() ?? '';
+    const dur = healthRecord.exercise?.duration?.trim?.() ?? '';
+    const mealOther = String(healthRecord.meal?.other ?? '');
+    const dailyLife = String(healthRecord.dailyLife ?? '');
 
     if (!sys) add('bloodPressure.systolic', '収縮期血圧（上）は必須です');
     if (!dia) add('bloodPressure.diastolic', '拡張期血圧（下）は必須です');
@@ -549,8 +550,8 @@ export default function Home() {
   const [showMealGuide, setShowMealGuide] = useState(false);
 
   // LIFF関連の状態を追加
-  const [liff, setLiff] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [liff, setLiff] = useState<Liff | null>(null);
+  const [user, setUser] = useState<LiffProfile | null>(null);
   const [isLiffReady, setIsLiffReady] = useState(false);
   // 心臓ちゃんの表情状態を追加
   const [heartEmotion, setHeartEmotion] = useState('normal');
@@ -799,9 +800,10 @@ export default function Home() {
   };
 
   // 健康記録を家族全員に自動送信
-  const shareHealthRecordToAllFamily = async (healthRecord: any) => {
+  const shareHealthRecordToAllFamily = async (healthRecord: HealthRecord) => {
     // 家族メンバー情報を取得
-    const familyMembers = JSON.parse(localStorage.getItem('familyMembers') || '[]');
+    const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]') as unknown;
+    const familyMembers: FamilyMember[] = Array.isArray(raw) ? (raw as FamilyMember[]) : [];
     
     const message = `💖 心臓ちゃんからの健康報告 💖\n\n` +
       `日時: ${new Date().toLocaleDateString('ja-JP')}\n` +
@@ -813,8 +815,8 @@ export default function Home() {
       `\n心臓ちゃんからのメッセージ: 今日もお疲れ様でした！💪`;
 
     // 登録済みの家族メンバーに送信
-    const registeredMembers = familyMembers.filter((member: any) => 
-      member.isRegistered && member.lineUserId
+    const registeredMembers = familyMembers.filter(
+      (member) => Boolean(member.lineUserId) && (member.isRegistered === true || member.isRegistered === 'true')
     );
 
     for (const member of registeredMembers) {
@@ -823,7 +825,7 @@ export default function Home() {
   };
 
   // 異常値検出時の緊急通知
-  const sendEmergencyNotification = async (healthRecord: any) => {
+  const sendEmergencyNotification = async (healthRecord: HealthRecord) => {
     const isAbnormal = 
       parseInt(healthRecord.bloodPressure?.systolic) > 180 ||
       parseInt(healthRecord.bloodPressure?.diastolic) > 110 ||
@@ -839,10 +841,11 @@ export default function Home() {
         `心臓ちゃんより💖`;
 
       // 家族メンバー情報を取得
-      const familyMembers = JSON.parse(localStorage.getItem('familyMembers') || '[]');
+      const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]') as unknown;
+      const familyMembers: FamilyMember[] = Array.isArray(raw) ? (raw as FamilyMember[]) : [];
       
-      const registeredMembers = familyMembers.filter((member: any) => 
-        member.isRegistered && member.lineUserId
+      const registeredMembers = familyMembers.filter(
+        (member) => Boolean(member.lineUserId) && (member.isRegistered === true || member.isRegistered === 'true')
       );
 
       for (const member of registeredMembers) {
@@ -960,13 +963,15 @@ export default function Home() {
                       .then(() => {
                         console.log('✅ Bot に健康記録メッセージ送信成功');
                       })
-                      .catch((error: any) => {
-                        console.log('⚠️ メッセージ送信失敗（無視）:', error?.message);
+                      .catch((error: unknown) => {
+                        const message = error instanceof Error ? error.message : String(error);
+                        console.log('⚠️ メッセージ送信失敗（無視）:', message);
                       });
                     }
                   })
-                  .catch((error: any) => {
-                    console.log('⚠️ Messaging API LIFF 初期化失敗（無視）:', error?.message);
+                  .catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    console.log('⚠️ Messaging API LIFF 初期化失敗（無視）:', message);
                   });
               }
             } else {
@@ -1017,9 +1022,13 @@ export default function Home() {
         // フォームをリセット
         setHealthRecord(createEmptyHealthRecord());
       } else {
-        const error = await readJsonOrThrow(response).catch(() => ({} as any));
-        if (response.status === 400 && (error as any)?.fieldErrors) {
-          const fe = (error as any).fieldErrors as Record<string, string>;
+        const error = await readJsonOrThrow<unknown>(response).catch(() => ({}));
+        const fieldErrors =
+          typeof error === 'object' && error && 'fieldErrors' in error
+            ? (error as { fieldErrors?: Record<string, string> }).fieldErrors
+            : undefined;
+        if (response.status === 400 && fieldErrors) {
+          const fe = fieldErrors;
           setFieldErrors(fe);
           setFormError('入力内容にエラーがあります。赤枠の項目を修正してください。');
           const keys = Object.keys(fe);
@@ -1029,7 +1038,11 @@ export default function Home() {
           else if (first === 'weight') setActiveSection('weight');
           else if (first.startsWith('exercise.')) setActiveSection('exercise');
         } else {
-          alert(`保存に失敗しました: ${(error as any)?.error || '不明なエラー'}`);
+          const errorMessage =
+            typeof error === 'object' && error && 'error' in error
+              ? (error as { error?: string }).error
+              : undefined;
+          alert(`保存に失敗しました: ${errorMessage || '不明なエラー'}`);
         }
         setSaveStatus('idle');
       }
@@ -1078,12 +1091,12 @@ export default function Home() {
 
   // CSV形式でもエクスポート
   const exportCSV = () => {
-    const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}');
+    const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
     
     let csv = '日付,時間,収縮期血圧,拡張期血圧,脈拍,体重,運動種目,運動時間,主食,主菜,副菜,その他,服薬確認,日常生活\n';
     
-    Object.entries(saved).forEach(([date, times]: any) => {
-      Object.entries(times).forEach(([time, record]: any) => {
+    Object.entries(saved).forEach(([date, times]) => {
+      Object.entries(times).forEach(([time, record]) => {
         if (!record) return;
         
         const row = [
@@ -1191,8 +1204,8 @@ export default function Home() {
 
   // 食事内容が「何か1つでも」入力されているか（配列チェック or その他テキスト）
   const hasMealInput = (() => {
-    const meal = (healthRecord as any)?.meal;
-    const hasArray = (v: any) => Array.isArray(v) && v.filter(Boolean).length > 0;
+    const meal = healthRecord.meal;
+    const hasArray = (v: unknown) => Array.isArray(v) && v.filter(Boolean).length > 0;
     const other =
       typeof meal?.other === 'string' ? meal.other.trim().length > 0 : Boolean(meal?.other);
     return hasArray(meal?.staple) || hasArray(meal?.mainDish) || hasArray(meal?.sideDish) || other;
@@ -1327,8 +1340,8 @@ export default function Home() {
               >
                 <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">🩸 血圧</span>
                 <span className="text-base md:text-xl font-semibold text-gray-700">
-                  {(healthRecord as any)?.bloodPressure?.systolic || (healthRecord as any)?.bloodPressure?.diastolic
-                    ? `${(healthRecord as any)?.bloodPressure?.systolic || '-'} / ${(healthRecord as any)?.bloodPressure?.diastolic || '-'}`
+                  {healthRecord.bloodPressure?.systolic || healthRecord.bloodPressure?.diastolic
+                    ? `${healthRecord.bloodPressure?.systolic || '-'} / ${healthRecord.bloodPressure?.diastolic || '-'}`
                     : '未入力'}
                 </span>
               </button>
@@ -1404,8 +1417,8 @@ export default function Home() {
               >
                 <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">🚴 運動内容</span>
                 <span className="text-base md:text-xl font-semibold text-gray-700">
-                  {(healthRecord as any)?.exercise?.type || (healthRecord as any)?.exercise?.duration
-                    ? `${(healthRecord as any)?.exercise?.type || ''} ${(healthRecord as any)?.exercise?.duration || ''}分`
+                  {healthRecord.exercise?.type || healthRecord.exercise?.duration
+                    ? `${healthRecord.exercise?.type || ''} ${healthRecord.exercise?.duration || ''}分`
                     : '未入力'}
                 </span>
               </button>
@@ -1539,7 +1552,7 @@ export default function Home() {
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
-                      style={{ WebkitAppearance: 'textfield' as any }}
+                      style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['bloodPressure.systolic'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.systolic']}</p>
@@ -1570,7 +1583,7 @@ export default function Home() {
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
-                      style={{ WebkitAppearance: 'textfield' as any }}
+                      style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['bloodPressure.diastolic'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.diastolic']}</p>
@@ -1632,7 +1645,7 @@ export default function Home() {
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-pink-300 focus:border-pink-500'
                   }`}
-                  style={{ WebkitAppearance: 'textfield' as any }}
+                  style={{ WebkitAppearance: 'textfield' }}
               />
                 {fieldErrors['pulse'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>
@@ -1706,7 +1719,7 @@ export default function Home() {
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['weight'] ? 'border-red-400 focus:border-red-500' : 'border-yellow-300 focus:border-yellow-500'
                   }`}
-                      style={{ WebkitAppearance: 'textfield' as any }}
+                      style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['weight'] ? (
                   <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>
@@ -1801,7 +1814,7 @@ export default function Home() {
                           ? 'border-red-400 focus:border-red-500'
                           : 'border-green-300 focus:border-green-500'
                       }`}
-                          style={{ WebkitAppearance: 'textfield' as any }}
+                          style={{ WebkitAppearance: 'textfield' }}
                     />
                     {fieldErrors['exercise.duration'] ? (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors['exercise.duration']}</p>
@@ -2011,7 +2024,7 @@ export default function Home() {
                     { key: 'noon', label: '昼' },
                     { key: 'night', label: '夜' },
                   ].map((t) => {
-                    const checked = (healthRecord as any)?.medicationTimes?.[t.key] || false;
+                    const checked = healthRecord.medicationTimes?.[t.key as keyof HealthRecord['medicationTimes']] || false;
                     return (
                       <label
                         key={t.key}
@@ -2022,12 +2035,12 @@ export default function Home() {
                           checked={checked}
                           onChange={(e) => {
                             const nextTimes = {
-                              ...(healthRecord as any)?.medicationTimes,
+                              ...healthRecord.medicationTimes,
                               [t.key]: e.target.checked,
                             };
                             const anyTaken = !!(nextTimes.morning || nextTimes.noon || nextTimes.night);
                             setHealthRecord({
-                              ...(healthRecord as any),
+                              ...healthRecord,
                               medicationTimes: nextTimes,
                               medicationTaken: anyTaken,
                             });
@@ -2418,10 +2431,10 @@ export default function Home() {
         <p className="text-center text-sm text-gray-500 mb-6">作成日: {printCreatedDate}</p>
 
         {(() => {
-          let p: any = {};
-              try {
-            p = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-              } catch {
+          let p: Record<string, unknown> = {};
+          try {
+            p = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as Record<string, unknown>;
+          } catch {
             p = {};
           }
 
@@ -2485,7 +2498,7 @@ export default function Home() {
 
         {/* 血液検査データ / 運動負荷試験（CPX）データ（PDFに掲載） */}
         {(() => {
-          const fmt = (v: any) => (v === null || v === undefined || v === '' ? '-' : String(v));
+          const fmt = (v: unknown) => (v === null || v === undefined || v === '' ? '-' : String(v));
           const hasAnyBloodValue = (b: PrintBloodData) =>
             b.hbA1c != null ||
             b.randomBloodSugar != null ||

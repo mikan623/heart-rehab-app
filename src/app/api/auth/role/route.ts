@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ role: user?.role || "patient" });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("❌ /api/auth/role GET error:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ role: user.role });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("❌ /api/auth/role POST error:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

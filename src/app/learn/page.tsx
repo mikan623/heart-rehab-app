@@ -5,13 +5,6 @@ import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn } from "@/lib/auth";
 import PageHeader from "@/components/PageHeader";
 
-// LIFF型定義を追加
-declare global {
-  interface Window {
-    liff: any;
-  }
-}
-
 const learningContent = [
   {
     id: 1,

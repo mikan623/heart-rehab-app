@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
-declare global {
-  interface Window {
-    liff: any;
-  }
-}
-
 interface InviteInfo {
   valid: boolean;
   patientId: string;
@@ -91,9 +85,10 @@ export default function FamilyInvitePage() {
         if (!data.valid) {
           setError("この招待リンクは無効か、すでに利用されています。");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
-        setError("招待情報の読み込み中にエラーが発生しました。");
+        const message = err instanceof Error ? err.message : "招待情報の読み込み中にエラーが発生しました。";
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -153,9 +148,10 @@ export default function FamilyInvitePage() {
 
       setCompleted(true);
       alert("家族として登録が完了しました。公式LINEアカウントに招待コードを送信して連携を完了してください。");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "登録に失敗しました。");
+      const message = err instanceof Error ? err.message : "登録に失敗しました。";
+      setError(message);
     } finally {
       setSubmitting(false);
     }

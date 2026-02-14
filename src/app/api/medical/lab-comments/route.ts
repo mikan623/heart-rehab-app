@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       data: { providerId, patientId, cpxTestId: targetId, content },
     });
     return NextResponse.json({ success: true, comment: created });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/medical/lab-comments POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

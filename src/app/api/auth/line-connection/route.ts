@@ -45,11 +45,12 @@ export async function GET(request: NextRequest) {
       lineUserId: user.lineUserId || null
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ LINE 連携状態取得エラー:', error);
     return NextResponse.json({ 
       lineConnected: false,
-      error: error.message 
+      error: message 
     }, { status: 500 });
   }
 }
@@ -110,11 +111,12 @@ export async function POST(request: NextRequest) {
       user: updatedUser
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ LINE 連携状態更新エラー:', error);
     return NextResponse.json({ 
       error: 'Failed to update LINE connection status',
-      details: error.message,
+      details: message,
       success: false
     }, { status: 500 });
   }

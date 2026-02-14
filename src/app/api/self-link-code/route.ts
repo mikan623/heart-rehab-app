@@ -63,10 +63,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ code: user.selfLinkCode });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ self-link-code API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 }
     );
   }

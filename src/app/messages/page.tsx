@@ -36,29 +36,44 @@ interface CommentItem {
     bloodPressure: { systolic: number; diastolic: number };
     pulse: number | null;
     weight: number | null;
-    exercise: any;
-    meal: any;
+    exercise: { type?: string; duration?: string } | null;
+    meal: { staple?: string[]; mainDish?: string[]; sideDish?: string[]; other?: string } | null;
     dailyLife: string | null;
     medicationTaken: boolean | null;
   };
 }
 
+interface LabCommentItem {
+  id: string;
+  content: string;
+  createdAt: string;
+  provider?: { id?: string; name?: string | null; email?: string };
+  kind: 'blood' | 'cpx';
+  bloodData?: { testDate?: string | null } | null;
+  cpx?: { testDate?: string | null; parentBloodTestDate?: string | null; cpxRound?: number | null } | null;
+}
+
+type InvitesResponse = { invites?: InviteItem[]; error?: string };
+type CommentsResponse = { comments?: CommentItem[]; error?: string };
+type LabCommentsResponse = { comments?: LabCommentItem[]; error?: string };
+type ApiErrorResponse = { error?: string };
+
 export default function MessagesPage() {
   const userId = useMemo(() => getCurrentUserId(), []);
   const [invites, setInvites] = useState<InviteItem[]>([]);
   const [comments, setComments] = useState<CommentItem[]>([]);
-  const [labComments, setLabComments] = useState<any[]>([]);
+  const [labComments, setLabComments] = useState<LabCommentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
-    let lastErr: any = null;
+    let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = await res.json().catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as unknown;
         if (res.ok) return { ok: true as const, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
@@ -95,21 +110,36 @@ export default function MessagesPage() {
 
       if (!invR.ok) {
         setInvites([]);
-        setError((invR.data as any)?.error || '招待の取得に失敗しました');
+        const errorMessage =
+          typeof invR.data === 'object' && invR.data && 'error' in invR.data
+            ? (invR.data as ApiErrorResponse).error
+            : undefined;
+        setError(errorMessage || '招待の取得に失敗しました');
       } else {
-        setInvites(((invR.data as any)?.invites || []) as InviteItem[]);
+        const invData = invR.data as InvitesResponse;
+        setInvites(Array.isArray(invData.invites) ? invData.invites : []);
       }
       if (!cR.ok) {
         setComments([]);
-        setError((prev) => prev || (cR.data as any)?.error || 'コメント通知の取得に失敗しました');
+        const errorMessage =
+          typeof cR.data === 'object' && cR.data && 'error' in cR.data
+            ? (cR.data as ApiErrorResponse).error
+            : undefined;
+        setError((prev) => prev || errorMessage || 'コメント通知の取得に失敗しました');
       } else {
-        setComments(((cR.data as any)?.comments || []) as CommentItem[]);
+        const commentData = cR.data as CommentsResponse;
+        setComments(Array.isArray(commentData.comments) ? commentData.comments : []);
       }
       if (!labR.ok) {
         setLabComments([]);
-        setError((prev) => prev || (labR.data as any)?.error || '検査コメント通知の取得に失敗しました');
+        const errorMessage =
+          typeof labR.data === 'object' && labR.data && 'error' in labR.data
+            ? (labR.data as ApiErrorResponse).error
+            : undefined;
+        setError((prev) => prev || errorMessage || '検査コメント通知の取得に失敗しました');
       } else {
-        setLabComments(((labR.data as any)?.comments || []) as any[]);
+        const labData = labR.data as LabCommentsResponse;
+        setLabComments(Array.isArray(labData.comments) ? labData.comments : []);
       }
     } catch (e) {
       console.error(e);
@@ -149,7 +179,11 @@ export default function MessagesPage() {
         2
       );
       if (!ok) {
-        setError((data as any)?.error || '操作に失敗しました');
+        const errorMessage =
+          typeof data === 'object' && data && 'error' in data
+            ? (data as ApiErrorResponse).error
+            : undefined;
+        setError(errorMessage || '操作に失敗しました');
         return;
       }
       await fetchAll();
@@ -265,7 +299,7 @@ export default function MessagesPage() {
             <div className="text-gray-600">コメントはありません。</div>
           ) : (
             <div className="space-y-3">
-              {labComments.map((c: any) => (
+              {labComments.map((c) => (
                 <div key={c.id} className="rounded-xl border border-gray-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

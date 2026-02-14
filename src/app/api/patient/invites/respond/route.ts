@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, invite: updated }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/patient/invites/respond POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }

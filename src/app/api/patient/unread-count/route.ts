@@ -40,9 +40,10 @@ export async function GET(request: NextRequest) {
     const safeCount = async (fn: () => Promise<number>) => {
       try {
         return await fn();
-      } catch (err: any) {
+      } catch (err: unknown) {
         // 旧スキーマなどでテーブルが無い場合は未読0として扱う
-        if (err?.code === 'P2021' || err?.code === 'P2022') {
+        const code = typeof err === 'object' && err && 'code' in err ? (err as { code?: string }).code : undefined;
+        if (code === 'P2021' || code === 'P2022') {
           return 0;
         }
         throw err;
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
         unreadLabComments,
       },
     }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ /api/patient/unread-count GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }

@@ -44,14 +44,13 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ profile });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Profile fetch error:', error);
-    
-    const errorMessage = typeof error === 'object' ? (error?.message || 'Unknown error') : String(error);
     
     return NextResponse.json({ 
       error: 'Failed to fetch profile',
-      details: errorMessage
+      details: message
     }, { status: 500 });
   }
 }
@@ -154,14 +153,13 @@ export async function POST(request: NextRequest) {
       profile: savedProfile
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('❌ Profile save error:', error);
-    
-    const errorMessage = typeof error === 'object' ? (error?.message || 'Unknown error') : String(error);
     
     return NextResponse.json({ 
       error: 'Failed to save profile',
-      details: errorMessage
+      details: message
     }, { status: 500 });
   }
 }
