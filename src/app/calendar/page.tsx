@@ -40,6 +40,18 @@ type ApiHealthRecord = {
 
 type HealthRecordsResponse = { records: ApiHealthRecord[] };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getErrorMessage = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.error === 'string' ? value.error : undefined;
+
+const getProfileHeight = (value: unknown): unknown =>
+  isRecord(value) && isRecord(value.profile) ? value.profile.height : undefined;
+
+const getApiRecords = (value: unknown): ApiHealthRecord[] =>
+  isRecord(value) && Array.isArray(value.records) ? value.records : [];
+
 export default function CalendarPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -216,18 +228,22 @@ export default function CalendarPage() {
   const [isLiffReady, setIsLiffReady] = useState(false);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+  type FetchResult<T = unknown> =
+    | { ok: true; status: number; data: T }
+    | { ok: false; status: number; data: T };
+
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2): Promise<FetchResult> => {
     let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = (await res.json().catch(() => ({}))) as unknown;
-        if (res.ok) return { ok: true as const, status: res.status, data };
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
           continue;
         }
-        return { ok: false as const, status: res.status, data };
+        return { ok: false, status: res.status, data };
       } catch (e) {
         lastErr = e;
         if (attempt < retries) {
@@ -364,10 +380,7 @@ export default function CalendarPage() {
       try {
         const { ok, data } = await fetchJsonWithRetry(`/api/profiles?userId=${encodeURIComponent(userId)}`);
         if (ok) {
-          const hRaw =
-            typeof data === 'object' && data && 'profile' in data
-              ? (data as { profile?: { height?: unknown } }).profile?.height
-              : undefined;
+          const hRaw = getProfileHeight(data);
           const h =
             hRaw === null || hRaw === undefined || hRaw === ''
               ? null
@@ -399,10 +412,7 @@ export default function CalendarPage() {
         
         // データベースの形式をカレンダー表示用に変換
         const formattedRecords: SavedRecords = {};
-        const records =
-          typeof data === 'object' && data && 'records' in data && Array.isArray((data as HealthRecordsResponse).records)
-            ? (data as HealthRecordsResponse).records
-            : [];
+        const records = getApiRecords(data);
         
         records.forEach((record: ApiHealthRecord) => {
           const dateKey = record.date.split('T')[0]; // YYYY-MM-DD形式
@@ -431,11 +441,7 @@ export default function CalendarPage() {
         console.log('Formatted records:', formattedRecords);
         setSavedRecords(formattedRecords);
       } else {
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as { error?: string }).error
-            : undefined;
-        console.error('Failed to fetch health records:', status, errorMessage);
+        console.error('Failed to fetch health records:', status, getErrorMessage(data));
       }
     } catch (error) {
       console.error('Error fetching health records:', error);
@@ -457,8 +463,13 @@ export default function CalendarPage() {
       try {
         const raw = localStorage.getItem('lastSavedRecord');
         if (raw) {
-          const parsed = JSON.parse(raw) as { date?: string; time?: string; savedAt?: number };
-          if (parsed.date && parsed.time && parsed.savedAt) {
+          const parsed = JSON.parse(raw);
+          if (
+            isRecord(parsed) &&
+            typeof parsed.date === 'string' &&
+            typeof parsed.time === 'string' &&
+            typeof parsed.savedAt === 'number'
+          ) {
             const elapsed = Date.now() - parsed.savedAt;
             // 5分以内ならハイライト対象にする
             if (elapsed <= 5 * 60 * 1000) {
@@ -677,7 +688,13 @@ export default function CalendarPage() {
       } else {
         const errorData = await readJsonOrThrow(response);
         console.error('❌ カレンダー: データベース保存失敗:', errorData);
-        alert(`保存に失敗しました: ${errorData.details || errorData.error}`);
+        const details =
+          isRecord(errorData) && typeof errorData.details === 'string'
+            ? errorData.details
+            : isRecord(errorData) && typeof errorData.error === 'string'
+            ? errorData.error
+            : undefined;
+        alert(`保存に失敗しました: ${details || '不明なエラー'}`);
         setSaveStatus('idle');
       }
 
@@ -1057,17 +1074,17 @@ export default function CalendarPage() {
                         
                         {/* 記録の詳細 */}
                         <div className="space-y-2 text-sm">
-                          {((record as HealthRecord).bloodPressure?.systolic || (record as HealthRecord).bloodPressure?.diastolic) && (
-                            <p className="text-gray-700"><span className="font-semibold">血圧:</span> {(record as HealthRecord).bloodPressure?.systolic || ''}/{(record as HealthRecord).bloodPressure?.diastolic || ''}mmHg</p>
+                          {(record.bloodPressure?.systolic || record.bloodPressure?.diastolic) && (
+                            <p className="text-gray-700"><span className="font-semibold">血圧:</span> {record.bloodPressure?.systolic || ''}/{record.bloodPressure?.diastolic || ''}mmHg</p>
                           )}
-                          {(record as HealthRecord).pulse && (
-                            <p className="text-gray-700"><span className="font-semibold">脈拍:</span> {(record as HealthRecord).pulse}回/分</p>
+                          {record.pulse && (
+                            <p className="text-gray-700"><span className="font-semibold">脈拍:</span> {record.pulse}回/分</p>
                           )}
-                          {(record as HealthRecord).weight && (
+                          {record.weight && (
                             <>
-                            <p className="text-gray-700"><span className="font-semibold">体重:</span> {(record as HealthRecord).weight}kg</p>
+                            <p className="text-gray-700"><span className="font-semibold">体重:</span> {record.weight}kg</p>
                               {(() => {
-                                const wRaw = (record as HealthRecord).weight;
+                                const wRaw = record.weight;
                                 const w = wRaw === null || wRaw === undefined || wRaw === '' ? null : Number.parseFloat(String(wRaw));
                                 const bmi = calcBmi(Number.isFinite(w) ? w : null, heightCm);
                                 if (bmi === null) return null;
@@ -1077,33 +1094,33 @@ export default function CalendarPage() {
                               })()}
                             </>
                           )}
-                          {((record as HealthRecord).exercise?.type || (record as HealthRecord).exercise?.duration) && (
-                            <p className="text-gray-700"><span className="font-semibold">運動:</span> {(record as HealthRecord).exercise?.type || ''} {(record as HealthRecord).exercise?.duration || ''}分</p>
+                          {(record.exercise?.type || record.exercise?.duration) && (
+                            <p className="text-gray-700"><span className="font-semibold">運動:</span> {record.exercise?.type || ''} {record.exercise?.duration || ''}分</p>
                           )}
                           
-                          {((record as HealthRecord).meal?.staple || (record as HealthRecord).meal?.mainDish || (record as HealthRecord).meal?.sideDish || (record as HealthRecord).meal?.other) && (
+                          {(record.meal?.staple || record.meal?.mainDish || record.meal?.sideDish || record.meal?.other) && (
                             <div className="border-t pt-2 mt-2">
                               <p className="font-semibold text-gray-800 mb-2">食事内容：</p>
                               <div className="pl-2">
                                 <div className="grid grid-cols-3 gap-1 text-gray-700 text-xs mb-1">
-                                  {(record as HealthRecord).meal?.staple && <p>主食: {(record as HealthRecord).meal?.staple}</p>}
-                                  {(record as HealthRecord).meal?.mainDish && <p>主菜: {(record as HealthRecord).meal?.mainDish}</p>}
-                                  {(record as HealthRecord).meal?.sideDish && <p>副菜: {(record as HealthRecord).meal?.sideDish}</p>}
+                                  {record.meal?.staple && <p>主食: {record.meal?.staple}</p>}
+                                  {record.meal?.mainDish && <p>主菜: {record.meal?.mainDish}</p>}
+                                  {record.meal?.sideDish && <p>副菜: {record.meal?.sideDish}</p>}
                                 </div>
-                                {(record as HealthRecord).meal?.other && <p className="text-gray-700 text-xs">その他: {(record as HealthRecord).meal?.other}</p>}
+                                {record.meal?.other && <p className="text-gray-700 text-xs">その他: {record.meal?.other}</p>}
                               </div>
                             </div>
                           )}
 
-                          {((record as HealthRecord).medicationTaken || (record as HealthRecord).dailyLife) && (
+                          {(record.medicationTaken || record.dailyLife) && (
                             <div className="border-t pt-2 mt-2">
-                              {(record as HealthRecord).medicationTaken && (
+                              {record.medicationTaken && (
                                 <p className="text-gray-800 font-semibold"> 服薬確認：薬を飲みました</p>
                               )}
-                              {(record as HealthRecord).dailyLife && (
+                              {record.dailyLife && (
                                 <div className="mt-1">
                                   {(() => {
-                                    const dailyLife = (record as HealthRecord).dailyLife || '';
+                                    const dailyLife = record.dailyLife || '';
                                     const symptomsMatch = dailyLife.match(/【症状】([^【]*)/);
                                     const memoMatch = dailyLife.match(/【メモ】(.*)/);
                                     const symptoms = symptomsMatch ? symptomsMatch[1].trim() : '';

@@ -43,6 +43,21 @@ type FamilyMember = {
   isRegistered?: boolean | string;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+  isRecord(value) && Object.values(value).every((v) => typeof v === 'string');
+
+const isSavedRecords = (value: unknown): value is SavedRecords =>
+  isRecord(value);
+
+const parseSavedRecords = (value: unknown): SavedRecords =>
+  (isSavedRecords(value) ? value : {});
+
+const parseFamilyMembers = (value: unknown): FamilyMember[] =>
+  Array.isArray(value) ? value.filter((m): m is FamilyMember => isRecord(m)) : [];
+
 type PrintBloodData = {
   id: string;
   testDate: string;
@@ -192,7 +207,7 @@ export default function Home() {
     
     // 印刷用テーブル行を生成
     try {
-      const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
+      const saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
       const rows: React.ReactNode[] = [];
       Object.entries(saved).forEach(([date, times]) => {
         Object.entries(times).forEach(([time, record]) => {
@@ -741,7 +756,8 @@ export default function Home() {
   // メニュー外クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (!target.closest('.relative')) {
         setShowSettingsMenu(false);
       }
@@ -802,8 +818,8 @@ export default function Home() {
   // 健康記録を家族全員に自動送信
   const shareHealthRecordToAllFamily = async (healthRecord: HealthRecord) => {
     // 家族メンバー情報を取得
-    const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]') as unknown;
-    const familyMembers: FamilyMember[] = Array.isArray(raw) ? (raw as FamilyMember[]) : [];
+    const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]');
+    const familyMembers = parseFamilyMembers(raw);
     
     const message = `💖 心臓ちゃんからの健康報告 💖\n\n` +
       `日時: ${new Date().toLocaleDateString('ja-JP')}\n` +
@@ -841,8 +857,8 @@ export default function Home() {
         `心臓ちゃんより💖`;
 
       // 家族メンバー情報を取得
-      const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]') as unknown;
-      const familyMembers: FamilyMember[] = Array.isArray(raw) ? (raw as FamilyMember[]) : [];
+      const raw = JSON.parse(localStorage.getItem('familyMembers') || '[]');
+      const familyMembers = parseFamilyMembers(raw);
       
       const registeredMembers = familyMembers.filter(
         (member) => Boolean(member.lineUserId) && (member.isRegistered === true || member.isRegistered === 'true')
@@ -1022,11 +1038,9 @@ export default function Home() {
         // フォームをリセット
         setHealthRecord(createEmptyHealthRecord());
       } else {
-        const error = await readJsonOrThrow<unknown>(response).catch(() => ({}));
+        const error = await readJsonOrThrow(response).catch(() => ({}));
         const fieldErrors =
-          typeof error === 'object' && error && 'fieldErrors' in error
-            ? (error as { fieldErrors?: Record<string, string> }).fieldErrors
-            : undefined;
+          isRecord(error) && isStringRecord(error.fieldErrors) ? error.fieldErrors : undefined;
         if (response.status === 400 && fieldErrors) {
           const fe = fieldErrors;
           setFieldErrors(fe);
@@ -1038,10 +1052,7 @@ export default function Home() {
           else if (first === 'weight') setActiveSection('weight');
           else if (first.startsWith('exercise.')) setActiveSection('exercise');
         } else {
-          const errorMessage =
-            typeof error === 'object' && error && 'error' in error
-              ? (error as { error?: string }).error
-              : undefined;
+          const errorMessage = isRecord(error) && typeof error.error === 'string' ? error.error : undefined;
           alert(`保存に失敗しました: ${errorMessage || '不明なエラー'}`);
         }
         setSaveStatus('idle');
@@ -1091,7 +1102,7 @@ export default function Home() {
 
   // CSV形式でもエクスポート
   const exportCSV = () => {
-    const saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
+    const saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
     
     let csv = '日付,時間,収縮期血圧,拡張期血圧,脈拍,体重,運動種目,運動時間,主食,主菜,副菜,その他,服薬確認,日常生活\n';
     
@@ -2019,12 +2030,12 @@ export default function Home() {
                 </div>
                 <div className="mb-3 text-lg font-semibold text-gray-700">飲みました</div>
                 <div className="flex items-center justify-between gap-3">
-                  {[
+                  {([
                     { key: 'morning', label: '朝' },
                     { key: 'noon', label: '昼' },
                     { key: 'night', label: '夜' },
-                  ].map((t) => {
-                    const checked = healthRecord.medicationTimes?.[t.key as keyof HealthRecord['medicationTimes']] || false;
+                  ] satisfies Array<{ key: keyof HealthRecord['medicationTimes']; label: string }>).map((t) => {
+                    const checked = healthRecord.medicationTimes?.[t.key] || false;
                     return (
                       <label
                         key={t.key}
@@ -2433,7 +2444,8 @@ export default function Home() {
         {(() => {
           let p: Record<string, unknown> = {};
           try {
-            p = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as Record<string, unknown>;
+            const parsed = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
+            p = isRecord(parsed) ? parsed : {};
           } catch {
             p = {};
           }

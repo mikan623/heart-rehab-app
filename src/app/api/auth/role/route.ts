@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma, { ensurePrismaConnection } from "@/lib/prisma";
 import { AuthRole, getAuthContext, isAuthRole } from "@/lib/server-auth";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export async function GET(request: NextRequest) {
   try {
     const auth = getAuthContext(request);
@@ -41,8 +44,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
+    const data = isRecord(body) ? body : {};
     const userId = auth.userId;
-    const role = body?.role as AuthRole | undefined;
+    const role = isAuthRole(data.role) ? data.role : undefined;
     if (!role) {
       return NextResponse.json({ error: "role is required" }, { status: 400 });
     }

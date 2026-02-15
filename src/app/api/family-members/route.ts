@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // 家族メンバー一覧取得
 export async function GET(request: NextRequest) {
   try {
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Family member save error:', error);
 
     // 一意制約違反（保険）
-    if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === 'P2002') {
+    if (isRecord(error) && error.code === 'P2002') {
       return NextResponse.json(
         { error: '同じ家族情報が既に登録されています。' },
         { status: 409 }

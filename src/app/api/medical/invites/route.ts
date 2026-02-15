@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // 医療従事者が患者へ招待を作成 / 一覧取得
 // GET: ?providerId=... [&patientId=...]
 // POST: { providerId, patientId }
@@ -91,8 +94,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const providerId = body?.providerId as string | undefined;
-    const patientId = body?.patientId as string | undefined;
+    const data = isRecord(body) ? body : {};
+    const providerId = typeof data.providerId === 'string' ? data.providerId : undefined;
+    const patientId = typeof data.patientId === 'string' ? data.patientId : undefined;
 
     if (!providerId || !patientId) {
       return NextResponse.json({ error: 'providerId and patientId are required' }, { status: 400 });

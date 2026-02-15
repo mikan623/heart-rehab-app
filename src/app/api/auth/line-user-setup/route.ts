@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
+
+const isPrismaMetaError = (value: unknown): value is { code?: string; meta?: { target?: string[] } } =>
+  isRecord(value);
+
 /**
  * LINE ログイン時にユーザー情報をセットアップ
  * POST /api/auth/line-user-setup
@@ -18,7 +27,13 @@ export async function POST(request: NextRequest) {
     
     await ensurePrismaConnection();
     
-    const { userId, displayName, email, role, idToken } = await request.json();
+    const body = await request.json();
+    const data = isRecord(body) ? body : {};
+    const userId = getString(data.userId);
+    const displayName = getString(data.displayName);
+    const email = getString(data.email);
+    const role = data.role;
+    const idToken = getString(data.idToken);
     
     console.log('💾 LINE ユーザーセットアップ:', { userId, displayName, email });
     
@@ -32,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'LINE ID token is required' }, { status: 401 });
     }
 
-    let verifiedUserId = userId as string;
+    let verifiedUserId = userId;
     const lineChannelId = process.env.LINE_LOGIN_CHANNEL_ID || process.env.LINE_CHANNEL_ID;
     if (!lineChannelId) {
       return NextResponse.json({ error: 'LINE_LOGIN_CHANNEL_ID is not set' }, { status: 500 });
@@ -60,7 +75,7 @@ export async function POST(request: NextRequest) {
       if (verifyData?.sub) verifiedUserId = verifyData.sub;
     
     // メールアドレス重複を避ける（LINEログインはメール必須ではない）
-    let safeEmail = email as string | undefined;
+    let safeEmail = email;
     if (safeEmail) {
       const existingEmailUser = await prisma.user.findUnique({
         where: { email: safeEmail },
@@ -123,8 +138,7 @@ export async function POST(request: NextRequest) {
           console.log('✅ 既存ユーザーを更新:', user.id);
         } catch (err: unknown) {
           // email の一意制約エラー時は email 更新を諦めて継続
-          const errMeta = err as { code?: string; meta?: { target?: string[] } };
-          if (errMeta.code === 'P2002' && Array.isArray(errMeta.meta?.target) && errMeta.meta?.target.includes('email')) {
+          if (isPrismaMetaError(err) && err.code === 'P2002' && Array.isArray(err.meta?.target) && err.meta?.target.includes('email')) {
             user = await prisma.user.update({
               where: { id: verifiedUserId },
               data: {

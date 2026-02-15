@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // 医療従事者：承認済み患者の血液/CPXにコメント投稿
 // POST: { providerId, patientId, kind: "blood" | "cpx", targetId, content }
 
@@ -21,11 +24,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const data = isRecord(body) ? body : {};
     const providerId = auth.userId;
-    const patientId = body?.patientId as string | undefined;
-    const kind = body?.kind as 'blood' | 'cpx' | undefined;
-    const targetId = body?.targetId as string | undefined;
-    const content = (body?.content as string | undefined)?.trim();
+    const patientId = typeof data.patientId === 'string' ? data.patientId : undefined;
+    const kind = data.kind === 'blood' || data.kind === 'cpx' ? data.kind : undefined;
+    const targetId = typeof data.targetId === 'string' ? data.targetId : undefined;
+    const content = typeof data.content === 'string' ? data.content.trim() : undefined;
 
     if (!patientId || !kind || !targetId || !content) {
       return NextResponse.json(

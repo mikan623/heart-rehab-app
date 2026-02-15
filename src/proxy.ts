@@ -53,7 +53,10 @@ async function verifyJwt(token: string, secret: string) {
   );
 
   const signatureBytes = base64UrlToUint8Array(signatureB64);
-  const signature = signatureBytes.buffer as ArrayBuffer;
+  const signature = signatureBytes.buffer.slice(
+    signatureBytes.byteOffset,
+    signatureBytes.byteOffset + signatureBytes.byteLength
+  );
   const valid = await crypto.subtle.verify(
     'HMAC',
     key,
@@ -68,8 +71,8 @@ async function verifyJwt(token: string, secret: string) {
     const exp = typeof payload.exp === 'number' ? payload.exp : null;
     if (exp && Math.floor(Date.now() / 1000) > exp) return null;
 
-    if (payload?.sub && (payload.role === 'patient' || payload.role === 'medical')) {
-      return { userId: payload.sub as string, role: payload.role as string };
+    if (typeof payload?.sub === 'string' && (payload.role === 'patient' || payload.role === 'medical')) {
+      return { userId: payload.sub, role: payload.role };
     }
   } catch {
     return null;

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // 利用者側：未読数（招待pending + messagesLastSeen以降のコメント）をまとめて返す
 // GET: ?patientId=...&since=UnixMs
 
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
         return await fn();
       } catch (err: unknown) {
         // 旧スキーマなどでテーブルが無い場合は未読0として扱う
-        const code = typeof err === 'object' && err && 'code' in err ? (err as { code?: string }).code : undefined;
+        const code = isRecord(err) && typeof err.code === 'string' ? err.code : undefined;
         if (code === 'P2021' || code === 'P2022') {
           return 0;
         }

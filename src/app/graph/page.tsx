@@ -9,7 +9,7 @@ import { readJsonOrThrow } from "@/lib/readJson";
 
 // （デスクトップナビは NavigationBar に統一）
 import {
-  Chart as ChartJS,
+  Chart,
   CategoryScale,
   LinearScale,
   PointElement,
@@ -21,6 +21,8 @@ import {
 } from 'chart.js';
 import type { Chart, ChartData, ChartOptions, Plugin, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+
+const ChartJS = Chart;
 
 ChartJS.register(
   CategoryScale,
@@ -69,6 +71,7 @@ interface WeekData {
 }
 
 type TimeSlot = 'morning' | 'noon' | 'night';
+type ActiveMetric = 'bloodPressure' | 'pulse' | 'weight' | 'bmi';
 
 export default function GraphPage() {
   const router = useRouter();
@@ -78,7 +81,7 @@ export default function GraphPage() {
   const [user, setUser] = useState<AuthSession | null>(null);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [heightCm, setHeightCm] = useState<number | null>(null);
-  const [activeMetric, setActiveMetric] = useState<'bloodPressure' | 'pulse' | 'weight' | 'bmi'>('bloodPressure');
+  const [activeMetric, setActiveMetric] = useState<ActiveMetric>('bloodPressure');
   const [activeSlot, setActiveSlot] = useState<'all' | TimeSlot>('all');
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
@@ -148,12 +151,22 @@ export default function GraphPage() {
     return `${baseKey}_local`;
   };
 
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
+  isRecord(value);
+
+  const isHealthRecordMap = (value: unknown): value is { [date: string]: { [time: string]: HealthRecord } } =>
+    isRecord(value);
+
   const loadLocalRecords = (overrideUserId?: string): { [date: string]: { [time: string]: HealthRecord } } => {
     if (typeof window === 'undefined') return {};
     try {
       const raw = localStorage.getItem(localStorageKey('healthRecords', overrideUserId));
       if (!raw) return {};
-      return JSON.parse(raw) as { [date: string]: { [time: string]: HealthRecord } };
+      const parsed = JSON.parse(raw);
+      return isHealthRecordMap(parsed) ? parsed : {};
     } catch {
       return {};
     }
@@ -249,8 +262,11 @@ export default function GraphPage() {
 
         const res = await apiFetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
         if (res.ok) {
-          const data = await readJsonOrThrow<HealthRecordsResponse>(res);
-          const records = Array.isArray(data.records) ? data.records : [];
+          const data = await readJsonOrThrow(res);
+          const records =
+            isRecord(data) && Array.isArray(data.records)
+              ? data.records.filter(isHealthRecordApi)
+              : [];
 
           // 日付→時刻→記録 のマップに整形
           const grouped: { [date: string]: { [time: string]: HealthRecord } } = {};
@@ -297,8 +313,9 @@ export default function GraphPage() {
           const profileRes = await apiFetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
           if (profileRes.ok) {
             const profileData = await readJsonOrThrow(profileRes);
-            const twRaw = profileData?.profile?.targetWeight;
-            const hRaw = profileData?.profile?.height;
+            const profile = isRecord(profileData) && isRecord(profileData.profile) ? profileData.profile : {};
+            const twRaw = profile.targetWeight;
+            const hRaw = profile.height;
             const h =
               hRaw === null || hRaw === undefined || hRaw === ''
                 ? null
@@ -745,15 +762,15 @@ export default function GraphPage() {
       {/* 指標タブ - 大きくした */}
       <div className="bg-white shadow-sm px-4 py-3">
         <div className="max-w-6xl mx-auto grid grid-cols-4 gap-2 mb-4 md:flex md:gap-3 md:overflow-x-auto md:pb-2">
-          {[
+          {([
             { key: 'bloodPressure', label: '血圧', icon: '🩸' },
             { key: 'pulse', label: '脈拍', icon: '💓' },
             { key: 'weight', label: '体重', icon: '⚖️' },
             { key: 'bmi', label: 'BMI', icon: '📏' },
-          ].map((metric) => (
+          ] satisfies Array<{ key: ActiveMetric; label: string; icon: string }>).map((metric) => (
             <button
               key={metric.key}
-              onClick={() => setActiveMetric(metric.key as typeof activeMetric)}
+              onClick={() => setActiveMetric(metric.key)}
               className={`w-full md:w-auto px-3 md:px-6 py-3 rounded-full font-bold text-sm md:text-base whitespace-nowrap transition click-press ${
                 activeMetric === metric.key
                   ? 'bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-lg'
@@ -860,7 +877,7 @@ export default function GraphPage() {
               { key: 'morning', label: '朝', cls: 'bg-green-500 border-green-500 text-white hover:bg-green-600' },
               { key: 'noon', label: '昼', cls: 'bg-blue-500 border-blue-500 text-white hover:bg-blue-600' },
               { key: 'night', label: '夜', cls: 'bg-purple-500 border-purple-500 text-white hover:bg-purple-600' },
-            ] as const).map((s) => (
+            ] satisfies Array<{ key: 'all' | TimeSlot; label: string; cls: string }>).map((s) => (
                 <button
                 key={s.key}
                 onClick={() => setActiveSlot(s.key)}

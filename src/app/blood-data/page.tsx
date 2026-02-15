@@ -9,6 +9,12 @@ import { apiFetch } from '@/lib/api';
 
 // （デスクトップナビは NavigationBar に統一）
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+  isRecord(value) && Object.values(value).every((v) => typeof v === 'string');
+
 type BloodValueKey =
   | 'hbA1c'
   | 'randomBloodSugar'
@@ -426,10 +432,23 @@ export default function BloodDataPage() {
                   systolicBloodPressure: toNullableNumber(t.systolicBloodPressure),
                 })),
             } // CPXのみ
-          : {
-              bloodValues: Object.fromEntries(
-                (Object.keys(bloodValues) as BloodValueKey[]).map((k) => [k, toNullableNumber(bloodValues[k])])
-              ),
+            : {
+              bloodValues: (() => {
+                const keys: BloodValueKey[] = [
+                  'hbA1c',
+                  'randomBloodSugar',
+                  'totalCholesterol',
+                  'triglycerides',
+                  'hdlCholesterol',
+                  'ldlCholesterol',
+                  'bun',
+                  'creatinine',
+                  'uricAcid',
+                  'hemoglobin',
+                  'bnp',
+                ];
+                return Object.fromEntries(keys.map((k) => [k, toNullableNumber(bloodValues[k])]));
+              })(),
               cpxTests: cpxTests
                 .filter((t) => t.testDate)
                 .map((t) => ({
@@ -457,11 +476,9 @@ export default function BloodDataPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as unknown;
+        const data = await response.json().catch(() => ({}));
         const fieldErrors =
-          typeof data === 'object' && data && 'fieldErrors' in data
-            ? (data as { fieldErrors?: Record<string, string> }).fieldErrors
-            : undefined;
+          isRecord(data) && isStringRecord(data.fieldErrors) ? data.fieldErrors : undefined;
         if (response.status === 400 && fieldErrors) {
           const fe = fieldErrors;
           setFormError('入力内容にエラーがあります。赤字の項目を確認してください。');
@@ -471,10 +488,7 @@ export default function BloodDataPage() {
           setSaveStatus('idle');
           return;
         }
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as { error?: string }).error
-            : undefined;
+        const errorMessage = isRecord(data) && typeof data.error === 'string' ? data.error : undefined;
         throw new Error(errorMessage || '保存に失敗しました');
       }
 
