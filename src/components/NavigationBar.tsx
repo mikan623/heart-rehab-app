@@ -78,6 +78,22 @@ type HealthRecordsResponse = { records: HealthRecordApi[] };
 
 type UnreadCountResponse = { total?: number };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isSavedRecords = (value: unknown): value is SavedRecords => isRecord(value);
+const isProfilePrintable = (value: unknown): value is ProfilePrintable => isRecord(value);
+const isBloodDataItem = (value: unknown): value is BloodDataItem => isRecord(value);
+
+const parseSavedRecords = (value: unknown): SavedRecords =>
+  isSavedRecords(value) ? value : {};
+
+const parseProfile = (value: unknown): ProfilePrintable =>
+  isProfilePrintable(value) ? value : {};
+
+const parseBloodDataList = (value: unknown): BloodDataItem[] =>
+  Array.isArray(value) ? value.filter(isBloodDataItem) : [];
+
 // 学ぶアイコン
 const LearnIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -141,19 +157,23 @@ export default function NavigationBar() {
           }
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+    type FetchResult<T = unknown> =
+      | { ok: true; status: number; data: T }
+      | { ok: false; status: number; data: T };
+
+    const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2): Promise<FetchResult> => {
       let lastErr: unknown = null;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const res = await apiFetch(url, { ...init, cache: 'no-store' });
-          const data = (await res.json().catch(() => ({}))) as unknown;
-          if (res.ok) return { ok: true as const, status: res.status, data };
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) return { ok: true, status: res.status, data };
           // 一時障害はリトライ
           if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
             await sleep(350 * (attempt + 1));
             continue;
           }
-          return { ok: false as const, status: res.status, data };
+          return { ok: false, status: res.status, data };
         } catch (e) {
           lastErr = e;
           if (attempt < retries) {
@@ -176,9 +196,7 @@ export default function NavigationBar() {
         );
         if (!ok) return;
         const total =
-          typeof data === 'object' && data && 'total' in data
-            ? Number((data as UnreadCountResponse).total)
-            : 0;
+          isRecord(data) && 'total' in data ? Number(data.total) : 0;
         setUnreadCount(Number.isFinite(total) ? total : 0);
       } catch (e) {
         console.log('⚠️ NavigationBar: 未読数取得に失敗（無視）', e);
@@ -272,11 +290,12 @@ export default function NavigationBar() {
         try {
           const healthResponse = await apiFetch(`/api/health-records?userId=${userId}`);
           if (healthResponse.ok) {
-            const healthData = (await healthResponse.json()) as HealthRecordsResponse;
+            const healthData = await healthResponse.json();
             console.log('✅ 健康記録をデータベースから取得');
             
             // データベースの形式をPDF用に変換
-            healthData.records.forEach((record: HealthRecordApi) => {
+            const records = isRecord(healthData) && Array.isArray(healthData.records) ? healthData.records : [];
+            records.forEach((record: HealthRecordApi) => {
               const dateKey = record.date.split('T')[0];
               const timeKey = record.time;
               
@@ -303,47 +322,48 @@ export default function NavigationBar() {
             });
           } else {
             console.log('❌ 健康記録取得失敗（ステータス:', healthResponse.status, '）、localStorageを使用');
-            saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
+            saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
           }
         } catch (healthError) {
           console.log('❌ 健康記録取得エラー:', healthError, '、localStorageを使用');
-          saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
+          saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
         }
         
         // 🆕 データベースからプロフィールを取得（エラーハンドリング強化）
         try {
           const profileResponse = await apiFetch(`/api/profiles?userId=${userId}`);
           if (profileResponse.ok) {
-            const profileData = (await profileResponse.json()) as { profile?: ProfilePrintable | null };
-            if (profileData.profile) {
+            const profileData = await profileResponse.json();
+            const profileValue = isRecord(profileData) ? profileData.profile : undefined;
+            if (profileValue && isProfilePrintable(profileValue)) {
               console.log('✅ プロフィールをデータベースから取得');
               profile = {
-                displayName: liffDisplayName || profileData.profile.displayName,
-                age: profileData.profile.age,
-                gender: profileData.profile.gender,
-                targetWeight: profileData.profile.targetWeight,
-                diseases: profileData.profile.diseases,
-                medications: profileData.profile.medications,
-                physicalFunction: profileData.profile.physicalFunction,
-                emergencyContact: profileData.profile.emergencyContact
+                displayName: liffDisplayName || profileValue.displayName,
+                age: profileValue.age,
+                gender: profileValue.gender,
+                targetWeight: profileValue.targetWeight,
+                diseases: profileValue.diseases,
+                medications: profileValue.medications,
+                physicalFunction: profileValue.physicalFunction,
+                emergencyContact: profileValue.emergencyContact
               };
             } else {
               console.log('❌ プロフィールなし、localStorageを使用');
-              profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
+              profile = parseProfile(JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}'));
               if (liffDisplayName && !profile.displayName) {
                 profile.displayName = liffDisplayName; // ✅ LINE名をセット
               }
             }
           } else {
             console.log('❌ プロフィール取得失敗（ステータス:', profileResponse.status, '）、localStorageを使用');
-            profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
+            profile = parseProfile(JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}'));
             if (liffDisplayName && !profile.displayName) {
               profile.displayName = liffDisplayName; // ✅ LINE名をセット
             }
           }
         } catch (profileError) {
           console.log('❌ プロフィール取得エラー:', profileError, '、localStorageを使用');
-          profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
+          profile = parseProfile(JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}'));
           if (liffDisplayName && !profile.displayName) {
             profile.displayName = liffDisplayName; // ✅ LINE名をセット
           }
@@ -353,8 +373,8 @@ export default function NavigationBar() {
         try {
           const bloodRes = await apiFetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
           if (bloodRes.ok) {
-            const data = (await bloodRes.json()) as unknown;
-            bloodDataList = Array.isArray(data) ? (data as BloodDataItem[]) : [];
+            const data = await bloodRes.json();
+            bloodDataList = parseBloodDataList(data);
             console.log('✅ 血液検査/CPX をデータベースから取得:', bloodDataList.length);
           } else {
             console.log('❌ 血液検査/CPX 取得失敗（ステータス:', bloodRes.status, '）');
@@ -366,8 +386,8 @@ export default function NavigationBar() {
         }
       } catch (error) {
         console.error('データベースからの取得エラー、localStorageを使用:', error);
-        saved = JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}') as SavedRecords;
-        profile = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}') as ProfilePrintable;
+        saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
+        profile = parseProfile(JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}'));
         bloodDataList = [];
       }
 
@@ -632,7 +652,8 @@ export default function NavigationBar() {
   // 設定メニューを閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (!target.closest('.relative')) {
         setShowSettingsMenu(false);
       }

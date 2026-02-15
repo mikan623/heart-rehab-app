@@ -3,6 +3,9 @@ import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 import type { HealthRecord, Prisma } from '@prisma/client';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export const dynamic = 'force-dynamic';
 
 // 型定義を追加
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    const code = typeof error === 'object' && error && 'code' in error ? (error as { code?: string }).code : undefined;
+    const code = isRecord(error) && typeof error.code === 'string' ? error.code : undefined;
     console.error('❌ Health Records API Error:', {
       message,
       code,
@@ -415,7 +418,7 @@ export async function POST(request: NextRequest) {
     
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    const code = typeof error === 'object' && error && 'code' in error ? (error as { code?: string }).code : undefined;
+    const code = isRecord(error) && typeof error.code === 'string' ? error.code : undefined;
     console.error('❌ Health record creation error:', {
       message,
       code,
@@ -518,7 +521,7 @@ export async function DELETE(request: NextRequest) {
     });
     
     // Prismaエラーの詳細処理
-    if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === 'P2002') {
+    if (isRecord(error) && error.code === 'P2002') {
       return NextResponse.json(
         { error: 'この日時の記録は既に存在します。' },
         { status: 409 }

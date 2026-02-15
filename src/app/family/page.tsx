@@ -17,20 +17,21 @@ interface FamilyMember {
   isRegistered: boolean; // string から boolean に変更
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 const normalizeFamilyMembers = (raw: unknown): FamilyMember[] => {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((member) => {
-      const m = member as Partial<FamilyMember> & { isRegistered?: boolean | string };
-      return {
-        id: typeof m.id === 'string' ? m.id : '',
-        name: typeof m.name === 'string' ? m.name : '',
-        email: typeof m.email === 'string' ? m.email : '',
-        relationship: typeof m.relationship === 'string' ? m.relationship : '',
-        lineUserId: typeof m.lineUserId === 'string' ? m.lineUserId : undefined,
-        isRegistered: m.isRegistered === true || m.isRegistered === 'true',
-      };
-    })
+    .filter(isRecord)
+    .map((m) => ({
+      id: typeof m.id === 'string' ? m.id : '',
+      name: typeof m.name === 'string' ? m.name : '',
+      email: typeof m.email === 'string' ? m.email : '',
+      relationship: typeof m.relationship === 'string' ? m.relationship : '',
+      lineUserId: typeof m.lineUserId === 'string' ? m.lineUserId : undefined,
+      isRegistered: m.isRegistered === true || m.isRegistered === 'true',
+    }))
     .filter((m) => m.id || m.name || m.email);
 };
 
@@ -186,7 +187,7 @@ export default function FamilyPage() {
               console.error('データベース取得エラー(メールログイン)、localStorageから読み込み');
               const savedFamily = localStorage.getItem('familyMembers');
               if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily) as unknown;
+                const parsedFamily = JSON.parse(savedFamily);
                 const convertedFamily = normalizeFamilyMembers(parsedFamily);
                 setFamilyMembers(convertedFamily);
               }
@@ -208,7 +209,7 @@ export default function FamilyPage() {
               // LIFFが使えない/未設定の場合はフォールバックでlocalStorageから読み込み
               const savedFamily = localStorage.getItem('familyMembers');
               if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily) as unknown;
+                const parsedFamily = JSON.parse(savedFamily);
                 const convertedFamily = normalizeFamilyMembers(parsedFamily);
                 setFamilyMembers(convertedFamily);
               } else {
@@ -265,7 +266,7 @@ export default function FamilyPage() {
                 // フォールバック: localStorageから読み込み
                 const savedFamily = localStorage.getItem('familyMembers');
                 if (savedFamily) {
-                  const parsedFamily = JSON.parse(savedFamily) as unknown;
+                  const parsedFamily = JSON.parse(savedFamily);
                   const convertedFamily = normalizeFamilyMembers(parsedFamily);
                   setFamilyMembers(convertedFamily);
                 }
@@ -276,7 +277,7 @@ export default function FamilyPage() {
             // エラー時はlocalStorageから読み込み
             const savedFamily = localStorage.getItem('familyMembers');
             if (savedFamily) {
-              const parsedFamily = JSON.parse(savedFamily) as unknown;
+              const parsedFamily = JSON.parse(savedFamily);
               const convertedFamily = normalizeFamilyMembers(parsedFamily);
               setFamilyMembers(convertedFamily);
             }
@@ -285,7 +286,7 @@ export default function FamilyPage() {
           // LIFFが使えない場合（ローカル環境）
           const savedFamily = localStorage.getItem('familyMembers');
           if (savedFamily) {
-            const parsedFamily = JSON.parse(savedFamily) as unknown;
+            const parsedFamily = JSON.parse(savedFamily);
             const convertedFamily = normalizeFamilyMembers(parsedFamily);
             setFamilyMembers(convertedFamily);
           } else {
@@ -328,7 +329,7 @@ export default function FamilyPage() {
       }
 
       const data = await response.json();
-      const inviteId = data.inviteId as string;
+      const inviteId = typeof data.inviteId === 'string' ? data.inviteId : '';
 
       // LIFF の URL を生成（LINE上で開く想定）
       let inviteUrl = '';

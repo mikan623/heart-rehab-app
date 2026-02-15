@@ -53,10 +53,39 @@ interface LabCommentItem {
   cpx?: { testDate?: string | null; parentBloodTestDate?: string | null; cpxRound?: number | null } | null;
 }
 
-type InvitesResponse = { invites?: InviteItem[]; error?: string };
-type CommentsResponse = { comments?: CommentItem[]; error?: string };
-type LabCommentsResponse = { comments?: LabCommentItem[]; error?: string };
-type ApiErrorResponse = { error?: string };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getErrorMessage = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.error === 'string' ? value.error : undefined;
+
+const isInviteItem = (value: unknown): value is InviteItem =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.providerId === 'string' &&
+  typeof value.patientId === 'string' &&
+  typeof value.status === 'string';
+
+const isCommentItem = (value: unknown): value is CommentItem =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.content === 'string' &&
+  isRecord(value.healthRecord);
+
+const isLabCommentItem = (value: unknown): value is LabCommentItem =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.content === 'string' &&
+  typeof value.kind === 'string';
+
+const getInvites = (value: unknown): InviteItem[] =>
+  isRecord(value) && Array.isArray(value.invites) ? value.invites.filter(isInviteItem) : [];
+
+const getComments = (value: unknown): CommentItem[] =>
+  isRecord(value) && Array.isArray(value.comments) ? value.comments.filter(isCommentItem) : [];
+
+const getLabComments = (value: unknown): LabCommentItem[] =>
+  isRecord(value) && Array.isArray(value.comments) ? value.comments.filter(isLabCommentItem) : [];
 
 export default function MessagesPage() {
   const userId = useMemo(() => getCurrentUserId(), []);
@@ -68,18 +97,22 @@ export default function MessagesPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+  type FetchResult<T = unknown> =
+    | { ok: true; status: number; data: T }
+    | { ok: false; status: number; data: T };
+
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2): Promise<FetchResult> => {
     let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = (await res.json().catch(() => ({}))) as unknown;
-        if (res.ok) return { ok: true as const, status: res.status, data };
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
           continue;
         }
-        return { ok: false as const, status: res.status, data };
+        return { ok: false, status: res.status, data };
       } catch (e) {
         lastErr = e;
         if (attempt < retries) {
@@ -110,36 +143,21 @@ export default function MessagesPage() {
 
       if (!invR.ok) {
         setInvites([]);
-        const errorMessage =
-          typeof invR.data === 'object' && invR.data && 'error' in invR.data
-            ? (invR.data as ApiErrorResponse).error
-            : undefined;
-        setError(errorMessage || '招待の取得に失敗しました');
+        setError(getErrorMessage(invR.data) || '招待の取得に失敗しました');
       } else {
-        const invData = invR.data as InvitesResponse;
-        setInvites(Array.isArray(invData.invites) ? invData.invites : []);
+        setInvites(getInvites(invR.data));
       }
       if (!cR.ok) {
         setComments([]);
-        const errorMessage =
-          typeof cR.data === 'object' && cR.data && 'error' in cR.data
-            ? (cR.data as ApiErrorResponse).error
-            : undefined;
-        setError((prev) => prev || errorMessage || 'コメント通知の取得に失敗しました');
+        setError((prev) => prev || getErrorMessage(cR.data) || 'コメント通知の取得に失敗しました');
       } else {
-        const commentData = cR.data as CommentsResponse;
-        setComments(Array.isArray(commentData.comments) ? commentData.comments : []);
+        setComments(getComments(cR.data));
       }
       if (!labR.ok) {
         setLabComments([]);
-        const errorMessage =
-          typeof labR.data === 'object' && labR.data && 'error' in labR.data
-            ? (labR.data as ApiErrorResponse).error
-            : undefined;
-        setError((prev) => prev || errorMessage || '検査コメント通知の取得に失敗しました');
+        setError((prev) => prev || getErrorMessage(labR.data) || '検査コメント通知の取得に失敗しました');
       } else {
-        const labData = labR.data as LabCommentsResponse;
-        setLabComments(Array.isArray(labData.comments) ? labData.comments : []);
+        setLabComments(getLabComments(labR.data));
       }
     } catch (e) {
       console.error(e);
@@ -179,11 +197,7 @@ export default function MessagesPage() {
         2
       );
       if (!ok) {
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as ApiErrorResponse).error
-            : undefined;
-        setError(errorMessage || '操作に失敗しました');
+        setError(getErrorMessage(data) || '操作に失敗しました');
         return;
       }
       await fetchAll();

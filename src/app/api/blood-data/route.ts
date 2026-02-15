@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
+
+const getMode = (value: unknown): 'blood' | 'cpx' | undefined =>
+  value === 'blood' || value === 'cpx' ? value : undefined;
+
+const getArray = (value: unknown): unknown[] | undefined =>
+  Array.isArray(value) ? value : undefined;
+
 type BloodValueKey =
   | 'hbA1c'
   | 'randomBloodSugar'
@@ -80,13 +92,12 @@ export async function POST(request: NextRequest) {
     }
     
     const data = await request.json();
-    const { mode, userId: bodyUserId, testDate, bloodValues, cpxTests } = data as {
-      mode?: 'blood' | 'cpx';
-      userId: string;
-      testDate: string;
-      bloodValues?: BloodValuesInput;
-      cpxTests?: CpxTestInput[];
-    };
+    const body = isRecord(data) ? data : {};
+    const mode = getMode(body.mode);
+    const bodyUserId = getString(body.userId);
+    const testDate = getString(body.testDate) || '';
+    const bloodValues: BloodValuesInput | undefined = isRecord(body.bloodValues) ? body.bloodValues : undefined;
+    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests);
     const userId = auth.userId;
 
     const fieldErrors: Record<string, string> = {};
@@ -230,13 +241,12 @@ export async function PUT(request: NextRequest) {
     }
     
     const data = await request.json();
-    const { mode, id, testDate, bloodValues, cpxTests } = data as {
-      mode?: 'blood' | 'cpx';
-      id: string;
-      testDate: string;
-      bloodValues?: BloodValuesInput;
-      cpxTests?: CpxTestInput[];
-    };
+    const body = isRecord(data) ? data : {};
+    const mode = getMode(body.mode);
+    const id = getString(body.id) || '';
+    const testDate = getString(body.testDate) || '';
+    const bloodValues: BloodValuesInput | undefined = isRecord(body.bloodValues) ? body.bloodValues : undefined;
+    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests);
 
     const fieldErrors: Record<string, string> = {};
     const addErr = (k: string, msg: string) => {

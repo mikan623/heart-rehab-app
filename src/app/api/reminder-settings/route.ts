@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // GET /api/reminder-settings?userId=...
 export async function GET(request: NextRequest) {
   try {
@@ -57,11 +60,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId: bodyUserId, reminderEnabled, reminderTime } = body as {
-      userId?: string;
-      reminderEnabled?: boolean;
-      reminderTime?: string;
-    };
+    const data = isRecord(body) ? body : {};
+    const bodyUserId = typeof data.userId === 'string' ? data.userId : undefined;
+    const reminderEnabled = typeof data.reminderEnabled === 'boolean' ? data.reminderEnabled : undefined;
+    const reminderTime = typeof data.reminderTime === 'string' ? data.reminderTime : undefined;
     const userId = auth.userId;
 
     if (bodyUserId && bodyUserId !== userId) {

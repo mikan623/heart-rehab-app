@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // 患者（利用者）側：招待を承認/拒否
 // POST: { patientId, inviteId, action } action: "accept" | "decline"
 
@@ -23,9 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const patientId = body?.patientId as string | undefined;
-    const inviteId = body?.inviteId as string | undefined;
-    const action = body?.action as 'accept' | 'decline' | undefined;
+    const data = isRecord(body) ? body : {};
+    const patientId = typeof data.patientId === 'string' ? data.patientId : undefined;
+    const inviteId = typeof data.inviteId === 'string' ? data.inviteId : undefined;
+    const action = data.action === 'accept' || data.action === 'decline' ? data.action : undefined;
 
     if (!patientId || !inviteId || (action !== 'accept' && action !== 'decline')) {
       return NextResponse.json({ error: 'patientId, inviteId, and action are required' }, { status: 400 });

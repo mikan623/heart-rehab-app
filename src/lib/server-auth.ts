@@ -3,6 +3,9 @@ import crypto from 'crypto';
 
 export type AuthRole = 'patient' | 'medical';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export interface AuthContext {
   userId: string;
   role: AuthRole;
@@ -86,14 +89,20 @@ export function verifyAuthToken(token: string): AuthContext | null {
 
   try {
     const payloadJson = base64UrlDecode(payloadB64).toString('utf8');
-    const payload = JSON.parse(payloadJson) as { sub?: string; role?: AuthRole; exp?: number };
-    if (!payload.sub || (payload.role !== 'patient' && payload.role !== 'medical')) {
+    const payload = JSON.parse(payloadJson);
+    if (!isRecord(payload)) {
       return null;
     }
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+    const sub = typeof payload.sub === 'string' ? payload.sub : null;
+    const role = payload.role;
+    const exp = typeof payload.exp === 'number' ? payload.exp : null;
+    if (!sub || (role !== 'patient' && role !== 'medical')) {
       return null;
     }
-    return { userId: payload.sub, role: payload.role };
+    if (exp && Math.floor(Date.now() / 1000) > exp) {
+      return null;
+    }
+    return { userId: sub, role };
   } catch {
     return null;
   }

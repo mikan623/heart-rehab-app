@@ -72,7 +72,22 @@ type PatientsResponse = {
   error?: string;
 };
 
-type ApiErrorResponse = { error?: string };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getErrorMessage = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.error === 'string' ? value.error : undefined;
+
+const isPatient = (value: unknown): value is Patient =>
+  isRecord(value) &&
+  typeof value.userId === 'string' &&
+  'displayName' in value;
+
+const getPatients = (value: unknown): Patient[] =>
+  isRecord(value) && Array.isArray(value.patients) ? value.patients.filter(isPatient) : [];
+
+const getInvites = (value: unknown): InvitesResponse['invites'] =>
+  isRecord(value) && Array.isArray(value.invites) ? value.invites : [];
 
 interface CPXTest {
   id: string;
@@ -163,18 +178,22 @@ const MedicalPage: React.FC = () => {
   };
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2) => {
+  type FetchResult<T = unknown> =
+    | { ok: true; status: number; data: T }
+    | { ok: false; status: number; data: T };
+
+  const fetchJsonWithRetry = async (url: string, init?: RequestInit, retries = 2): Promise<FetchResult> => {
     let lastErr: unknown = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(url, { ...init, cache: 'no-store' });
-        const data = (await res.json().catch(() => ({}))) as unknown;
-        if (res.ok) return { ok: true as const, status: res.status, data };
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, status: res.status, data };
         if ([429, 500, 502, 503, 504].includes(res.status) && attempt < retries) {
           await sleep(350 * (attempt + 1));
           continue;
         }
-        return { ok: false as const, status: res.status, data };
+        return { ok: false, status: res.status, data };
       } catch (e) {
         lastErr = e;
         if (attempt < retries) {
@@ -205,23 +224,23 @@ const MedicalPage: React.FC = () => {
       setRecords([]);
 
       const res = await apiFetch(`/api/medical/patients?name=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
-      const data = (await res.json()) as PatientsResponse;
+      const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || '患者検索に失敗しました');
+        setError(getErrorMessage(data) || '患者検索に失敗しました');
         setPatients([]);
         return;
       }
 
-      setPatients(data.patients || []);
+      setPatients(getPatients(data));
       // 招待ステータスをマージ（承認済/招待中表示）
       if (providerId) {
         try {
           const invRes = await apiFetch(`/api/medical/invites?providerId=${encodeURIComponent(providerId)}`, { cache: 'no-store' });
-          const invData = (await invRes.json()) as InvitesResponse;
+          const invData = await invRes.json();
           if (invRes.ok) {
             const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
-            (invData.invites || []).forEach((inv) => {
+            (getInvites(invData) || []).forEach((inv) => {
               if (inv?.patientId) map[inv.patientId] = inv.status;
             });
             setInviteStatusByPatientId(map);
@@ -260,11 +279,7 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as ApiErrorResponse).error
-            : undefined;
-        setError(errorMessage || '招待の作成に失敗しました');
+        setError(getErrorMessage(data) || '招待の作成に失敗しました');
         return;
       }
       alert('招待を送信しました。利用者側が承認すると閲覧できます。');
@@ -347,11 +362,7 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as ApiErrorResponse).error
-            : undefined;
-        alert(errorMessage || 'コメント送信に失敗しました');
+        alert(getErrorMessage(data) || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');
@@ -399,11 +410,7 @@ const MedicalPage: React.FC = () => {
         2
       );
       if (!ok) {
-        const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as ApiErrorResponse).error
-            : undefined;
-        alert(errorMessage || 'コメント送信に失敗しました');
+        alert(getErrorMessage(data) || 'コメント送信に失敗しました');
         return;
       }
       alert('コメントを送信しました（利用者のメッセージに届きます）');

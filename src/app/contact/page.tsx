@@ -4,6 +4,8 @@ import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 export default function ContactPage() {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [category, setCategory] = useState("general");
@@ -31,12 +33,10 @@ export default function ContactPage() {
       });
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as unknown;
+        const data = await res.json().catch(() => ({}));
         const errorMessage =
-          typeof data === 'object' && data && 'error' in data
-            ? (data as { error?: string }).error
-            : undefined;
-        throw new Error(errorMessage || "送信に失敗しました。時間をおいて再度お試しください。");
+          isRecord(data) && typeof data.error === 'string' ? data.error : undefined;
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : "送信に失敗しました。時間をおいて再度お試しください。");
       }
 
       setSuccess("お問い合わせを送信しました。担当者よりご連絡いたします。");
