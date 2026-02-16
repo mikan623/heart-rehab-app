@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import type { AuthSession } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import NavigationBar from "@/components/NavigationBar";
+import PageHeader from "@/components/PageHeader";
 import { readJsonOrThrow } from "@/lib/readJson";
 
 // （デスクトップナビは NavigationBar に統一）
@@ -734,30 +734,7 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
-        {/* PC版：横並び（タイトル左・ナビ右） */}
-        <div className="hidden md:flex justify-between items-center">
-          <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
-              グラフ
-          </h1>
-          </div>
-          <NavigationBar />
-        </div>
-
-        {/* スマホ版：縦並び（画像仕様） */}
-        <div className="md:hidden">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-lg font-bold text-orange-800">グラフ</h1>
-          </div>
-          <div className="flex justify-center">
-            <NavigationBar />
-          </div>
-        </div>
-
-        {/* スマホ版ナビは PageHeader 風に統一したため削除 */}
-      </header>
+      <PageHeader title="グラフ" />
 
       {/* 指標タブ - 大きくした */}
       <div className="bg-white shadow-sm px-4 py-3">

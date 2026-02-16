@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
+import PageHeader from "@/components/PageHeader";
 
 export default function ContactClient() {
   const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -54,36 +55,18 @@ export default function ContactClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
-        {/* デスクトップ版：横並び */}
-        <div className="hidden md:flex justify-between items-center">
-          <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
-              お問い合わせ
-            </h1>
-          </div>
+      <PageHeader
+        title="お問い合わせ"
+        rightContent={
           <a
             href="/"
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            className="px-3 py-1 text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
           >
-            ホームに戻る
+            <span className="hidden md:inline">ホームに戻る</span>
+            <span className="md:hidden">戻る</span>
           </a>
-        </div>
-
-        {/* スマホ版：縦並び */}
-        <div className="md:hidden">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <h1 className="text-lg font-bold text-orange-800">お問い合わせ</h1>
-            <a
-              href="/"
-              className="px-3 py-1 bg-orange-500 text-white rounded-lg font-medium text-sm hover:bg-orange-600 transition-colors"
-            >
-              戻る
-            </a>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* メインコンテンツ */}
       <main className="p-4">
