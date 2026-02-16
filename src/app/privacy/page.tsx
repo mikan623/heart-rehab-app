@@ -1,5 +1,3 @@
-"use client";
-
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
