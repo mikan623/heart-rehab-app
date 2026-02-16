@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { clearLineLogin, clearSession, getCurrentUserId } from '@/lib/auth';
+import PageHeader from '@/components/PageHeader';
 import { apiFetch } from '@/lib/api';
 
 interface Patient {
@@ -429,12 +430,10 @@ export default function MedicalClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* medicalページはヘッダーに「ログアウト」だけ表示（メニュー不要） */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-3 py-2">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <h1 className="text-lg md:text-2xl font-bold text-orange-800">
-            医療従事者
-        </h1>
+      <PageHeader
+        title="医療従事者"
+        desktopTitleClassName="text-lg md:text-2xl font-bold text-orange-800"
+        rightContent={
           <button
             type="button"
             onClick={handleLogout}
@@ -442,8 +441,8 @@ export default function MedicalClient() {
           >
             ログアウト
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-6xl mx-auto p-4 pb-28">
         <div className="max-w-6xl mx-auto">

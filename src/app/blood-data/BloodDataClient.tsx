@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import NavigationBar from '@/components/NavigationBar';
+import PageHeader from '@/components/PageHeader';
 import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 // （デスクトップナビは NavigationBar に統一）
@@ -608,31 +608,10 @@ export default function BloodDataClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm px-2 py-1">
-        {/* PC版：横並び（タイトル左・ナビ右） */}
-        <div className="hidden md:flex justify-between items-center">
-          <div className="flex items-center gap-3 flex-1">
-            <div>
-              <h1 className="text-xl font-bold text-orange-800">
-                検査結果記録
-              </h1>
-              <p className="text-xs text-gray-600">血液検査・運動負荷試験を記録</p>
-            </div>
-          </div>
-          <NavigationBar />
-        </div>
-
-        {/* スマホ版：縦並び（画像仕様） */}
-        <div className="md:hidden">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-lg font-bold text-orange-800">検査結果記録</h1>
-          </div>
-          <div className="flex justify-center">
-            <NavigationBar />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="検査結果記録"
+        subtitle="血液検査・運動負荷試験を記録"
+      />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* メインコンテンツ */}

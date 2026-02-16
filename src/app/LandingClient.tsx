@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import LandingHeader from '@/components/LandingHeader';
 import { useRouter } from 'next/navigation';
 import { setLineLoggedInDB, setLineLogin, setSession } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
@@ -15,7 +16,6 @@ export default function LandingPage() {
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'medical'>('patient');
-  const [showRoleModal, setShowRoleModal] = useState(false);
   
   // ログインフォームの状態
   const [email, setEmail] = useState('');
@@ -48,22 +48,16 @@ export default function LandingPage() {
         const storedRole = localStorage.getItem('loginRole');
         if (storedRole === 'medical' || storedRole === 'patient') {
           setLoginRole(storedRole);
-          setShowRoleModal(false);
-        } else {
-          // 未設定なら最初にモーダルで選択させる
-          setShowRoleModal(true);
         }
       } catch {
         // ignore
-        setShowRoleModal(true);
       }
 
       const sessionToken = localStorage.getItem('sessionToken');
       if (sessionToken) {
         // 別端末で「ロールを選び直したい」場合の逃げ道
-        // /?switchRole=1 で開くと自動リダイレクトを止めてモーダルを出す
+        // /?switchRole=1 で開くと自動リダイレクトを止める
         if (switchRole) {
-          setShowRoleModal(true);
           setIsLoggedIn(false);
           return;
         }
@@ -247,17 +241,6 @@ export default function LandingPage() {
     initLiff();
   }, [router]);
 
-  // ロール選択モーダル表示中は背景スクロールを抑止
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    if (!showRoleModal) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [showRoleModal]);
-
   // LINE ログイン
   const handleLineLogin = async () => {
     if (liff && !isLoggedIn) {
@@ -358,11 +341,6 @@ export default function LandingPage() {
     }
   };
 
-  const chooseRole = (role: 'patient' | 'medical') => {
-    setRole(role);
-    setShowRoleModal(false);
-  };
-
   const handleFormSwitch = (signup: boolean) => {
     setIsSignUp(signup);
     setEmail('');
@@ -382,23 +360,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* ナビゲーションヘッダー */}
-      <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10">
-            <img 
-              src="/heart-animation.gif" 
-                alt="心臓ちゃん" 
-              className="w-full h-full object-contain"
-              />
-            </div>
-          <h1 className="text-2xl font-bold text-orange-800">
-              心臓リハビリ手帳
-            </h1>
-          </div>
-        </div>
-      </header>
+      <LandingHeader />
 
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto px-6 py-12">
@@ -754,37 +716,6 @@ export default function LandingPage() {
           )}
         </section>
       </main>
-
-      {/* ロール選択モーダル（初回のみ） */}
-      {showRoleModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-6">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-orange-200 p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              あなたは利用者ですか？医療従事者ですか？
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              ログイン後に表示されるページが切り替わります。
-            </p>
-
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => chooseRole('patient')}
-                className="w-full py-4 rounded-xl font-bold text-lg text-white bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-md"
-              >
-                患者（利用者）
-              </button>
-              <button
-                type="button"
-                onClick={() => chooseRole('medical')}
-                className="w-full py-4 rounded-xl font-bold text-lg text-orange-700 bg-white border-2 border-orange-300 hover:bg-orange-50 shadow-sm"
-              >
-                医療従事者
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* フッター */}
       <footer className="bg-white/50 backdrop-blur-sm border-t border-orange-200 mt-16 py-8">

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import NavigationBar from "@/components/NavigationBar";
+import PageHeader from "@/components/PageHeader";
 import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
@@ -827,38 +827,11 @@ export default function CalendarPage() {
             }}
           />
         )}
-        {/* ヘッダー */}
-        <header 
-          className={`sticky top-0 z-50 bg-white shadow-sm px-2 py-1 ${isLineApp ? 'line-app-header' : ''}`}
-          style={{
-            paddingTop: isLineApp ? `${lineSafeArea.top + 8}px` : '8px'
-          }}
-        >
-        {/* デスクトップ版：横並び */}
-        <div className="hidden md:flex justify-between items-center">
-          <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xl font-bold text-orange-800">
-              カレンダー
-            </h1>
-          </div>
-          <NavigationBar />
-        </div>
-
-        {/* スマホ版：縦並び */}
-        <div className="md:hidden">
-          {/* タイトル部分 */}
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-lg font-bold text-orange-800">
-              カレンダー
-            </h1>
-          </div>
-          
-          {/* ナビゲーションボタン */}
-          <div className="flex justify-center">
-            <NavigationBar />
-          </div>
-        </div>
-      </header>
+        <PageHeader
+          title="カレンダー"
+          isLineApp={isLineApp}
+          lineSafeAreaTop={isLineApp ? lineSafeArea.top : undefined}
+        />
 
       {/* メインコンテンツ */}
       <main 
