@@ -607,6 +607,9 @@ export default function NavigationBar() {
   // ログアウト処理
   const handleLogout = async () => {
     try {
+      // サーバー側で auth_token Cookie を削除（credentials: 'include' で Cookie 送信）
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+
       // メールログイン情報をクリア
       clearSession();
       // LINEログイン状態（sessionStorage含む）もクリア

@@ -140,3 +140,16 @@ export function setAuthCookie(response: NextResponse, token: string) {
   });
 }
 
+/**
+ * 認証 Cookie を削除（ログアウト用）
+ */
+export function clearAuthCookie(response: NextResponse) {
+  response.cookies.set(AUTH_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 0,
+  });
+}
+

@@ -53,8 +53,8 @@ export default function LandingPage() {
         // ignore
       }
 
-      const sessionToken = localStorage.getItem('sessionToken');
-      if (sessionToken) {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
         // 別端末で「ロールを選び直したい」場合の逃げ道
         // /?switchRole=1 で開くと自動リダイレクトを止める
         if (switchRole) {
@@ -171,11 +171,10 @@ export default function LandingPage() {
                     localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient'
                   );
                 }
-                if (setupData?.sessionToken) {
+                if (setupRes.ok) {
                   setSession({
                     userId: profile.userId,
                     userName: profile.displayName || '',
-                    sessionToken: setupData.sessionToken,
                   });
                 }
               } catch {
@@ -276,12 +275,9 @@ export default function LandingPage() {
       }
 
       const data = await response.json();
-      
-      // セッションをローカルストレージに保存
-      localStorage.setItem('sessionToken', data.sessionToken);
-      localStorage.setItem('userId', data.user.id);
-      localStorage.setItem('userName', data.user.name || '');
-      // ログイン前に選択した「利用モード（患者/医療）」を優先して保存（同一アカウントでも切替可能にする）
+
+      // 表示用の userId/userName のみ保存（認証は httpOnly Cookie で管理）
+      setSession({ userId: data.user.id, userName: data.user.name || '' });
       localStorage.setItem('loginRole', loginRole);
 
       // ロールに応じて遷移
@@ -314,14 +310,9 @@ export default function LandingPage() {
       }
 
       const data = await response.json();
-      
-      // セッションをローカルストレージに保存
-      localStorage.setItem(
-        'sessionToken',
-        data.sessionToken || Buffer.from(`${data.user.id}:${Date.now()}`).toString('base64')
-      );
-      localStorage.setItem('userId', data.user.id);
-      localStorage.setItem('userName', data.user.name || '');
+
+      // 表示用の userId/userName のみ保存（認証は httpOnly Cookie で管理）
+      setSession({ userId: data.user.id, userName: data.user.name || '' });
       localStorage.setItem('loginRole', loginRole);
 
       // 🆕 新規登録後の遷移（患者:プロフィール、医療従事者:medical）

@@ -7,38 +7,36 @@ import { apiFetch } from '@/lib/api';
 export interface AuthSession {
   userId: string;
   userName: string;
-  sessionToken: string;
 }
 
 /**
  * ローカルストレージからセッション情報を取得
+ * 認証は httpOnly Cookie で行うため、sessionToken は保存しない（XSS 対策）
  */
 export function getSession(): AuthSession | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  const sessionToken = localStorage.getItem('sessionToken');
   const userId = localStorage.getItem('userId');
   const userName = localStorage.getItem('userName') || '';
 
-  if (!sessionToken || !userId) {
+  if (!userId) {
     return null;
   }
 
   return {
     userId,
     userName,
-    sessionToken,
   };
 }
 
 /**
- * セッション情報をローカルストレージに保存
+ * セッション情報をローカルストレージに保存（表示用 userId/userName のみ）
+ * 認証トークンは httpOnly Cookie で管理
  */
 export function setSession(session: AuthSession): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('sessionToken', session.sessionToken);
     localStorage.setItem('userId', session.userId);
     localStorage.setItem('userName', session.userName);
   }

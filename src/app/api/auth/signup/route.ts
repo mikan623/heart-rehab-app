@@ -79,14 +79,15 @@ export async function POST(request: NextRequest) {
     });
 
     const response = NextResponse.json(
-      { 
+      {
         message: '登録が完了しました',
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
           authType: user.authType,
-        }
+        },
+        sessionToken,
       },
       { status: 201 }
     );

@@ -137,8 +137,11 @@ export default function MedicalClient() {
   const [labCommentText, setLabCommentText] = useState('');
   const [labCommentSaving, setLabCommentSaving] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
+      // サーバー側で auth_token Cookie を削除
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+
       clearSession();
       clearLineLogin();
       if (typeof window !== 'undefined' && window.liff) {
