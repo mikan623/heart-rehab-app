@@ -6,6 +6,7 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/signup',
   '/api/auth/check-email',
   '/api/auth/reset-password',
+  '/api/auth/logout',
   '/api/auth/line-user-setup',
   // LINE Webhook / 返信（署名・内部シークレットで保護）
   '/api/line/webhook',
