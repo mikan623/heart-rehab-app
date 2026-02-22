@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     await ensurePrismaConnection();
 
     const { email, securityAnswer, newPassword } = await request.json();
+    const normalizedSecurityAnswer = String(securityAnswer ?? '').trim().toLowerCase();
 
     // バリデーション
     if (!email || !securityAnswer || !newPassword) {
@@ -48,13 +49,14 @@ export async function POST(request: NextRequest) {
     if (!profile || !profile.securityQuestionAnswer) {
       // ✅ **初回パスワード変更**：セキュリティ質問の回答を保存して進行
       console.log('📝 初回パスワード変更: セキュリティ質問の回答を保存します');
+      const hashedSecurityAnswer = await bcrypt.hash(normalizedSecurityAnswer, 10);
       
       // プロフィールが存在しない場合は作成
       if (!profile) {
         await prisma?.profile.create({
           data: {
             userId: user.id,
-            securityQuestionAnswer: securityAnswer // セキュリティ質問の答えを保存
+            securityQuestionAnswer: hashedSecurityAnswer
           }
         });
       } else {
@@ -62,20 +64,39 @@ export async function POST(request: NextRequest) {
         await prisma?.profile.update({
           where: { id: profile.id },
           data: {
-            securityQuestionAnswer: securityAnswer // セキュリティ質問の答えを保存
+            securityQuestionAnswer: hashedSecurityAnswer
           }
         });
       }
     } else {
       // ✅ **2回目以降のパスワード変更**：保存された回答で検証
       console.log('🔐 2回目以降のパスワード変更: 保存された回答で検証します');
-      
+
       // セキュリティ質問の答えを確認（大文字小文字を区別しない）
-      if (profile.securityQuestionAnswer.toLowerCase() !== securityAnswer.toLowerCase()) {
+      const stored = profile.securityQuestionAnswer;
+      const looksHashed = typeof stored === 'string' && stored.startsWith('$2');
+      const answerOk = looksHashed
+        ? await bcrypt.compare(normalizedSecurityAnswer, stored)
+        : String(stored ?? '').trim().toLowerCase() === normalizedSecurityAnswer;
+
+      if (!answerOk) {
         return NextResponse.json(
           { error: 'セキュリティ質問の答えが正しくありません' },
           { status: 401 }
         );
+      }
+
+      // 旧データ（平文）からの自動移行：一致した場合に bcrypt ハッシュへ置換
+      if (!looksHashed && profile?.id) {
+        try {
+          const hashedSecurityAnswer = await bcrypt.hash(normalizedSecurityAnswer, 10);
+          await prisma?.profile.update({
+            where: { id: profile.id },
+            data: { securityQuestionAnswer: hashedSecurityAnswer },
+          });
+        } catch (migrateError) {
+          console.warn('⚠️ securityQuestionAnswer のハッシュ移行に失敗（処理は継続）:', migrateError);
+        }
       }
     }
 
