@@ -5,7 +5,8 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/login',
   '/api/auth/signup',
   '/api/auth/check-email',
-  '/api/auth/reset-password',
+  '/api/auth/reset-password/request',
+  '/api/auth/reset-password/confirm',
   '/api/auth/logout',
   '/api/auth/line-user-setup',
   // LINE Webhook / 返信（署名・内部シークレットで保護）
@@ -54,10 +55,7 @@ async function verifyJwt(token: string, secret: string) {
   );
 
   const signatureBytes = base64UrlToUint8Array(signatureB64);
-  const signature = signatureBytes.buffer.slice(
-    signatureBytes.byteOffset,
-    signatureBytes.byteOffset + signatureBytes.byteLength
-  );
+  const signature = signatureBytes as unknown as BufferSource;
   const valid = await crypto.subtle.verify(
     'HMAC',
     key,

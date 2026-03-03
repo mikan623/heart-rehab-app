@@ -1,39 +1,42 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function ResetPasswordClient() {
   const router = useRouter();
-  const [step, setStep] = useState<'email' | 'verify' | 'reset'>('email');
+  const searchParams = useSearchParams();
+  const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
+
+  const isTokenFlow = !!token;
   const [email, setEmail] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // ステップ1：メールアドレス確認
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  // ① リセットリンク送信（メール）
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
-      // メールアドレスがシステムに存在するか確認
-      const response = await apiFetch('/api/auth/check-email', {
+      const response = await apiFetch('/api/auth/reset-password/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
 
       if (response.ok) {
-        setStep('verify');
+        setSuccess('メールを送信しました（該当アカウントが存在する場合）。受信箱をご確認ください。');
       } else {
         const data = await response.json();
-        setError(data.error || 'メールアドレスが見つかりません');
+        setError(data.error || '送信に失敗しました');
       }
     } catch (err) {
       setError('エラーが発生しました');
@@ -43,8 +46,8 @@ export default function ResetPasswordClient() {
     }
   };
 
-  // ステップ2：本人確認とパスワード変更
-  const handleResetSubmit = async (e: React.FormEvent) => {
+  // ② トークン提示で新しいパスワードを設定
+  const handleConfirmSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -62,13 +65,12 @@ export default function ResetPasswordClient() {
     setIsLoading(true);
 
     try {
-      const response = await apiFetch('/api/auth/reset-password', {
+      const response = await apiFetch('/api/auth/reset-password/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
-          securityAnswer,
-          newPassword
+          token,
+          newPassword,
         })
       });
 
@@ -94,14 +96,18 @@ export default function ResetPasswordClient() {
       <div className="w-full max-w-md">
         {/* ヘッダー */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">🔐 パスワード変更</h1>
-          <p className="text-gray-600">メールアドレスとセキュリティ質問で本人確認して、新しいパスワードを設定します</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">🔐 パスワード再設定</h1>
+          <p className="text-gray-600">
+            {isTokenFlow
+              ? 'メールのリンクから開いた場合は、新しいパスワードを設定してください'
+              : '登録メールアドレスを入力すると、再設定リンクをお送りします'}
+          </p>
         </div>
 
-        {/* ステップ1：メールアドレス入力 */}
-        {step === 'email' && (
-          <form onSubmit={handleEmailSubmit} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-orange-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">📧 メールアドレスを入力</h2>
+        {/* ① リセットリンク送信 */}
+        {!isTokenFlow && (
+          <form onSubmit={handleRequestSubmit} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-orange-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">📧 再設定リンクを送信</h2>
             
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -123,50 +129,26 @@ export default function ResetPasswordClient() {
               </div>
             )}
 
+            {success && (
+              <div className="mb-4 p-3 bg-green-100 border-2 border-green-300 rounded-lg text-green-700 text-sm">
+                {success}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
               className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-lg hover:from-orange-600 hover:to-pink-600 disabled:opacity-50"
             >
-              {isLoading ? '確認中...' : '次へ'}
+              {isLoading ? '送信中...' : '送信する'}
             </button>
           </form>
         )}
 
-        {/* ステップ2：本人確認とパスワード変更 */}
-        {step === 'verify' && (
-          <form onSubmit={handleResetSubmit} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-orange-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">✅ 本人確認</h2>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                📧 メールアドレス
-              </label>
-              <input
-                type="email"
-                value={email}
-                disabled
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                ❓ セキュリティ質問：あなたの出身地は？
-              </label>
-              <input
-                type="text"
-                value={securityAnswer}
-                onChange={(e) => setSecurityAnswer(e.target.value)}
-                placeholder="例：東京都"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                初回の場合は、今後の本人確認に使う出身地を入力してください。<br />
-                2回目以降は、前回入力した答えを入力してください。
-              </p>
-            </div>
+        {/* ② トークンで新PW設定 */}
+        {isTokenFlow && (
+          <form onSubmit={handleConfirmSubmit} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-orange-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">🔐 新しいパスワードを設定</h2>
 
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -208,28 +190,13 @@ export default function ResetPasswordClient() {
               </div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('email');
-                  setError('');
-                  setSecurityAnswer('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                }}
-                className="flex-1 py-3 px-4 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500"
-              >
-                戻る
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-lg hover:from-orange-600 hover:to-pink-600 disabled:opacity-50"
-              >
-                {isLoading ? '変更中...' : 'パスワードを変更'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-lg hover:from-orange-600 hover:to-pink-600 disabled:opacity-50"
+            >
+              {isLoading ? '変更中...' : 'パスワードを変更'}
+            </button>
           </form>
         )}
 

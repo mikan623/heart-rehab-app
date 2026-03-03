@@ -30,6 +30,7 @@ model User {
   
   // リレーション
   profiles      Profile[]
+  passwordResetTokens PasswordResetToken[]
   healthRecords HealthRecord[]
   familyMembers FamilyMember[]
   familyInvites FamilyInvite[]
@@ -82,6 +83,20 @@ model Profile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("profiles")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_reset_tokens")
 }
 
 model HealthRecord {
