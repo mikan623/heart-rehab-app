@@ -53,4 +53,3 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 
 EXPOSE 3002
 CMD ["npm","run","start","--","-p","3002"]
-
