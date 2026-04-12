@@ -5,8 +5,6 @@ import { getAuthContext } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const SYSTEM_PROMPT = `あなたは「心臓リハビリ専門の健康アドバイザーAI」です。
 元理学療法士が開発した心臓リハビリ手帳アプリのサポートとして動作します。
 
@@ -160,6 +158,8 @@ export async function POST(request: NextRequest) {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: 'OpenAI APIキーが設定されていません' }, { status: 500 });
     }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
