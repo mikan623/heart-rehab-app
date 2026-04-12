@@ -64,6 +64,10 @@
         {
           "name": "SMTP_FROM",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:SMTP_FROM-2ano8H"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:OPENAI_API_KEY-siduM2"
         }
       ],
       "logConfiguration": {
