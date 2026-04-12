@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import LandingHeader from '@/components/LandingHeader';
 import { useRouter } from 'next/navigation';
-import { setLineLoggedInDB, setLineLogin, setSession } from '@/lib/auth';
+import { clearLineLogin, clearSession, setLineLogin, setSession } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { buildLiffUrl, isLikelyLineInAppBrowser } from '@/lib/liffUrl';
 import type { Liff } from '@/types/liff';
@@ -28,45 +28,6 @@ export default function LandingPage() {
   useEffect(() => {
     setIsClient(true);
 
-    // 🔁 familyInviteId が付いた招待URLで開かれた場合は、家族登録画面へリダイレクト
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const familyInviteId = params.get('familyInviteId');
-      if (familyInviteId) {
-        router.push(`/family-invite?familyInviteId=${familyInviteId}`);
-        return;
-      }
-    }
-
-    // ローカルストレージからセッション確認
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const switchRole = params.get('switchRole') === '1';
-
-      // ロール復元（患者/医療従事者）
-      try {
-        const storedRole = localStorage.getItem('loginRole');
-        if (storedRole === 'medical' || storedRole === 'patient') {
-          setLoginRole(storedRole);
-        }
-      } catch {
-        // ignore
-      }
-
-      const userId = localStorage.getItem('userId');
-      if (userId) {
-        // 別端末で「ロールを選び直したい」場合の逃げ道
-        // /?switchRole=1 で開くと自動リダイレクトを止める
-        if (switchRole) {
-          setIsLoggedIn(false);
-          return;
-        }
-        const role = localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient';
-        router.push(role === 'medical' ? '/medical' : '/health-records');
-        return;
-      }
-    }
-
     const waitForLiff = async (timeoutMs = 3500, intervalMs = 50): Promise<Liff | null> => {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
@@ -76,168 +37,231 @@ export default function LandingPage() {
       return null;
     };
 
-    const initLiff = async () => {
+    const init = async () => {
+      if (typeof window === 'undefined') return;
+
+      const params = new URLSearchParams(window.location.search);
+      const familyInviteId = params.get('familyInviteId');
+      if (familyInviteId) {
+        router.push(`/family-invite?familyInviteId=${familyInviteId}`);
+        return;
+      }
+
+      const switchRole = params.get('switchRole') === '1';
+
       try {
-        // Android等でSDK読み込みが遅れると window.liff が未定義のまま固まることがあるため待機
-        const liffSdk = await waitForLiff();
-        if (typeof window !== 'undefined' && liffSdk) {
-          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-          if (!liffId) {
-            console.warn('LIFF ID missing; skipping init');
-            // トップは isLiffReady state を持たないので、未初期化でも画面表示を続行する
-            setIsLoggedIn(false);
-            return;
-          }
-          await liffSdk.init({ 
-            liffId
-          });
+        const storedRole = localStorage.getItem('loginRole');
+        if (storedRole === 'medical' || storedRole === 'patient') {
+          setLoginRole(storedRole);
+        }
+      } catch {
+        // ignore
+      }
 
-          // ✅ LINEのアプリ内ブラウザで「通常Webとして開かれている」場合は、LIFF起動URLへ寄せる
-          // これにより、ログイン後の「ログインしました（続行）」ダイアログが出るケースを減らす
-          try {
-            const isLineBrowser = isLikelyLineInAppBrowser();
-            const inClient = typeof liffSdk.isInClient === 'function' ? liffSdk.isInClient() : false;
-            const alreadyRedirected = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('redirectedToLiff') === '1';
-            if (isLineBrowser && !inClient && !alreadyRedirected) {
-              const state = `${window.location.pathname}${window.location.search}`;
-              const liffUrl = buildLiffUrl(state);
-              if (liffUrl) {
-                sessionStorage.setItem('redirectedToLiff', '1');
-                window.location.replace(liffUrl);
-                return;
-              }
-            }
-          } catch {
-            // ignore
-          }
-          
-          setLiff(liffSdk);
+      // ログアウト直後は、自動リダイレクトも LIFF 自動復元も止める
+      if (sessionStorage.getItem('justLoggedOut') === '1') {
+        sessionStorage.removeItem('justLoggedOut');
+        sessionStorage.removeItem('redirectedToLiff');
+        clearSession();
+        clearLineLogin();
+        localStorage.removeItem('loginRole');
+        setIsLoggedIn(false);
+        return;
+      }
 
-          // ログイン状態をチェック
-          if (liffSdk.isLoggedIn()) {
-            // ✅ LINE ログイン済み時：ユーザー情報を取得して Supabase に保存
-            let isNewProfile = false;
+      // ロール選択し直し時は自動遷移しない
+      if (switchRole) {
+        setIsLoggedIn(false);
+        return;
+      }
 
-            try {
-              const profile = await liffSdk.getProfile();
-              console.log('✅ LINE プロフィール取得:', profile);
+      // localStorage が残っていても、まずサーバー側の認証を確認する
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        try {
+          const res = await apiFetch('/api/auth/role', { cache: 'no-store' });
 
-              // 📧 LINE メールアドレス取得（あれば）
-              let lineEmail = '';
-              let liffIdToken: string | null = null;
-              try {
-                liffIdToken = await liffSdk.getIDToken();
-                if (liffIdToken) {
-                  const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
-                  lineEmail = decodedToken.email || '';
-                  console.log('📧 LINE メールアドレス取得:', lineEmail);
-                }
-              } catch (emailError) {
-                console.log('⚠️ LINE メールアドレス取得エラー（無視）:', emailError);
-              }
-              
-              // 🆕 メモリに保存
-              setLineLogin(profile.userId, profile.displayName);
-              
-              // 🆕 Supabase にユーザー情報を保存（users テーブル）
-              // メールアドレスを users テーブルに保存する
-              const setupRes = await apiFetch('/api/auth/line-user-setup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  userId: profile.userId,
-                  displayName: profile.displayName,
-                  email: lineEmail || undefined,  // LINE メールアドレスがあればそれを使用
-                  idToken: liffIdToken || undefined,
-                  role:
-                    typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
-                      ? 'medical'
-                      : 'patient',
-                })
-              });
-              if (!setupRes.ok) {
-                const errorData = await setupRes.json().catch(() => ({}));
-                console.error('❌ LINE ユーザーセットアップ失敗:', errorData);
-                throw new Error(errorData?.error || 'LINE ユーザーセットアップに失敗しました');
-              }
-              console.log('✅ LINE ユーザーデータを Supabase(users) に保存');
-              try {
-                const setupData = await setupRes.json();
-                // LINEログインでも、ログイン前に選択した「利用モード（患者/医療）」を優先する
-                // DBのroleはサーバー側でupgradeのみ行う（降格しない）
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem(
-                    'loginRole',
-                    localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient'
-                  );
-                }
-                if (setupRes.ok) {
-                  setSession({
-                    userId: profile.userId,
-                    userName: profile.displayName || '',
-                  });
-                }
-              } catch {
-                // ignore
-              }
-
-              // 🆕 プロフィール情報を Supabase(profiles) に初回保存
-              try {
-                const res = await apiFetch(`/api/profiles?userId=${profile.userId}`);
-                if (res.ok) {
-                  const data = await res.json();
-                  if (!data.profile) {
-                    isNewProfile = true;
-                    await apiFetch('/api/profiles', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        userId: profile.userId,
-                        profile: {
-                          displayName: profile.displayName || '',
-                          email: lineEmail || undefined,
-                        },
-                      }),
-                    });
-                    console.log('✅ LINE プロフィールを Supabase(profiles) に初期保存（メール含む）');
-                  }
-                }
-              } catch (profileSaveError) {
-                console.log('⚠️ プロフィール初期保存エラー（無視）:', profileSaveError);
-              }
-            } catch (profileError) {
-              console.error('⚠️ LINE プロフィール取得エラー:', profileError);
-            }
-            
-            // 🆕 ロールに応じて遷移（医療従事者はmedicalへ、患者は既存動線）
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
             const role =
-              typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+              data?.role === 'medical' || localStorage.getItem('loginRole') === 'medical'
                 ? 'medical'
                 : 'patient';
-            if (role === 'medical') {
-              router.push('/medical');
-            } else if (isNewProfile) {
-              router.push('/profile');
-            } else {
-            router.push('/health-records');
-            }
+
+            localStorage.setItem('loginRole', role);
+            router.push(role === 'medical' ? '/medical' : '/health-records');
             return;
-            } else {
-            // ログインしていない場合のみウェルカムページを表示
-            setIsLoggedIn(false);
           }
-        } else {
-          // SDKが読めていない場合でもローディング固定にしない
+        } catch (error) {
+          console.warn('認証確認に失敗。ログイン画面を表示します:', error);
+        }
+
+        clearSession();
+        clearLineLogin();
+        localStorage.removeItem('loginRole');
+      }
+
+      try {
+        const liffSdk = await waitForLiff();
+
+        if (!liffSdk) {
           console.warn('LIFF SDK not ready; falling back to login screen');
           setIsLoggedIn(false);
+          return;
         }
+
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        if (!liffId) {
+          console.warn('LIFF ID missing; skipping init');
+          setIsLoggedIn(false);
+          return;
+        }
+
+        await liffSdk.init({
+          liffId
+        });
+
+        // LIFF 初期化後にもログアウト直後フラグを再確認
+        if (sessionStorage.getItem('justLoggedOut') === '1') {
+          sessionStorage.removeItem('justLoggedOut');
+          sessionStorage.removeItem('redirectedToLiff');
+          clearSession();
+          clearLineLogin();
+          localStorage.removeItem('loginRole');
+          setIsLoggedIn(false);
+          return;
+        }
+
+        try {
+          const isLineBrowser = isLikelyLineInAppBrowser();
+          const inClient = typeof liffSdk.isInClient === 'function' ? liffSdk.isInClient() : false;
+          const alreadyRedirected =
+            typeof sessionStorage !== 'undefined' &&
+            sessionStorage.getItem('redirectedToLiff') === '1';
+
+          if (isLineBrowser && !inClient && !alreadyRedirected) {
+            const state = `${window.location.pathname}${window.location.search}`;
+            const liffUrl = buildLiffUrl(state);
+            if (liffUrl) {
+              sessionStorage.setItem('redirectedToLiff', '1');
+              window.location.replace(liffUrl);
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        setLiff(liffSdk);
+
+        if (liffSdk.isLoggedIn()) {
+          let isNewProfile = false;
+
+          try {
+            const profile = await liffSdk.getProfile();
+            console.log('✅ LINE プロフィール取得:', profile);
+
+            let lineEmail = '';
+            let liffIdToken: string | null = null;
+
+            try {
+              liffIdToken = await liffSdk.getIDToken();
+              if (liffIdToken) {
+                const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
+                lineEmail = decodedToken.email || '';
+                console.log('📧 LINE メールアドレス取得:', lineEmail);
+              }
+            } catch (emailError) {
+              console.log('⚠️ LINE メールアドレス取得エラー（無視）:', emailError);
+            }
+
+            setLineLogin(profile.userId, profile.displayName);
+
+            const setupRes = await apiFetch('/api/auth/line-user-setup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: profile.userId,
+                displayName: profile.displayName,
+                email: lineEmail || undefined,
+                idToken: liffIdToken || undefined,
+                role:
+                  typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+                    ? 'medical'
+                    : 'patient',
+              })
+            });
+
+            if (!setupRes.ok) {
+              const errorData = await setupRes.json().catch(() => ({}));
+              console.error('❌ LINE ユーザーセットアップ失敗:', errorData);
+              throw new Error(errorData?.error || 'LINE ユーザーセットアップに失敗しました');
+            }
+
+            console.log('✅ LINE ユーザーデータを保存');
+
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(
+                'loginRole',
+                localStorage.getItem('loginRole') === 'medical' ? 'medical' : 'patient'
+              );
+            }
+
+            setSession({
+              userId: profile.userId,
+              userName: profile.displayName || '',
+            });
+
+            try {
+              const res = await apiFetch(`/api/profiles?userId=${profile.userId}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (!data.profile) {
+                  isNewProfile = true;
+                  await apiFetch('/api/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: profile.userId,
+                      profile: {
+                        displayName: profile.displayName || '',
+                        email: lineEmail || undefined,
+                      },
+                    }),
+                  });
+                  console.log('✅ LINE プロフィール初期保存');
+                }
+              }
+            } catch (profileSaveError) {
+              console.log('⚠️ プロフィール初期保存エラー（無視）:', profileSaveError);
+            }
+          } catch (profileError) {
+            console.error('⚠️ LINE プロフィール取得エラー:', profileError);
+          }
+
+          const role =
+            typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+              ? 'medical'
+              : 'patient';
+
+          if (role === 'medical') {
+            router.push('/medical');
+          } else if (isNewProfile) {
+            router.push('/profile');
+          } else {
+            router.push('/health-records');
+          }
+          return;
+        }
+
+        setIsLoggedIn(false);
       } catch (error) {
         console.error('LIFF初期化エラー:', error);
         setIsLoggedIn(false);
       }
     };
-    
-    initLiff();
+
+    void init();
   }, [router]);
 
   // LINE ログイン
@@ -245,7 +269,7 @@ export default function LandingPage() {
     if (liff && !isLoggedIn) {
       try {
         // LINE ログイン画面に遷移
-      window.liff.login();
+        liff.login();
         
         // ページリロード後、LIFF 初期化時にユーザーデータが保存される
       } catch (error) {

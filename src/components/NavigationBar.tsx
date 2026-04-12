@@ -607,46 +607,53 @@ export default function NavigationBar() {
   // ログアウト処理
   const handleLogout = async () => {
     try {
-      // サーバー側で auth_token Cookie を削除（credentials: 'include' で Cookie 送信）
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('justLoggedOut', '1');
+        sessionStorage.removeItem('redirectedToLiff');
+      }
+
       await apiFetch('/api/auth/logout', { method: 'POST' });
 
-      // メールログイン情報をクリア
       clearSession();
-      // LINEログイン状態（sessionStorage含む）もクリア
       clearLineLogin();
-      console.log('✅ メールログイン情報をクリア');
-      
-      // LIFF からログアウト
+      console.log('✅ ログイン情報をクリア');
+
       if (typeof window !== 'undefined' && window.liff) {
         try {
-          // LIFF が初期化されているかチェック
-          if (window.liff.isLoggedIn && typeof window.liff.isLoggedIn === 'function') {
-        window.liff.logout();
-        console.log('✅ LINE ログアウト完了');
+          if (
+            window.liff.isLoggedIn &&
+            typeof window.liff.isLoggedIn === 'function' &&
+            window.liff.isLoggedIn()
+          ) {
+            window.liff.logout();
+            console.log('✅ LINE ログアウト完了');
           }
         } catch (liffError) {
           console.log('⚠️ LINE ログアウトスキップ（LIFF 未初期化）:', liffError);
         }
       }
-      
-      // ローカルストレージをクリア
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.includes('profile') || key.includes('healthRecords') || key.includes('familyMembers')) {
-          localStorage.removeItem(key);
-          console.log('🗑️ ローカルストレージをクリア:', key);
-        }
-      });
 
-      // ロールもクリア（次回ログイン時に選択し直す）
-      localStorage.removeItem('loginRole');
-      
-      // 設定メニューを閉じる
-      setShowSettingsMenu(false);
-      
-      // ホームページにリダイレクト
-      window.location.href = '/';
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach((key) => {
+          if (
+            key.includes('profile') ||
+            key.includes('healthRecords') ||
+            key.includes('familyMembers')
+          ) {
+            localStorage.removeItem(key);
+            console.log('🗑️ ローカルストレージをクリア:', key);
+          }
+        });
+
+        localStorage.removeItem('loginRole');
+        setShowSettingsMenu(false);
+        window.location.replace('/');
+      }
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('justLoggedOut');
+      }
       console.error('ログアウトエラー:', error);
       alert('ログアウトに失敗しました');
     }

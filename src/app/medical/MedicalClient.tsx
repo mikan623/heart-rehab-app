@@ -139,11 +139,16 @@ export default function MedicalClient() {
 
   const handleLogout = async () => {
     try {
-      // サーバー側で auth_token Cookie を削除
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('justLoggedOut', '1');
+        sessionStorage.removeItem('redirectedToLiff');
+      }
+
       await apiFetch('/api/auth/logout', { method: 'POST' });
 
       clearSession();
       clearLineLogin();
+
       if (typeof window !== 'undefined' && window.liff) {
         try {
           const liff = window.liff;
@@ -154,12 +159,26 @@ export default function MedicalClient() {
           // ignore
         }
       }
+
       if (typeof window !== 'undefined') {
-        // 役割も含めて明示的にクリア
+        const keys = Object.keys(localStorage);
+        keys.forEach((key) => {
+          if (
+            key.includes('profile') ||
+            key.includes('healthRecords') ||
+            key.includes('familyMembers')
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
+
         localStorage.removeItem('loginRole');
-        window.location.href = '/';
+        window.location.replace('/');
       }
     } catch (e) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('justLoggedOut');
+      }
       console.error(e);
       alert('ログアウトに失敗しました');
     }
