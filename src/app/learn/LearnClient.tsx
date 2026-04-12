@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import { getSession, isLineLoggedIn } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 
 const learningContent = [
@@ -118,6 +119,50 @@ export default function LearnClient() {
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // AIアドバイス
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [advice, setAdvice] = useState<string | null>(null);
+  const [adviceError, setAdviceError] = useState<string | null>(null);
+
+  const handleGenerateAdvice = async () => {
+    setIsGenerating(true);
+    setAdvice(null);
+    setAdviceError(null);
+    try {
+      const res = await apiFetch('/api/ai-health-guidance', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setAdviceError(data.error ?? 'エラーが発生しました');
+        return;
+      }
+      setAdvice(data.advice);
+    } catch {
+      setAdviceError('通信エラーが発生しました。もう一度お試しください。');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const renderAdvice = (text: string) =>
+    text.split('\n').map((line, i) => {
+      if (line.startsWith('## ') || line.startsWith('### ')) {
+        return (
+          <h3 key={i} className="text-base font-bold text-orange-800 mt-4 mb-1">
+            {line.replace(/^#{2,3}\s/, '')}
+          </h3>
+        );
+      }
+      if (line.startsWith('- ') || line.startsWith('・')) {
+        return (
+          <li key={i} className="ml-4 text-sm text-gray-700 list-disc">
+            {line.replace(/^[-・]\s?/, '')}
+          </li>
+        );
+      }
+      if (line.trim() === '') return <div key={i} className="h-2" />;
+      return <p key={i} className="text-sm text-gray-700">{line}</p>;
+    });
+
   // 画面幅判定（md未満＝スマホ）
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -181,10 +226,59 @@ export default function LearnClient() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* ページサブタイトル */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <p className="text-lg text-gray-600">
             心臓の健康を守るための知識を身につけましょう
           </p>
+        </div>
+
+        {/* AIアドバイスセクション */}
+        <div className="mb-12">
+          <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🤖</span>
+                <h2 className="text-lg font-bold text-orange-800">AI健康アドバイス</h2>
+              </div>
+              <button
+                onClick={handleGenerateAdvice}
+                disabled={isGenerating}
+                className="px-5 py-2 bg-orange-500 text-white font-bold rounded-xl shadow
+                  hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed
+                  flex items-center gap-2 text-sm"
+              >
+                {isGenerating ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  '✨ アドバイスを生成する'
+                )}
+              </button>
+            </div>
+
+            {adviceError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                ⚠️ {adviceError}
+              </div>
+            )}
+
+            {advice ? (
+              <div>
+                <div className="space-y-1">{renderAdvice(advice)}</div>
+                <div className="mt-4 p-3 bg-orange-50 rounded-xl border border-orange-100">
+                  <p className="text-xs text-gray-500">
+                    ⚠️ このアドバイスはAIによる参考情報です。医療上の判断は必ず担当医にご相談ください。
+                  </p>
+                </div>
+              </div>
+            ) : !adviceError && !isGenerating && (
+              <p className="text-sm text-gray-400 text-center py-4">
+                直近7日間の健康記録を元にパーソナライズされたアドバイスが届きます。
+              </p>
+            )}
+          </div>
         </div>
 
         {/* メインコンテンツ */}

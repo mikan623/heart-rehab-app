@@ -717,15 +717,6 @@ export default function NavigationBar() {
         </button>
         <button
           onClick={() => {
-            setActiveButton('ai-guidance');
-            setTimeout(() => window.location.href = '/ai-guidance', 150);
-          }}
-          className={`flex flex-col items-center gap-0.5 bg-white border border-orange-300 text-orange-700 py-1 px-2 rounded-lg font-medium hover:bg-orange-50 text-xs whitespace-nowrap flex-shrink-0 min-w-[40px] md:min-w-[60px] ${activeButton === 'ai-guidance' ? 'click-animate' : ''}`}>
-          <span className="text-xl">🤖</span>
-          <span className="text-[10px] md:text-xs">AIアドバイス</span>
-        </button>
-        <button
-          onClick={() => {
             setActiveButton('test');
             setTimeout(() => window.location.href = '/blood-data', 150);
           }}
