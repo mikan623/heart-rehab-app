@@ -5,9 +5,9 @@
 心臓疾患を持つ患者が日々の健康を安心して管理できるWebアプリケーションです。
 元理学療法士が開発し、医療現場の課題をITで解決することをコンセプトにしています。
 
-### [リンク]: https://app.patient-held-diary.org
+### [リンク]: [https://app.patient-held-diary.org](https://app.patient-held-diary.org)
 
-### [GitHub]: https://github.com/mikan623/heart-rehab-app
+### [GitHub]: [https://github.com/mikan623/heart-rehab-app](https://github.com/mikan623/heart-rehab-app)
 
 ---
 
@@ -18,7 +18,6 @@
   - GitHub ActionsでCI/CDパイプラインを構築し、mainブランチへのpushで自動デプロイされる点
   - AWS Secrets Managerでシークレットを一元管理し、セキュアな本番運用を実現している点
   - AWS ECRでDockerイメージを管理している点
-
 - ### バックエンド面
   - Prisma ORMによる型安全なデータベースアクセス
   - JWT認証をhttpOnly Cookieで管理し、XSSによるトークン窃取を防止している点
@@ -26,7 +25,6 @@
   - LINE Messaging APIによる家族への健康記録通知・リマインダー機能
   - AWS SES（Nodemailer経由）によるパスワードリセットメール送信
   - OpenAI API（gpt-4o-mini）を活用したAI健康アドバイス機能
-
 - ### フロントエンド面
   - Chart.jsによる血圧・脈拍・体重の推移グラフ表示
   - html2canvas + jsPDFによるPDFエクスポート機能
@@ -36,46 +34,52 @@
 
 # 機能一覧
 
-| 機能 | 内容 |
-|---|---|
-| 健康記録 | 血圧・脈拍・体重・運動・食事・服薬を毎日記録 |
+
+| 機能        | 内容                                   |
+| --------- | ------------------------------------ |
+| 健康記録      | 血圧・脈拍・体重・運動・食事・服薬を毎日記録               |
 | AI健康アドバイス | 直近7日間の記録を元にOpenAIがパーソナライズされたアドバイスを生成 |
-| 血液検査データ管理 | HbA1c・コレステロール・BNPなどの検査値を管理 |
-| CPXデータ管理 | 心肺運動負荷試験（VO2・METs・AT）の結果を記録 |
-| グラフ表示 | 健康データの推移をグラフで可視化 |
-| カレンダー | 過去の記録をカレンダーから確認・編集 |
-| 家族共有 | 健康記録をLINE通知で家族にリアルタイム共有 |
-| 医療従事者画面 | 担当患者の健康記録・検査データを一覧管理 |
-| PDFエクスポート | 健康記録をPDFで出力・印刷 |
-| LINEログイン | LINE LIFF（OIDC）によるワンタップログイン |
-| メールログイン | メールアドレス＋パスワードでのログイン・新規登録 |
-| パスワードリセット | メール経由でのパスワードリセット |
-| リマインダー | 記録忘れをLINEで通知 |
-| 学習コンテンツ | 心臓リハビリ・血圧管理・運動療法などの知識コンテンツ |
+| 血液検査データ管理 | HbA1c・コレステロール・BNPなどの検査値を管理           |
+| CPXデータ管理  | 心肺運動負荷試験（VO2・METs・AT）の結果を記録          |
+| グラフ表示     | 健康データの推移をグラフで可視化                     |
+| カレンダー     | 過去の記録をカレンダーから確認・編集                   |
+| 家族共有      | 健康記録をLINE通知で家族にリアルタイム共有              |
+| 医療従事者画面   | 担当患者の健康記録・検査データを一覧管理                 |
+| PDFエクスポート | 健康記録をPDFで出力・印刷                       |
+| LINEログイン  | LINE LIFF（OIDC）によるワンタップログイン          |
+| メールログイン   | メールアドレス＋パスワードでのログイン・新規登録             |
+| パスワードリセット | メール経由でのパスワードリセット                     |
+| リマインダー    | 記録忘れをLINEで通知                         |
+| 学習コンテンツ   | 心臓リハビリ・血圧管理・運動療法などの知識コンテンツ           |
+
 
 ---
 
 # 使用技術
 
 ### フロントエンド
+
 - **Next.js 16（Turbopack）** / **React 19** / **TypeScript**
 - **Tailwind CSS v4**
 - **Chart.js** / react-chartjs-2
 - **jsPDF** / html2canvas
 
 ### バックエンド
+
 - **Next.js API Routes**
 - **Prisma ORM**
 - **PostgreSQL**
 - **Nodemailer**（AWS SES）
 
 ### インフラ
+
 - **AWS ECS Fargate** / **ECR**
 - **AWS Secrets Manager**
 - **Docker**
 - **GitHub Actions**（CI/CD）
 
 ### 外部連携
+
 - **LINE LIFF** / **LINE Messaging API**
 - **OpenAI API**（gpt-4o-mini）
 
@@ -126,7 +130,9 @@ npm run dev
 
 # 作者
 
-**Hara Shinoka**
+**Suzuki Shinoka**
+
 - GitHub: [@mikan623](https://github.com/mikan623)
 - 前職：理学療法士（医療機関・リハビリテーション施設）
 - 医療現場のIT化に関心を持ち、現場の課題を解決するアプリ開発に取り組んでいます
+
