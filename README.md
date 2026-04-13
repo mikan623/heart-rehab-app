@@ -1,262 +1,132 @@
-# 心臓リハビリ記録アプリ# 心臓リハビリ記録アプリ 💖
+# 心臓リハビリ手帳 💖
 
-循環器疾患患者向けの健康管理アプリケーション。日々の血圧・脈拍・体重を記録し、AIが個別アドバイスを生成します。LINE Mini Appとして動作し、家族間での情報共有も可能です。
+心臓の健康を、毎日サポート。
 
-## 🎯 主な機能
+心臓疾患を持つ患者が日々の健康を安心して管理できるWebアプリケーションです。
+元理学療法士が開発し、医療現場の課題をITで解決することをコンセプトにしています。
 
-### 1. 健康記録管理
-- 血圧（収縮期/拡張期）、脈拍、体重の記録
-- 運動内容・時間の記録
-- 食事内容（主食・主菜・副菜）の記録
-- 日常生活メモ
+### [リンク]: https://app.patient-held-diary.org
 
-### 2. データ可視化
-- 血圧・脈拍・体重の推移グラフ
-- 年齢別の正常範囲表示
-- カレンダービューでの記録一覧
+### [GitHub]: https://github.com/mikan623/heart-rehab-app
 
-### 3. AIアドバイス機能
-- 記録データに基づく健康アドバイス生成
-- ルールベースエンジン（無料・安定）
-- Hugging Face連携（拡張可能）
+---
 
-### 4. LINE連携
-- LINE Mini App（LIFF）として動作
-- LINEアカウントでログイン
-- トークへの通知送信
+# 特に見ていただきたい点
 
-### 5. その他
-- PDF出力（印刷・共有用）
-- 家族メンバー管理
-- プロフィール設定
+- ### インフラ面
+  - DockerコンテナをAWS ECS（Fargate）でサーバーレス運用している点
+  - GitHub ActionsでCI/CDパイプラインを構築し、mainブランチへのpushで自動デプロイされる点
+  - AWS Secrets Managerでシークレットを一元管理し、セキュアな本番運用を実現している点
+  - AWS ECRでDockerイメージを管理している点
 
-## 🛠 技術スタック
+- ### バックエンド面
+  - Prisma ORMによる型安全なデータベースアクセス
+  - JWT認証をhttpOnly Cookieで管理し、XSSによるトークン窃取を防止している点
+  - LINE LIFF（LINE Front-end Framework）を用いたLINEログインの実装
+  - LINE Messaging APIによる家族への健康記録通知・リマインダー機能
+  - AWS SES（Nodemailer経由）によるパスワードリセットメール送信
+  - OpenAI API（gpt-4o-mini）を活用したAI健康アドバイス機能
+
+- ### フロントエンド面
+  - Chart.jsによる血圧・脈拍・体重の推移グラフ表示
+  - html2canvas + jsPDFによるPDFエクスポート機能
+  - スマートフォン対応のレスポンシブUI（Tailwind CSS）
+
+---
+
+# 機能一覧
+
+| 機能 | 内容 |
+|---|---|
+| 健康記録 | 血圧・脈拍・体重・運動・食事・服薬を毎日記録 |
+| AI健康アドバイス | 直近7日間の記録を元にOpenAIがパーソナライズされたアドバイスを生成 |
+| 血液検査データ管理 | HbA1c・コレステロール・BNPなどの検査値を管理 |
+| CPXデータ管理 | 心肺運動負荷試験（VO2・METs・AT）の結果を記録 |
+| グラフ表示 | 健康データの推移をグラフで可視化 |
+| カレンダー | 過去の記録をカレンダーから確認・編集 |
+| 家族共有 | 健康記録をLINE通知で家族にリアルタイム共有 |
+| 医療従事者画面 | 担当患者の健康記録・検査データを一覧管理 |
+| PDFエクスポート | 健康記録をPDFで出力・印刷 |
+| LINEログイン | LINE LIFF（OIDC）によるワンタップログイン |
+| メールログイン | メールアドレス＋パスワードでのログイン・新規登録 |
+| パスワードリセット | メール経由でのパスワードリセット |
+| リマインダー | 記録忘れをLINEで通知 |
+| 学習コンテンツ | 心臓リハビリ・血圧管理・運動療法などの知識コンテンツ |
+
+---
+
+# 使用技術
 
 ### フロントエンド
-- **Next.js 15** - React フレームワーク
-- **TypeScript** - 型安全性
-- **Tailwind CSS** - スタイリング
-- **Chart.js** - データ可視化
-- **jsPDF + html2canvas** - PDF生成
+- **Next.js 16（Turbopack）** / **React 19** / **TypeScript**
+- **Tailwind CSS v4**
+- **Chart.js** / react-chartjs-2
+- **jsPDF** / html2canvas
 
 ### バックエンド
-- **Next.js API Routes** - サーバーレスAPI
-- **Prisma** - ORM
-- **PostgreSQL** - データベース
+- **Next.js API Routes**
+- **Prisma ORM**
+- **PostgreSQL**
+- **Nodemailer**（AWS SES）
 
-### 外部API
-- **LINE LIFF** - 認証・ミニアプリ
-- **LINE Messaging API** - 通知送信
-- **Hugging Face Inference API** - AI機能（オプション）
+### インフラ
+- **AWS ECS Fargate** / **ECR**
+- **AWS Secrets Manager**
+- **Docker**
+- **GitHub Actions**（CI/CD）
 
-## 📦 セットアップ
+### 外部連携
+- **LINE LIFF** / **LINE Messaging API**
+- **OpenAI API**（gpt-4o-mini）
 
-### 必要な環境
-- Node.js 18以上
-- npm または yarn
-- PostgreSQL データベース
+---
 
-### インストール
+# 環境変数
+
+`.env.local` に以下を設定してください：
+
+```bash
+DATABASE_URL=
+NEXT_PUBLIC_LIFF_ID=
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+LINE_LOGIN_CHANNEL_ID=
+JWT_SECRET=
+OPENAI_API_KEY=
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+REMINDER_CRON_SECRET=
+```
+
+---
+
+# ローカル起動
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/your-username/heart-rehab-app.git
+git clone https://github.com/mikan623/heart-rehab-app.git
 cd heart-rehab-app
 
 # 依存関係をインストール
 npm install
 
-# 環境変数を設定
-cp .env.example .env.local
-# .env.local を編集して必要な値を設定
-
-# Prismaのマイグレーション
+# Prismaクライアント生成
 npx prisma generate
-npx prisma migrate dev
 
-# 開発サーバーを起動
+# 開発サーバーを起動（ポート3002）
 npm run dev
 ```
 
 ブラウザで `http://localhost:3002` を開く
 
-## 🔑 環境変数
-
-`.env.local` に以下を設定してください：
-
-```bash
-# データベース
-DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
-
-# LINE
-NEXT_PUBLIC_LIFF_ID="your-liff-id"
-NEXT_PUBLIC_LINE_ACCESS_TOKEN="your-channel-access-token"
-
-# AI機能（オプション）
-HF_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxx"
-```
-
-詳細は `.env.example` を参照してください。
-
-## 🚀 デプロイ
-
-### Vercel（推奨）
-
-```bash
-# Vercel CLIをインストール
-npm install -g vercel
-
-# デプロイ
-vercel
-
-# 本番デプロイ
-vercel --prod
-```
-
-### 環境変数の設定
-Vercel Dashboardで上記の環境変数を設定してください。
-
-## 📱 LINE Mini App設定
-
-1. LINE Developers Consoleでチャネルを作成
-2. LIFF アプリを追加
-3. Endpoint URLを設定: `https://your-domain.vercel.app/graph`
-4. Scopeを設定: `profile`, `openid`
-5. LIFF IDを `.env.local` に追加
-
-## 🎨 主な画面
-
-### メイン画面
-- 健康記録の入力フォーム
-- 心臓ちゃんキャラクター表示
-
-### カレンダー画面
-- 月別カレンダービュー
-- 記録の編集・削除機能
-
-### グラフ画面
-- 血圧・脈拍・体重の推移グラフ
-- AIアドバイス表示・LINE送信
-
-### プロフィール画面
-- 個人情報設定
-- 疾患・服薬情報
-
-### 家族画面
-- 家族メンバー管理
-- 緊急連絡先
-
-## 💡 工夫した点
-
-### 1. LINEミニアプリ最適化
-- Safe Area対応（ノッチ・ホームバーへの配慮）
-- タッチ操作の最適化（最小タップエリア44px）
-- iOS Safariのズーム防止（font-size: 16px）
-
-### 2. データベース設計
-- ユーザーIDでデータ分離（マルチテナント）
-- JSON型で柔軟なデータ格納（meal, exercise）
-- 日付+時間帯でユニーク制約
-
-### 3. AI機能の実装
-- ルールベースエンジンでフォールバック
-- Hugging Face APIで拡張可能
-- サーバー側処理でセキュリティ確保
-
-### 4. パフォーマンス
-- Next.js Turbopackで高速開発
-- API Routesでサーバーレス化
-- Prismaのコネクションプーリング
-
-## 🧪 テスト
-
-```bash
-# ユニットテスト
-npm test
-
-# テストカバレッジ
-npm run test:coverage
-```
-
-## 📝 今後の改善予定
-
-- [ ] テストカバレッジの向上（現在: 基本実装のみ）
-- [ ] CI/CDパイプライン構築（GitHub Actions）
-- [ ] Sentryでエラー監視
-- [ ] Storybookでコンポーネントカタログ
-- [ ] アクセシビリティ対応強化
-- [ ] PWA化（オフライン対応）
-
-## 🤔 技術的な意思決定
-
-### なぜNext.jsを選んだか？
-- SSR/SSGでSEO対策
-- API Routesでフルスタック開発
-- Vercelで簡単デプロイ
-- TypeScript標準サポート
-
-### なぜPrismaを選んだか？
-- 型安全なクエリ
-- マイグレーション管理が容易
-- PostgreSQL最適化
-
-### なぜルールベースAIを実装したか？
-- コスト削減（無料）
-- レスポンス速度の安定性
-- 医療ドメイン特化ロジック
-
-## 📄 ライセンス
-
-MIT License
-
-## 👤 作者
-
-**Shinoka Hara**
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [your-profile](https://linkedin.com/in/your-profile)
-
-## 🙏 謝辞
-
-このプロジェクトは循環器リハビリテーションの現場の声を参考に作成しました。
-
 ---
 
-⭐ このプロジェクトが役に立ったら、スターをつけていただけると嬉しいです！
+# 作者
 
-## 概要
-循環器患者向けの健康管理アプリ。血圧・脈拍・体重を記録し、AIがアドバイスを生成。
-
-## 技術スタック
-- Next.js 15, TypeScript, Prisma, PostgreSQL
-- LINE LIFF, Chart.js, jsPDF
-
-## 主な機能
-1. 健康記録のCRUD
-2. グラフ表示
-3. AIアドバイス
-4. PDF出力
-5. LINE連携
-
-## デモ
-[デモ動画/スクリーンショット]
-
-## セットアップ
-\`\`\`bash
-npm install
-npm run dev
-\`\`\`
-
-## 環境変数
-\`\`\`
-DATABASE_URL=...
-NEXT_PUBLIC_LIFF_ID=...
-\`\`\`
-
-## 工夫した点
-- LINEミニアプリ最適化（タップ対応、Safe Area）
-- データベース統合で複数ユーザー対応
-- ルールベースAIでコスト削減
-
-## 今後の改善点
-- テストカバレッジ向上
-- パフォーマンス最適化
+**Hara Shinoka**
+- GitHub: [@mikan623](https://github.com/mikan623)
+- 前職：理学療法士（医療機関・リハビリテーション施設）
+- 医療現場のIT化に関心を持ち、現場の課題を解決するアプリ開発に取り組んでいます
