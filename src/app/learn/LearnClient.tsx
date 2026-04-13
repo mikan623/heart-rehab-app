@@ -145,20 +145,6 @@ export default function LearnClient() {
 
   const renderAdvice = (text: string) =>
     text.split('\n').map((line, i) => {
-      if (line.startsWith('## ') || line.startsWith('### ')) {
-        return (
-          <h3 key={i} className="text-base font-bold text-orange-800 mt-4 mb-1">
-            {line.replace(/^#{2,3}\s/, '')}
-          </h3>
-        );
-      }
-      if (line.startsWith('- ') || line.startsWith('・')) {
-        return (
-          <li key={i} className="ml-4 text-sm text-gray-700 list-disc">
-            {line.replace(/^[-・]\s?/, '')}
-          </li>
-        );
-      }
       if (line.trim() === '') return <div key={i} className="h-2" />;
       return <p key={i} className="text-sm text-gray-700">{line}</p>;
     });
