@@ -89,24 +89,26 @@ function buildUserPrompt(data: {
 - 身体機能：${profile.physicalFunction ?? '記録なし'}`
     : '【ユーザー基本情報】\nプロフィール未登録';
 
+  // 配列・文字列どちらで保存されていても結合できるようにする
+  const toJoined = (val: unknown): string => {
+    if (Array.isArray(val)) return val.filter(Boolean).join('・') || '-';
+    if (typeof val === 'string' && val.trim()) return val;
+    return '-';
+  };
+
   const recordsSection =
     healthRecords.length > 0
       ? `【直近7日間の健康記録】\n` +
         healthRecords
           .map((r) => {
             const ex = r.exercise as { type?: string; duration?: string } | null;
-            const meal = r.meal as {
-              staple?: string[];
-              mainDish?: string[];
-              sideDish?: string[];
-              other?: string;
-            } | null;
+            const meal = r.meal as Record<string, unknown> | null;
             return (
               `- ${r.date} ${r.time}\n` +
               `  血圧：${r.bloodPressureSystolic}/${r.bloodPressureDiastolic} mmHg　` +
               `脈拍：${r.pulse ?? '-'} bpm　体重：${r.weight ?? '-'} kg\n` +
               `  運動：${ex?.type ?? 'なし'}（${ex?.duration ?? '-'}分）\n` +
-              `  食事：主食[${meal?.staple?.join('・') ?? '-'}]　主菜[${meal?.mainDish?.join('・') ?? '-'}]　副菜[${meal?.sideDish?.join('・') ?? '-'}]\n` +
+              `  食事：主食[${toJoined(meal?.staple)}]　主菜[${toJoined(meal?.mainDish)}]　副菜[${toJoined(meal?.sideDish)}]\n` +
               `  日常生活メモ：${r.dailyLife ?? 'なし'}\n` +
               `  服薬：${r.medicationTaken ? '服用済み' : '未服用'}`
             );
@@ -168,10 +170,9 @@ export async function POST(request: NextRequest) {
 
     const userId = auth.userId;
 
-    // 直近7日分の健康記録を取得
+    // 直近7日分の健康記録を取得（createdAtで絞り込み）
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
     const [profile, healthRecords, bloodData] = await Promise.all([
       prisma.profile.findFirst({
@@ -189,8 +190,8 @@ export async function POST(request: NextRequest) {
         },
       }),
       prisma.healthRecord.findMany({
-        where: { userId, date: { gte: sevenDaysAgoStr } },
-        orderBy: { date: 'desc' },
+        where: { userId, createdAt: { gte: sevenDaysAgo } },
+        orderBy: { createdAt: 'desc' },
         take: 14,
         select: {
           date: true,
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
     const userPrompt = buildUserPrompt({ profile, healthRecords, bloodData });
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
@@ -251,6 +252,9 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('❌ AI Health Guidance API Error:', message);
-    return NextResponse.json({ error: 'アドバイスの生成に失敗しました' }, { status: 500 });
+    return NextResponse.json(
+      { error: `アドバイスの生成に失敗しました: ${message}` },
+      { status: 500 }
+    );
   }
 }
