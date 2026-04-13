@@ -13,6 +13,7 @@ export default function LandingPage() {
   const [isClient, setIsClient] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [liff, setLiff] = useState<Liff | null>(null);
+  const [liffLoading, setLiffLoading] = useState(true);
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginRole, setLoginRole] = useState<'patient' | 'medical'>('patient');
@@ -153,6 +154,7 @@ export default function LandingPage() {
         }
 
         setLiff(liffSdk);
+        setLiffLoading(false);
 
         if (liffSdk.isLoggedIn()) {
           let isNewProfile = false;
@@ -255,9 +257,11 @@ export default function LandingPage() {
         }
 
         setIsLoggedIn(false);
+        setLiffLoading(false);
       } catch (error) {
         console.error('LIFF初期化エラー:', error);
         setIsLoggedIn(false);
+        setLiffLoading(false);
       }
     };
 
@@ -266,16 +270,19 @@ export default function LandingPage() {
 
   // LINE ログイン
   const handleLineLogin = async () => {
-    if (liff && !isLoggedIn) {
-      try {
-        // LINE ログイン画面に遷移
-        liff.login();
-        
-        // ページリロード後、LIFF 初期化時にユーザーデータが保存される
-      } catch (error) {
-        console.error('LINE ログインエラー:', error);
-        setError('LINE ログインに失敗しました');
-      }
+    if (liffLoading) {
+      setError('LINEの準備中です。少しお待ちください。');
+      return;
+    }
+    if (!liff) {
+      setError('LINEログインを利用できません。ページを再読み込みしてお試しください。');
+      return;
+    }
+    try {
+      liff.login();
+    } catch (error) {
+      console.error('LINE ログインエラー:', error);
+      setError('LINE ログインに失敗しました');
     }
   };
 
@@ -434,12 +441,17 @@ export default function LandingPage() {
           {/* LINE ログインボタン */}
           <button
             onClick={handleLineLogin}
-            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+            disabled={liffLoading}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:cursor-wait"
           >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
-            </svg>
-            LINE でログイン
+            {liffLoading ? (
+              <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
+              </svg>
+            )}
+            {liffLoading ? 'LINE 準備中...' : 'LINE でログイン'}
           </button>
 
               {/* メール/パスワードログインボタン */}
@@ -706,14 +718,19 @@ export default function LandingPage() {
           </h3>
           {!showLoginForm && (
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-            onClick={handleLineLogin}
-            className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
-            </svg>
-            LINE でログイン
+            <button
+              onClick={handleLineLogin}
+              disabled={liffLoading}
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:cursor-wait"
+            >
+              {liffLoading ? (
+                <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 4.373 0 10c0 3.325 2.237 6.196 5.35 7.688-.235 1.264.077 3.45.45 4.725.05.283.3.45.55.338 2.637-1.687 5.95-3.787 7.975-5.237 1.875.338 3.862.512 5.675.512 6.627 0 12-4.373 12-10S18.627 0 12 0z"/>
+                </svg>
+              )}
+              {liffLoading ? 'LINE 準備中...' : 'LINE でログイン'}
             </button>
               <button 
                 onClick={() => {
