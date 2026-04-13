@@ -60,7 +60,8 @@ export default function LandingPage() {
           // ignore
         }
 
-        // ログアウト直後は、自動リダイレクトも LIFF 自動復元も止める
+        // ログアウト直後フラグ（自動リダイレクトのみ抑止、LIFF初期化は続行）
+        let wasJustLoggedOut = false;
         if (sessionStorage.getItem('justLoggedOut') === '1') {
           sessionStorage.removeItem('justLoggedOut');
           sessionStorage.removeItem('redirectedToLiff');
@@ -68,7 +69,8 @@ export default function LandingPage() {
           clearLineLogin();
           localStorage.removeItem('loginRole');
           setIsLoggedIn(false);
-          return;
+          wasJustLoggedOut = true;
+          // return しない → LIFF初期化を続行してログインボタンを使えるようにする
         }
 
         // ロール選択し直し時は自動遷移しない
@@ -120,15 +122,14 @@ export default function LandingPage() {
 
         await liffSdk.init({ liffId });
 
-        // LIFF 初期化後にもログアウト直後フラグを再確認
+        // LIFF 初期化後にもログアウト直後フラグを念のため確認（競合対策）
         if (sessionStorage.getItem('justLoggedOut') === '1') {
           sessionStorage.removeItem('justLoggedOut');
           sessionStorage.removeItem('redirectedToLiff');
           clearSession();
           clearLineLogin();
           localStorage.removeItem('loginRole');
-          setIsLoggedIn(false);
-          return;
+          wasJustLoggedOut = true;
         }
 
         try {
@@ -153,7 +154,8 @@ export default function LandingPage() {
 
         setLiff(liffSdk);
 
-        if (liffSdk.isLoggedIn()) {
+        // ログアウト直後は自動リダイレクトをスキップしてログイン画面を表示する
+        if (liffSdk.isLoggedIn() && !wasJustLoggedOut) {
           let isNewProfile = false;
 
           try {
