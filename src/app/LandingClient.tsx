@@ -41,68 +41,68 @@ export default function LandingPage() {
     const init = async () => {
       if (typeof window === 'undefined') return;
 
-      const params = new URLSearchParams(window.location.search);
-      const familyInviteId = params.get('familyInviteId');
-      if (familyInviteId) {
-        router.push(`/family-invite?familyInviteId=${familyInviteId}`);
-        return;
-      }
-
-      const switchRole = params.get('switchRole') === '1';
-
       try {
-        const storedRole = localStorage.getItem('loginRole');
-        if (storedRole === 'medical' || storedRole === 'patient') {
-          setLoginRole(storedRole);
+        const params = new URLSearchParams(window.location.search);
+        const familyInviteId = params.get('familyInviteId');
+        if (familyInviteId) {
+          router.push(`/family-invite?familyInviteId=${familyInviteId}`);
+          return;
         }
-      } catch {
-        // ignore
-      }
 
-      // ログアウト直後は、自動リダイレクトも LIFF 自動復元も止める
-      if (sessionStorage.getItem('justLoggedOut') === '1') {
-        sessionStorage.removeItem('justLoggedOut');
-        sessionStorage.removeItem('redirectedToLiff');
-        clearSession();
-        clearLineLogin();
-        localStorage.removeItem('loginRole');
-        setIsLoggedIn(false);
-        return;
-      }
+        const switchRole = params.get('switchRole') === '1';
 
-      // ロール選択し直し時は自動遷移しない
-      if (switchRole) {
-        setIsLoggedIn(false);
-        return;
-      }
-
-      // localStorage が残っていても、まずサーバー側の認証を確認する
-      const userId = localStorage.getItem('userId');
-      if (userId) {
         try {
-          const res = await apiFetch('/api/auth/role', { cache: 'no-store' });
-
-          if (res.ok) {
-            const data = await res.json().catch(() => ({}));
-            const role =
-              data?.role === 'medical' || localStorage.getItem('loginRole') === 'medical'
-                ? 'medical'
-                : 'patient';
-
-            localStorage.setItem('loginRole', role);
-            router.push(role === 'medical' ? '/medical' : '/health-records');
-            return;
+          const storedRole = localStorage.getItem('loginRole');
+          if (storedRole === 'medical' || storedRole === 'patient') {
+            setLoginRole(storedRole);
           }
-        } catch (error) {
-          console.warn('認証確認に失敗。ログイン画面を表示します:', error);
+        } catch {
+          // ignore
         }
 
-        clearSession();
-        clearLineLogin();
-        localStorage.removeItem('loginRole');
-      }
+        // ログアウト直後は、自動リダイレクトも LIFF 自動復元も止める
+        if (sessionStorage.getItem('justLoggedOut') === '1') {
+          sessionStorage.removeItem('justLoggedOut');
+          sessionStorage.removeItem('redirectedToLiff');
+          clearSession();
+          clearLineLogin();
+          localStorage.removeItem('loginRole');
+          setIsLoggedIn(false);
+          return;
+        }
 
-      try {
+        // ロール選択し直し時は自動遷移しない
+        if (switchRole) {
+          setIsLoggedIn(false);
+          return;
+        }
+
+        // localStorage が残っていても、まずサーバー側の認証を確認する
+        const userId = localStorage.getItem('userId');
+        if (userId) {
+          try {
+            const res = await apiFetch('/api/auth/role', { cache: 'no-store' });
+
+            if (res.ok) {
+              const data = await res.json().catch(() => ({}));
+              const role =
+                data?.role === 'medical' || localStorage.getItem('loginRole') === 'medical'
+                  ? 'medical'
+                  : 'patient';
+
+              localStorage.setItem('loginRole', role);
+              router.push(role === 'medical' ? '/medical' : '/health-records');
+              return;
+            }
+          } catch (error) {
+            console.warn('認証確認に失敗。ログイン画面を表示します:', error);
+          }
+
+          clearSession();
+          clearLineLogin();
+          localStorage.removeItem('loginRole');
+        }
+
         const liffSdk = await waitForLiff();
 
         if (!liffSdk) {
@@ -118,9 +118,7 @@ export default function LandingPage() {
           return;
         }
 
-        await liffSdk.init({
-          liffId
-        });
+        await liffSdk.init({ liffId });
 
         // LIFF 初期化後にもログアウト直後フラグを再確認
         if (sessionStorage.getItem('justLoggedOut') === '1') {
@@ -154,7 +152,6 @@ export default function LandingPage() {
         }
 
         setLiff(liffSdk);
-        setLiffLoading(false);
 
         if (liffSdk.isLoggedIn()) {
           let isNewProfile = false;
@@ -167,7 +164,7 @@ export default function LandingPage() {
             let liffIdToken: string | null = null;
 
             try {
-              liffIdToken = await liffSdk.getIDToken();
+              liffIdToken = liffSdk.getIDToken();
               if (liffIdToken) {
                 const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
                 lineEmail = decodedToken.email || '';
@@ -257,10 +254,11 @@ export default function LandingPage() {
         }
 
         setIsLoggedIn(false);
-        setLiffLoading(false);
       } catch (error) {
         console.error('LIFF初期化エラー:', error);
         setIsLoggedIn(false);
+      } finally {
+        // どのパスを通っても必ず liffLoading を解除する
         setLiffLoading(false);
       }
     };
