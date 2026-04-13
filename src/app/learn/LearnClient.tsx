@@ -220,37 +220,48 @@ export default function LearnClient() {
 
         {/* AIアドバイスセクション */}
         <div className="mb-12">
-          <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🤖</span>
-                <h2 className="text-lg font-bold text-orange-800">AI健康アドバイス</h2>
-              </div>
-              <button
-                onClick={handleGenerateAdvice}
-                disabled={isGenerating}
-                className="px-5 py-2 bg-orange-500 text-white font-bold rounded-xl shadow
-                  hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed
-                  flex items-center gap-2 text-sm"
-              >
-                {isGenerating ? (
-                  <>
-                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    生成中...
-                  </>
-                ) : (
-                  '✨ アドバイスを生成する'
-                )}
-              </button>
+          <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-4 md:p-6">
+
+            {/* ヘッダー */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-2xl">🤖</span>
+              <h2 className="text-lg font-bold text-orange-800">AI健康アドバイス</h2>
             </div>
 
+            {/* 説明文 */}
+            {!advice && !adviceError && !isGenerating && (
+              <p className="text-sm text-gray-400 mb-3">
+                直近7日間の健康記録を元にパーソナライズされたアドバイスが届きます。
+              </p>
+            )}
+
+            {/* 生成ボタン */}
+            <button
+              onClick={handleGenerateAdvice}
+              disabled={isGenerating}
+              className="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow
+                hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed
+                flex items-center justify-center gap-2 text-sm mb-4"
+            >
+              {isGenerating ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  生成中...
+                </>
+              ) : (
+                '✨ アドバイスを生成する'
+              )}
+            </button>
+
+            {/* エラー */}
             {adviceError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                 ⚠️ {adviceError}
               </div>
             )}
 
-            {advice ? (
+            {/* アドバイス本文 */}
+            {advice && (
               <div>
                 <div className="space-y-1">{renderAdvice(advice)}</div>
                 <div className="mt-4 p-3 bg-orange-50 rounded-xl border border-orange-100">
@@ -259,10 +270,6 @@ export default function LearnClient() {
                   </p>
                 </div>
               </div>
-            ) : !adviceError && !isGenerating && (
-              <p className="text-sm text-gray-400 text-center py-4">
-                直近7日間の健康記録を元にパーソナライズされたアドバイスが届きます。
-              </p>
             )}
           </div>
         </div>
