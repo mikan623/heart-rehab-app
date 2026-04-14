@@ -234,12 +234,17 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
-    
+
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
-    
+
     const data = await request.json();
     const body = isRecord(data) ? data : {};
     const mode = getMode(body.mode);
@@ -272,6 +277,18 @@ export async function PUT(request: NextRequest) {
         { error: 'id is required' },
         { status: 400 }
       );
+    }
+
+    // オーナー検証：自分のデータのみ更新可能
+    const existing = await prisma.bloodData.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (existing.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // バリデーション（>1000 を禁止、小数OK）
@@ -387,6 +404,11 @@ export async function PUT(request: NextRequest) {
 // - cpxId: CPX（子）を単体削除
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const connected = await ensurePrismaConnection();
 
     if (!connected || !prisma) {
@@ -402,12 +424,32 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (cpxId) {
-      await prisma.cardiopulmonaryExerciseTest.delete({
+      // CPX削除：親のBloodDataが自分のものか確認
+      const cpx = await prisma.cardiopulmonaryExerciseTest.findUnique({
         where: { id: cpxId },
+        select: { bloodData: { select: { userId: true } } },
       });
+      if (!cpx) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+      if (cpx.bloodData.userId !== auth.userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      await prisma.cardiopulmonaryExerciseTest.delete({ where: { id: cpxId } });
       return NextResponse.json({ success: true });
     }
 
+    // BloodData削除：自分のものか確認
+    const bloodData = await prisma.bloodData.findUnique({
+      where: { id: id! },
+      select: { userId: true },
+    });
+    if (!bloodData) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (bloodData.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     await prisma.bloodData.delete({ where: { id: id! } });
 
     return NextResponse.json({ success: true });

@@ -119,12 +119,6 @@ export function getAuthTokenFromRequest(request: NextRequest): string | null {
 }
 
 export function getAuthContext(request: NextRequest): AuthContext | null {
-  const headerUserId = request.headers.get('x-auth-user-id');
-  const headerRole = request.headers.get('x-auth-role');
-  if (headerUserId && (headerRole === 'patient' || headerRole === 'medical')) {
-    return { userId: headerUserId, role: headerRole };
-  }
-
   const token = getAuthTokenFromRequest(request);
   if (!token) return null;
   return verifyAuthToken(token);

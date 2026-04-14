@@ -53,13 +53,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'LINE_LOGIN_CHANNEL_ID is not set' }, { status: 500 });
     }
 
+      const verifyParams = new URLSearchParams({
+        id_token: idToken,
+        client_id: lineChannelId,
+        user_id: userId, // user_idを指定してトークンの対象ユーザーを厳密に検証
+      });
+
       const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          id_token: idToken,
-          client_id: lineChannelId,
-        }),
+        body: verifyParams,
       });
 
       if (!verifyRes.ok) {
@@ -69,10 +72,14 @@ export async function POST(request: NextRequest) {
       }
 
       const verifyData = await verifyRes.json();
-      if (verifyData?.sub && verifyData.sub !== userId) {
+      // subが存在しない場合も不正なトークンとして拒否
+      if (!verifyData?.sub) {
+        return NextResponse.json({ error: 'Invalid LINE ID token: missing sub' }, { status: 401 });
+      }
+      if (verifyData.sub !== userId) {
         return NextResponse.json({ error: 'LINE user mismatch' }, { status: 401 });
       }
-      if (verifyData?.sub) verifiedUserId = verifyData.sub;
+      verifiedUserId = verifyData.sub;
     
     // メールアドレス重複を避ける（LINEログインはメール必須ではない）
     let safeEmail = email;

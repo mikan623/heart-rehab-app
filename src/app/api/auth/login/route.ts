@@ -2,9 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // レート制限: IP ごとに 15 分間で 10 回まで
+    const ip = getClientIp(request);
+    const { allowed, remaining, resetAt } = checkRateLimit(`login:${ip}`, {
+      limit: 10,
+      windowSeconds: 15 * 60,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'リクエストが多すぎます。しばらく時間をおいて再試行してください。' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)),
+            'X-RateLimit-Remaining': String(remaining),
+          },
+        }
+      );
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });

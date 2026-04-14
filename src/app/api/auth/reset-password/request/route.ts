@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma, { ensurePrismaConnection } from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/mailer';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const TOKEN_TTL_SECONDS = 60 * 15; // 15 minutes
 
@@ -20,6 +21,25 @@ function hashToken(token: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // レート制限: IP ごとに 15 分間で 3 回まで（メール爆撃対策）
+    const ip = getClientIp(request);
+    const { allowed, remaining, resetAt } = checkRateLimit(`reset-password:${ip}`, {
+      limit: 3,
+      windowSeconds: 15 * 60,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'リクエストが多すぎます。しばらく時間をおいて再試行してください。' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)),
+            'X-RateLimit-Remaining': String(remaining),
+          },
+        }
+      );
+    }
+
     const connected = await ensurePrismaConnection();
     if (!connected || !prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
