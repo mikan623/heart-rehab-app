@@ -170,6 +170,14 @@ export default function LandingPage() {
               if (liffIdToken) {
                 const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
                 lineEmail = decodedToken.email || '';
+
+                // ID Token の有効期限を確認 → 期限切れなら LINE 再ログインで新しいトークンを取得
+                if (decodedToken.exp && Math.floor(Date.now() / 1000) > decodedToken.exp) {
+                  console.warn('⚠️ LINE ID Token expired, forcing re-login');
+                  liffSdk.login();
+                  return; // ページ遷移するのでここで終了
+                }
+
                 console.log('📧 LINE メールアドレス取得:', lineEmail);
               }
             } catch (emailError) {
@@ -236,23 +244,26 @@ export default function LandingPage() {
             } catch (profileSaveError) {
               console.log('⚠️ プロフィール初期保存エラー（無視）:', profileSaveError);
             }
+
+            // セットアップ成功時のみリダイレクト（失敗時はログイン画面に戻す）
+            const role =
+              typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
+                ? 'medical'
+                : 'patient';
+
+            if (role === 'medical') {
+              router.push('/medical');
+            } else if (isNewProfile) {
+              router.push('/profile');
+            } else {
+              router.push('/health-records');
+            }
+            return;
+
           } catch (profileError) {
-            console.error('⚠️ LINE プロフィール取得エラー:', profileError);
+            console.error('⚠️ LINE セットアップエラー（ログイン画面を表示）:', profileError);
+            // セットアップ失敗時はリダイレクトせずログイン画面を表示する
           }
-
-          const role =
-            typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
-              ? 'medical'
-              : 'patient';
-
-          if (role === 'medical') {
-            router.push('/medical');
-          } else if (isNewProfile) {
-            router.push('/profile');
-          } else {
-            router.push('/health-records');
-          }
-          return;
         }
 
         setIsLoggedIn(false);
