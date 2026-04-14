@@ -25,8 +25,8 @@ const securityHeaders = [
       // LINE プロフィール画像は複数の LINE CDN ドメインから配信される
       "img-src 'self' data: blob: https://profile.line-scdn.net https://obs.line-scdn.net https://d.line-scdn.net",
       "font-src 'self'",
-      // LIFF SDK 初期化時に liff.line.me へ API リクエストが発生する（必須）
-      "connect-src 'self' https://liff.line.me https://api.line.me https://access.line.me",
+      // LIFF SDK 初期化時に複数の LINE ドメインへ API リクエストが発生する（必須）
+      "connect-src 'self' https://liff.line.me https://liffsdk.line-scdn.net https://api.line.me https://access.line.me",
       // LIFF OAuth フローで access.line.me の iframe が生成されることがある
       "frame-src 'self' https://liff.line.me https://access.line.me",
       "object-src 'none'",
