@@ -16,151 +16,170 @@ export default function PrivacyPage() {
         }
       />
 
-      {/* メインコンテンツ */}
       <main className="p-4">
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-4 md:p-8">
-          {/* プライバシーポリシーのタイトル */}
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
               心臓リハビリ手帳 プライバシーポリシー
             </h2>
             <p className="text-sm text-gray-600">
-              本アプリのプライバシーポリシーをご説明します。
-              個人情報の取り扱いについてご不明な点がございましたら、
-              お気軽にお問い合わせください。
+              開発者（以下「開発者」）は、ユーザーの個人情報を適切に保護・管理することを重要な責務と考えています。
+              本ポリシーでは、収集する情報の種類・利用目的・外部サービスへの送信・保護対策についてご説明します。
             </p>
           </div>
 
           <div className="space-y-4 md:space-y-6 text-gray-700">
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第1条（個人情報について）</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第1条（個人情報の定義）</h3>
               <p className="text-sm leading-relaxed">
-                本プライバシーポリシーにおいて「個人情報」とは、
-                氏名、メールアドレス、血圧や脈拍などの健康データなど、
-                ユーザーを特定できる情報のことを指します。
+                本ポリシーにおける「個人情報」とは、氏名・メールアドレス・LINEプロフィール情報・
+                血圧や脈拍などの健康データなど、特定の個人を識別できる情報を指します。
               </p>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第2条（個人情報の収集）</h3>
-              <p className="text-sm leading-relaxed">
-                本アプリは、以下の個人情報を収集する場合があります：
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第2条（収集する情報）</h3>
+              <p className="text-sm leading-relaxed mb-2">
+                本アプリは、以下の情報を収集します。
               </p>
-              <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
-                <li>ログイン時に入力されるメールアドレスとパスワード</li>
-                <li>LINE ログイン時に取得される LINE プロフィール情報（表示名、プロフィール画像など）</li>
-                <li>ユーザーが手動で入力する健康データ（血圧、脈拍、体重など）</li>
-                <li>食事や運動などの日常生活データ</li>
-                <li>家族共有機能により登録・共有される家族メンバー情報（氏名、続柄、LINEユーザーID、メールアドレスなど）</li>
+              <ul className="text-sm leading-relaxed ml-4 list-disc space-y-1">
+                <li>メールアドレスおよびパスワード（メールログイン時）</li>
+                <li>LINEプロフィール情報（表示名・プロフィール画像・LINEユーザーID）（LINEログイン時）</li>
+                <li>ユーザーが入力する健康データ（血圧・脈拍・体重・運動・食事・服薬など）</li>
+                <li>血液検査・CPXデータなどの医療検査値</li>
+                <li>家族共有機能で登録する家族メンバー情報（氏名・続柄・LINEユーザーID）</li>
+                <li>お問い合わせ時にご入力いただく情報</li>
               </ul>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第3条（個人情報の利用目的）</h3>
-              <p className="text-sm leading-relaxed">
-                収集した個人情報は、以下の目的でのみ利用します：
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第3条（利用目的）</h3>
+              <p className="text-sm leading-relaxed mb-2">
+                収集した情報は、以下の目的でのみ利用します。
               </p>
-              <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
-                <li>本アプリのサービス提供と改善</li>
-                <li>ユーザーアカウントの管理と認証</li>
-                <li>健康データの記録と管理</li>
-                <li>家族共有機能の提供</li>
-                <li>医療機関へのデータ共有</li>
-                <li>ユーザーサポートとお問い合わせ対応</li>
+              <ul className="text-sm leading-relaxed ml-4 list-disc space-y-1">
+                <li>アカウントの作成・認証・管理</li>
+                <li>健康データの記録・表示・グラフ化</li>
+                <li>AIアドバイス機能の提供（OpenAI APIへのデータ送信を含む）</li>
+                <li>LINEによる家族共有通知・リマインダーの送信</li>
+                <li>医療従事者との連携機能の提供</li>
+                <li>パスワードリセットメールの送信</li>
+                <li>サービスの改善・不具合対応</li>
               </ul>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第4条（個人情報の保護）</h3>
-              <p className="text-sm leading-relaxed">
-                本アプリは、ユーザーの個人情報を保護するために、
-                以下の対策を実施しています：
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第4条（外部サービスへのデータ送信）</h3>
+              <p className="text-sm leading-relaxed mb-3">
+                本アプリは、以下の外部サービスにデータを送信する場合があります。
+                各サービスのプライバシーポリシーも併せてご確認ください。
               </p>
-              <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
-                <li>すべての健康データは暗号化されて保存されます</li>
-                <li>パスワードは安全なハッシュ化アルゴリズムで保護されます</li>
-                <li>通信は SSL/TLS で暗号化されます</li>
-                <li>定期的なセキュリティ監査を実施します</li>
+              <div className="space-y-3">
+                <div className="bg-white rounded-md p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">OpenAI（AIアドバイス機能）</p>
+                  <p className="text-sm text-gray-600">
+                    AIアドバイス機能をご利用の際、直近7日間の健康記録データ（血圧・脈拍・体重・運動・食事・服薬など）を
+                    OpenAIのAPIサーバーに送信し、アドバイス文章を生成します。
+                    氏名・メールアドレスなどの直接的な個人識別情報は送信しません。
+                    OpenAIのプライバシーポリシーは公式サイトをご参照ください。
+                  </p>
+                </div>
+                <div className="bg-white rounded-md p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">LINE（家族共有・リマインダー通知）</p>
+                  <p className="text-sm text-gray-600">
+                    家族共有機能をご利用の場合、健康記録の一部をLINE Messaging APIを通じて家族のLINEアカウントに送信します。
+                    リマインダー機能をONに設定した場合、設定した時刻にLINEへ通知が送信されます。
+                    LINEログインをご利用の場合、LINEのプロフィール情報をアプリに取得・保存します。
+                  </p>
+                </div>
+                <div className="bg-white rounded-md p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">AWS SES（パスワードリセットメール）</p>
+                  <p className="text-sm text-gray-600">
+                    パスワードリセット機能をご利用の際、メールアドレス宛にリセットリンクを送信するため、
+                    Amazon SES（Simple Email Service）を使用します。
+                    メールアドレス以外の情報は送信されません。
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第5条（情報の保護）</h3>
+              <p className="text-sm leading-relaxed mb-2">
+                個人情報の保護のために、以下の対策を実施しています。
+              </p>
+              <ul className="text-sm leading-relaxed ml-4 list-disc space-y-1">
+                <li>通信はすべてSSL/TLSで暗号化</li>
+                <li>パスワードはbcryptによりハッシュ化して保存（平文では保存しない）</li>
+                <li>認証にはhttpOnly CookieによるJWTを使用し、XSSによるトークン窃取を防止</li>
+                <li>APIキー・DB接続情報などのシークレットはAWS Secrets Managerで一元管理</li>
+                <li>セキュリティヘッダー（CSP・HSTS・X-Frame-Options等）の設定</li>
               </ul>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第5条（個人情報の第三者提供）</h3>
-              <p className="text-sm leading-relaxed">
-                本アプリは、以下の場合を除き、ユーザーの個人情報を第三者に提供しません：
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第6条（第三者への提供）</h3>
+              <p className="text-sm leading-relaxed mb-2">
+                以下の場合を除き、ユーザーの個人情報を第三者に提供しません。
               </p>
-              <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
+              <ul className="text-sm leading-relaxed ml-4 list-disc space-y-1">
                 <li>ユーザー本人の明示的な同意がある場合</li>
                 <li>家族共有機能により、ユーザーが共有を選択した場合</li>
-                <li>医療機関へのデータエクスポート機能により、ユーザーが共有を選択した場合</li>
-                <li>法律により提供が要求される場合</li>
+                <li>医療従事者との連携機能により、ユーザーが承認した医療従事者がデータを閲覧する場合</li>
+                <li>第4条に記載の外部サービスへのデータ送信（利用目的の範囲内）</li>
+                <li>法令により提供が義務付けられている場合</li>
               </ul>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第6条（LINE ログインについて）</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第7条（Cookieの使用）</h3>
               <p className="text-sm leading-relaxed">
-                本アプリで LINE ログインを利用する場合、以下の点にご同意いただきます：
-              </p>
-              <ul className="text-sm leading-relaxed mt-2 ml-4 list-disc space-y-1">
-                <li>LINE の個人情報ポリシーも適用されます</li>
-                <li>LINE プロフィール情報（表示名、プロフィール画像、LINEユーザーID）がアプリに保存されます</li>
-                <li>LINE ログイン情報の詳細については、LINE の公式ドキュメントをご参照ください</li>
-              </ul>
-            </section>
-
-            <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第7条（個人情報へのアクセス権）</h3>
-              <p className="text-sm leading-relaxed">
-                ユーザーは、本アプリ内でいつでも自分の個人情報を確認、
-                編集、または削除することができます。
-                削除を希望される場合は、本アプリ内の設定から実行してください。
+                本アプリは、ログイン認証のためにhttpOnly Cookieを使用します。
+                このCookieにはJWT（認証トークン）が含まれており、
+                JavaScriptからはアクセスできない設定で安全に管理されています。
+                ブラウザの設定でCookieを無効にすると、ログイン機能が利用できなくなります。
+                広告目的やトラッキング目的のCookieは使用していません。
               </p>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第8条（ローカルストレージについて）</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第8条（ローカルストレージの使用）</h3>
               <p className="text-sm leading-relaxed">
-                本アプリは、ユーザーの利便性向上や一時的なバックアップのために、
-                ユーザーのデバイスのローカルストレージに一部の情報（ログインセッション情報、
-                プロフィール情報、健康記録データの一時保存、家族共有設定 など）を保存する場合があります。
-                これらのデータは主にオフライン環境での利用や入力内容の保持を目的としており、
-                原則としてユーザーのデバイス内でのみ利用されます。
-                ユーザーはブラウザの設定やアプリ内のログアウト操作などにより、
-                これらのローカルデータを削除することができます。
-                ローカルストレージに保存された情報を、ユーザーの同意なく外部に送信することはありません。
+                本アプリは、ログイン状態の維持やロール（患者／医療従事者）の記憶のため、
+                ブラウザのローカルストレージにユーザーID・表示名・ログインロールなどを保存します。
+                健康データそのものはサーバー側にのみ保存されます。
+                ローカルストレージの情報はユーザーの端末内でのみ利用され、
+                ログアウトすることで削除されます。
               </p>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">第9条（Cookies の使用）</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">第9条（個人情報の確認・削除）</h3>
               <p className="text-sm leading-relaxed">
-                本アプリは、ユーザー体験を向上させるため、
-                限定的に Cookies を使用する場合があります。
-                ブラウザの設定で Cookies を無効にすることもできます。
+                ユーザーは、本アプリ内のプロフィール画面からご自身の情報を確認・編集できます。
+                アカウントの削除またはデータの消去をご希望の場合は、
+                お問い合わせフォームよりご連絡ください。速やかに対応いたします。
               </p>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">第10条（ポリシーの変更）</h3>
               <p className="text-sm leading-relaxed">
-                本ポリシーは、予告なく変更される場合があります。
-                変更後のポリシーは、本アプリ内で公開された時点で効力を生じます。
-                重要な変更の場合は、事前に通知する努力をいたします。
+                本ポリシーは、法令の改正やサービス変更に応じて更新される場合があります。
+                重要な変更が生じた場合は、アプリ内またはお問い合わせ等を通じてお知らせします。
+                変更後のポリシーは、本ページに掲載した時点で効力を生じます。
               </p>
             </section>
 
             <section className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">第11条（お問い合わせ）</h3>
               <p className="text-sm leading-relaxed">
-                本プライバシーポリシーについてご不明な点や
-                個人情報の取り扱いについてのご質問がございましたら、
-                本アプリ内の「お問い合わせフォーム」よりご連絡ください。
+                本プライバシーポリシーや個人情報の取り扱いについてご不明な点がございましたら、
+                下記のお問い合わせフォームよりご連絡ください。
               </p>
               <p className="text-sm leading-relaxed mt-3">
-                <strong>お問い合わせフォーム：</strong>
-                <a href="/contact" className="text-orange-600 hover:underline">
-                  お問い合わせページ
+                <a href="/contact" className="text-orange-600 hover:underline font-medium">
+                  お問い合わせフォームはこちら
                 </a>
               </p>
             </section>
@@ -171,7 +190,7 @@ export default function PrivacyPage() {
                   <strong>制定日:</strong> 2025年10月
                 </p>
                 <p className="text-xs text-gray-500">
-                  最終更新: 2025年10月
+                  最終更新: 2026年4月
                 </p>
               </div>
             </div>
@@ -181,4 +200,3 @@ export default function PrivacyPage() {
     </div>
   );
 }
-
