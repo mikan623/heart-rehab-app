@@ -245,11 +245,23 @@ export default function LandingPage() {
                 const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
                 lineEmail = decodedToken.email || '';
 
-                // ID Token の有効期限を確認 → 期限切れなら LINE 再ログインで新しいトークンを取得
+                // ID Token の有効期限を確認
                 if (decodedToken.exp && Math.floor(Date.now() / 1000) > decodedToken.exp) {
-                  console.warn('⚠️ LINE ID Token expired, forcing re-login');
-                  liffSdk.login();
-                  return; // ページ遷移するのでここで終了
+                  // ループ防止: 既に1回再ログインを試みた場合はスキップしてサーバーに判断させる
+                  const alreadyRetried = sessionStorage.getItem('liffTokenRetry') === '1';
+                  if (!alreadyRetried) {
+                    console.warn('⚠️ LINE ID Token expired, forcing full re-login');
+                    sessionStorage.setItem('liffTokenRetry', '1');
+                    // logout() でローカルセッションをクリアしてから login() することで
+                    // LIFF が新しいコード交換を行い、フレッシュな ID Token が発行される
+                    liffSdk.logout();
+                    liffSdk.login();
+                    return;
+                  } else {
+                    // リトライ後もトークンが期限切れ → フラグをクリアしてサーバー検証に委ねる
+                    console.warn('⚠️ LINE ID Token still expired after retry, proceeding to server');
+                    sessionStorage.removeItem('liffTokenRetry');
+                  }
                 }
 
                 console.log('📧 LINE メールアドレス取得:', lineEmail);
@@ -319,7 +331,9 @@ export default function LandingPage() {
               console.log('⚠️ プロフィール初期保存エラー（無視）:', profileSaveError);
             }
 
-            // セットアップ成功時のみリダイレクト（失敗時はログイン画面に戻す）
+            // セットアップ成功 → リトライフラグをクリアしてリダイレクト
+            sessionStorage.removeItem('liffTokenRetry');
+
             const role =
               typeof window !== 'undefined' && localStorage.getItem('loginRole') === 'medical'
                 ? 'medical'
