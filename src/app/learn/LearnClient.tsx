@@ -143,11 +143,65 @@ export default function LearnClient() {
     }
   };
 
-  const renderAdvice = (text: string) =>
-    text.split('\n').map((line, i) => {
-      if (line.trim() === '') return <div key={i} className="h-2" />;
-      return <p key={i} className="text-sm text-gray-700">{line}</p>;
-    });
+  const renderAdvice = (text: string) => {
+    const inlineBold = (raw: string) => {
+      const parts = raw.split(/\*\*(.+?)\*\*/g);
+      return parts.map((part, idx) =>
+        idx % 2 === 1
+          ? <strong key={idx} className="font-bold text-gray-900">{part}</strong>
+          : <span key={idx}>{part}</span>
+      );
+    };
+
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed === '') {
+        elements.push(<div key={i} className="h-3" />);
+      } else if (/^#{1,3}\s/.test(trimmed)) {
+        // 見出し行（## や # で始まる）
+        const headingText = trimmed.replace(/^#{1,3}\s+/, '');
+        elements.push(
+          <div key={i} className="flex items-center gap-2 mt-4 mb-2">
+            <div className="w-1 h-6 bg-orange-500 rounded-full flex-shrink-0" />
+            <h3 className="text-lg font-bold text-orange-700">{headingText}</h3>
+          </div>
+        );
+      } else if (/^[-•]\s/.test(trimmed)) {
+        // 箇条書き
+        const itemText = trimmed.replace(/^[-•]\s+/, '');
+        elements.push(
+          <div key={i} className="flex items-start gap-3 py-1">
+            <span className="mt-1.5 w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+            <p className="text-base text-gray-700 leading-relaxed">{inlineBold(itemText)}</p>
+          </div>
+        );
+      } else if (/^\d+[.．]\s/.test(trimmed)) {
+        // 番号付きリスト
+        const match = trimmed.match(/^(\d+)[.．]\s+(.*)/);
+        if (match) {
+          elements.push(
+            <div key={i} className="flex items-start gap-3 py-1">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-sm flex items-center justify-center leading-none">
+                {match[1]}
+              </span>
+              <p className="text-base text-gray-700 leading-relaxed">{inlineBold(match[2])}</p>
+            </div>
+          );
+        }
+      } else {
+        elements.push(
+          <p key={i} className="text-base text-gray-700 leading-relaxed">{inlineBold(trimmed)}</p>
+        );
+      }
+      i++;
+    }
+    return elements;
+  };
 
   // 画面幅判定（md未満＝スマホ）
   useEffect(() => {
@@ -220,57 +274,74 @@ export default function LearnClient() {
 
         {/* AIアドバイスセクション */}
         <div className="mb-12">
-          <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-4 md:p-6">
+          <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-md overflow-hidden">
 
-            {/* ヘッダー */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">🤖</span>
-              <h2 className="text-lg font-bold text-orange-800">AI健康アドバイス</h2>
+            {/* ヘッダーバー */}
+            <div className="bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-4 flex items-center gap-3">
+              <span className="text-3xl">🤖</span>
+              <div>
+                <h2 className="text-xl font-bold text-white">AI健康アドバイス</h2>
+                <p className="text-sm text-white/80">直近7日間の記録をもとに生成します</p>
+              </div>
             </div>
 
-            {/* 説明文 */}
-            {!advice && !adviceError && !isGenerating && (
-              <p className="text-sm text-gray-400 mb-3">
-                直近7日間の健康記録を元にパーソナライズされたアドバイスが届きます。
-              </p>
-            )}
-
-            {/* 生成ボタン */}
-            <button
-              onClick={handleGenerateAdvice}
-              disabled={isGenerating}
-              className="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow
-                hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed
-                flex items-center justify-center gap-2 text-sm mb-4"
-            >
-              {isGenerating ? (
-                <>
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                '✨ アドバイスを生成する'
-              )}
-            </button>
-
-            {/* エラー */}
-            {adviceError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                ⚠️ {adviceError}
-              </div>
-            )}
-
-            {/* アドバイス本文 */}
-            {advice && (
-              <div>
-                <div className="space-y-1">{renderAdvice(advice)}</div>
-                <div className="mt-4 p-3 bg-orange-50 rounded-xl border border-orange-100">
-                  <p className="text-xs text-gray-500">
-                    ⚠️ このアドバイスはAIによる参考情報です。医療上の判断は必ず担当医にご相談ください。
+            <div className="p-5 md:p-7">
+              {/* 説明文（未生成時のみ） */}
+              {!advice && !adviceError && !isGenerating && (
+                <div className="flex items-start gap-3 mb-5 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                  <span className="text-2xl flex-shrink-0">💡</span>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    ボタンを押すと、あなたの直近7日間の健康記録をもとに、
+                    OpenAI がパーソナライズされたアドバイスを生成します。
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* 生成ボタン */}
+              <button
+                onClick={handleGenerateAdvice}
+                disabled={isGenerating}
+                className="w-full py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-xl shadow-md
+                  hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed
+                  flex items-center justify-center gap-3 text-lg mb-5"
+              >
+                {isGenerating ? (
+                  <>
+                    <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>生成中...少々お待ちください</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl">✨</span>
+                    <span>アドバイスを生成する</span>
+                  </>
+                )}
+              </button>
+
+              {/* エラー */}
+              {adviceError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">⚠️</span>
+                  <p className="text-base text-red-700">{adviceError}</p>
+                </div>
+              )}
+
+              {/* アドバイス本文 */}
+              {advice && (
+                <div>
+                  <div className="bg-gray-50 rounded-xl p-5 md:p-6 space-y-1 border border-gray-100">
+                    {renderAdvice(advice)}
+                  </div>
+                  <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-200 flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0">⚠️</span>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      このアドバイスはAIによる参考情報です。<br />
+                      医療上の判断は必ず担当医にご相談ください。
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
