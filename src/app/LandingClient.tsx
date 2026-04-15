@@ -688,23 +688,60 @@ export default function LandingPage() {
               )}
             </div>
 
-            {/* 右: Heart animation */}
-            <div className="flex-shrink-0 flex flex-col items-center gap-6">
-              <div className="relative">
-                <div className="w-52 h-52 md:w-64 md:h-64 rounded-full bg-white/70 backdrop-blur shadow-2xl flex items-center justify-center border border-orange-100">
+            {/* 右: Heart animation + orbiting badges */}
+            <div className="flex-shrink-0 flex items-center justify-center">
+              {/*
+                rotate を一切使わず translate だけで円軌道を描く方式。
+                テキストが傾く問題を根本から解決する。
+                radius = 118px, 8 keyframes で円を近似。
+              */}
+              <style>{`
+                @keyframes badgeOrbit {
+                  0%    { transform: translate(148px,   0px)   translate(-50%, -50%); }
+                  12.5% { transform: translate(105px,  105px)  translate(-50%, -50%); }
+                  25%   { transform: translate(0px,    148px)  translate(-50%, -50%); }
+                  37.5% { transform: translate(-105px, 105px)  translate(-50%, -50%); }
+                  50%   { transform: translate(-148px,  0px)   translate(-50%, -50%); }
+                  62.5% { transform: translate(-105px,-105px)  translate(-50%, -50%); }
+                  75%   { transform: translate(0px,   -148px)  translate(-50%, -50%); }
+                  87.5% { transform: translate(105px, -105px)  translate(-50%, -50%); }
+                  100%  { transform: translate(148px,   0px)   translate(-50%, -50%); }
+                }
+              `}</style>
+
+              <div className="relative w-[320px] h-[320px] flex items-center justify-center" style={{ overflow: 'visible' }}>
+
+                {/* Heart circle */}
+                <div className="w-52 h-52 md:w-60 md:h-60 rounded-full bg-white/70 backdrop-blur shadow-2xl flex items-center justify-center border border-orange-100 flex-shrink-0">
                   <img
                     src="/heart-animation.gif"
                     alt="心臓ちゃん"
-                    className="w-44 h-44 md:w-56 md:h-56 object-contain"
+                    className="w-44 h-44 md:w-52 md:h-52 object-contain"
                   />
                 </div>
-                {/* floating badge */}
-                <div className="absolute -top-3 -right-3 bg-white border border-orange-100 rounded-full px-3 py-1.5 shadow-lg text-xs font-bold text-orange-600 whitespace-nowrap">
-                  AI搭載
-                </div>
-                <div className="absolute -bottom-3 -left-3 bg-white border border-pink-100 rounded-full px-3 py-1.5 shadow-lg text-xs font-bold text-pink-600 whitespace-nowrap">
-                  LINE連携
-                </div>
+
+                {/* Orbiting badges — 120s でゆっくり、4つが90°ずつ均等間隔 */}
+                {[
+                  { label: 'AI搭載',   textColor: 'text-orange-600', border: 'border-orange-300', delay: 0   },
+                  { label: 'LINE連携', textColor: 'text-green-600',  border: 'border-green-300',  delay: -30 },
+                  { label: '家族共有', textColor: 'text-blue-600',   border: 'border-blue-300',   delay: -60 },
+                  { label: 'PDF印刷',  textColor: 'text-purple-600', border: 'border-purple-300', delay: -90 },
+                ].map((badge, idx) => (
+                  <div
+                    key={idx}
+                    className={`bg-white border-2 ${badge.border} rounded-full shadow-md px-3 py-1.5 whitespace-nowrap ${badge.textColor}`}
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      animation: 'badgeOrbit 120s linear infinite',
+                      animationDelay: `${badge.delay}s`,
+                    }}
+                  >
+                    <span className="text-sm font-bold">{badge.label}</span>
+                  </div>
+                ))}
+
               </div>
             </div>
 
