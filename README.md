@@ -72,6 +72,62 @@
 
 ---
 
+# クラウドアーキテクチャ
+
+```mermaid
+flowchart TD
+    subgraph DEV["👨‍💻 開発者"]
+        GIT["git push"]
+    end
+
+    subgraph CICD["CI/CD"]
+        GH["GitHub"]
+        GA["GitHub Actions\n(build & deploy)"]
+        ECR["Amazon ECR\n(Dockerイメージ管理)"]
+    end
+
+    subgraph AWS["☁️ AWS"]
+        subgraph NET["ネットワーク"]
+            R53["Route 53\n(DNSルーティング)"]
+            ACM["AWS ACM\n(SSL証明書)"]
+            ALB["ALB\n(ロードバランサー)"]
+        end
+
+        subgraph COMPUTE["コンピューティング"]
+            ECS["ECS Fargate\n(サーバーレスコンテナ)"]
+            APP["Next.js App\n(Frontend + API Routes)"]
+        end
+
+        subgraph DATA["データ・セキュリティ"]
+            RDS["Amazon RDS\n(PostgreSQL)"]
+            SM["AWS Secrets Manager\n(APIキー・DB接続情報)"]
+            SES["AWS SES\n(メール送信)"]
+        end
+    end
+
+    subgraph EXT["外部サービス"]
+        LINE["LINE API\n(LIFF / Messaging)"]
+        OPENAI["OpenAI API\n(gpt-4o-mini)"]
+    end
+
+    subgraph USER["👤 ユーザー"]
+        BROWSER["ブラウザ / スマートフォン"]
+    end
+
+    GIT --> GH --> GA --> ECR --> ECS
+    BROWSER -->|HTTPS| R53 --> ALB
+    ACM -.->|SSL| ALB
+    ALB --> ECS
+    ECS --> APP
+    APP --> RDS
+    APP --> SM
+    APP --> SES
+    APP --> LINE
+    APP --> OPENAI
+```
+
+---
+
 # 技術選定理由と背景
 
 ### フロントエンド
