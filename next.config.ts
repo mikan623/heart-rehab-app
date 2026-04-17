@@ -23,7 +23,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.line-scdn.net https://d.line-scdn.net",
       "style-src 'self' 'unsafe-inline'",
       // LINE プロフィール画像は複数の LINE CDN ドメインから配信される
-      "img-src 'self' data: blob: https://profile.line-scdn.net https://obs.line-scdn.net https://d.line-scdn.net",
+      "img-src 'self' data: blob: https://profile.line-scdn.net https://obs.line-scdn.net https://d.line-scdn.net https://api.qrserver.com",
       "font-src 'self'",
       // LIFF SDK 初期化時に複数の LINE ドメインへ API リクエストが発生する（必須）
       "connect-src 'self' https://liff.line.me https://liffsdk.line-scdn.net https://api.line.me https://access.line.me",
