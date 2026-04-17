@@ -303,9 +303,6 @@ export default function FamilyPage() {
     initData();
   }, []);
 
-  // LINE Messaging API関連の状態と機能
-  const [lineConnected, setLineConnected] = useState(false);
-  
   // 家族用招待QRコードを生成（家族メンバー共通）
   const generateFamilyInviteQr = async () => {
     try {
@@ -348,182 +345,6 @@ export default function FamilyPage() {
       alert('招待用QRコードの作成に失敗しました。');
     } finally {
       setGeneratingInvite(false);
-    }
-  };
-
-  // LINE Messaging APIで家族にメッセージを送信
-  const sendLineMessageToFamily = async (memberId: string, message: string) => {
-    try {
-      const response = await apiFetch('/api/line/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          lineUserId: memberId,
-          message: message,
-        }),
-      });
-
-      if (response.ok) {
-        console.log('LINEメッセージ送信成功');
-        return true;
-      }
-    } catch (error) {
-      console.error('LINEメッセージ送信エラー:', error);
-    }
-    return false;
-  };
-
-  // ※ 健康記録の共有や異常値通知の実処理は /api/health-records 側で行う想定です。
-
-  // 家族メンバーを更新する関数（ローカルのみ）
-  const updateFamilyMember = (id: string, field: keyof FamilyMember, value: string | boolean) => {
-    // ローカルステートを更新するだけ（入力フォーム用）
-    const member = familyMembers.find(m => m.id === id);
-    if (!member) return;
-
-    const updatedMember = { ...member, [field]: value };
-
-    // ローカルステートを更新（即座に反映）
-    setFamilyMembers(prev => {
-      const updated = prev.map(m => 
-        m.id === id ? updatedMember : m
-      );
-      return updated;
-    });
-  };
-
-  // 家族メンバーを DB に保存する関数（手動保存）
-  const saveFamilyMemberToDatabase = async (id: string) => {
-    try {
-      const member = familyMembers.find(m => m.id === id);
-      if (!member) return;
-
-      // バリデーション
-      if (!member.name || !member.email) {
-        alert('名前とメールアドレスを入力してください');
-        return;
-      }
-
-      let userId = 'user-1';
-      if (typeof window !== 'undefined' && window.liff && window.liff.isLoggedIn && window.liff.isLoggedIn()) {
-        try {
-          const profile = await window.liff.getProfile();
-          userId = profile.userId;
-        } catch (error) {
-          console.log('⚠️ LIFF プロフィール取得エラー:', error);
-        }
-      }
-
-      // 新規メンバーかどうかで POST/PATCH を分ける
-      if (id.length <= 15) {
-        // 新規メンバー → POST
-        const response = await apiFetch('/api/family-members', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            familyMember: member
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ 家族メンバーをデータベースに保存');
-          
-          // 一時的な ID を DB の ID に置き換え
-          setFamilyMembers(prev => 
-            prev.map(m => m.id === id ? { ...member, id: result.familyMember.id } : m)
-          );
-          alert('家族メンバーを追加しました！');
-        } else {
-          console.error('❌ 保存失敗:', response.status);
-          alert('保存に失敗しました');
-        }
-      } else {
-        // 既存メンバー → PATCH
-        const response = await apiFetch('/api/family-members', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            memberId: id,
-            name: member.name,
-            email: member.email,
-            relationship: member.relationship,
-            lineUserId: member.lineUserId,
-            isRegistered: member.isRegistered
-          })
-        });
-
-        if (response.ok) {
-          console.log('✅ 家族メンバーを更新しました');
-          alert('更新しました！');
-        } else {
-          console.error('❌ 更新失敗:', response.status);
-          alert('更新に失敗しました');
-        }
-      }
-    } catch (error) {
-      console.error('❌ エラー:', error);
-      alert('エラーが発生しました');
-    }
-  };
-
-  // 家族メンバーの登録
-  const registerFamilyMember = async (id: string) => {
-    // LINE友達追加の処理
-    if (typeof window !== 'undefined' && window.liff) {
-      try {
-        // LIFFが初期化されているか確認
-        if (!window.liff.isInClient()) {
-          console.log('Not in LINE client, using fallback');
-          // ローカル環境やブラウザでのテスト用
-          updateFamilyMember(id, 'isRegistered', true);
-          alert('家族メンバーを登録しました！（テスト用）');
-          return;
-        }
-
-        await window.liff.shareTargetPicker([
-          {
-            type: 'text',
-            text: `心臓リハビリ手帳に招待されました！\n\n${familyMembers.find(m => m.id === id)?.name}さんから健康記録の共有を依頼されています。\n\nアプリをダウンロードして、一緒に健康管理を始めましょう！`
-          }
-        ]);
-        
-        updateFamilyMember(id, 'isRegistered', 'true');
-        alert('家族に招待を送信しました！');
-      } catch (error: unknown) {
-        console.error('LIFF initialization failed:', error);
-      }
-    } else {
-      // ローカル環境でのテスト用
-      updateFamilyMember(id, 'isRegistered', 'true');
-      alert('家族メンバーを登録しました！（テスト用）');
-    }
-  };
-
-  // 家族メンバーを追加する関数（データベース連携）
-  const addFamilyMember = async () => {
-    try {
-      // 一旦ローカルに追加（UX向上のため）
-      const newMember: FamilyMember = {
-        id: Date.now().toString(), // 一時的なID
-        name: '',
-        email: '',
-        relationship: '',
-        isRegistered: false
-      };
-      
-      // ローカルステートにも追加
-      setFamilyMembers(prev => [...prev, newMember]);
-      
-      // 🆕 データベースには保存しない
-      // （名前と メールアドレス が入力されたら updateFamilyMember で保存）
-      console.log('✅ 新しい家族メンバーをローカルに追加');
-    } catch (error) {
-      console.error('❌ エラー:', error);
-      alert('エラーが発生しました');
     }
   };
 
@@ -735,7 +556,7 @@ export default function FamilyPage() {
                 <div>
                   <p className="text-lg font-semibold text-gray-800">記録忘れリマインダーを使う</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    毎日指定した時間に、記録を忘れないようLINEでお知らせする設定です（※自動送信処理は今後追加予定）。
+                    毎日指定した時間に、記録を忘れないようLINEでお知らせする設定です。
                   </p>
                 </div>
               </div>
