@@ -679,124 +679,8 @@ export default function FamilyPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            {familyMembers.map((member) => (
-              <div key={member.id} className="bg-white rounded-lg border-2 border-orange-200 p-4 md:p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-800">
-                    {member.name || '（名前未設定）'}
-                  </h3>
-                  <button
-                    onClick={() => removeFamilyMember(member.id)}
-                    className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 font-medium"
-                  >
-                    🗑️ 削除
-                  </button>
-                </div>
-
-                {/* 名前 */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">名前</label>
-                  <input
-                    type="text"
-                    value={member.name}
-                    onChange={(e) => updateFamilyMember(member.id, 'name', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
-                    placeholder="山田太郎"
-                  />
-                </div>
-
-                {/* メールアドレス */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">メールアドレス</label>
-                  <input
-                    type="email"
-                    value={member.email}
-                    onChange={(e) => updateFamilyMember(member.id, 'email', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
-                    placeholder="example@email.com"
-                  />
-                </div>
-
-                {/* 関係性 */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">関係性</label>
-                  <select
-                    value={member.relationship}
-                    onChange={(e) => updateFamilyMember(member.id, 'relationship', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 font-semibold"
-                  >
-                    <option value="">選択してください</option>
-                    <option value="配偶者">配偶者</option>
-                    <option value="子供">子供</option>
-                    <option value="親">親</option>
-                    <option value="兄弟">兄弟</option>
-                    <option value="姉妹">姉妹</option>
-                    <option value="その他">その他</option>
-                  </select>
-                </div>
-
-                {/* LINE User ID */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">LINE User ID</label>
-                  <input
-                    type="text"
-                    value={member.lineUserId || ''}
-                    onChange={(e) => updateFamilyMember(member.id, 'lineUserId', e.target.value)}
-                    className="w-full px-4 py-3 text-base border-2 border-orange-300 rounded-lg focus:outline-none focus:border-orange-500"
-                    placeholder="U1234567890abcdef..."
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    💡 LINE User IDを入力すると自動通知が可能になります
-                  </p>
-                </div>
-
-                {/* ボタングループ */}
-                <div className="flex gap-3 flex-col md:flex-row">
-                  {/* 保存ボタン（新規メンバーのみ） */}
-                  {member.id.length <= 15 && (
-                    <button
-                      onClick={() => saveFamilyMemberToDatabase(member.id)}
-                      disabled={!member.name || !member.email}
-                      className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
-                        member.name && member.email
-                          ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      💾 保存
-                    </button>
-                  )}
-
-                  {/* 登録ボタン */}
-                  <button
-                    onClick={() => registerFamilyMember(member.id)}
-                    disabled={!member.name || !member.email || Boolean(member.isRegistered)}
-                    className={`flex-1 py-3 px-4 rounded-lg font-bold text-lg ${
-                      Boolean(member.isRegistered)
-                        ? 'bg-green-500 text-white cursor-not-allowed'
-                        : member.name && member.email
-                        ? 'bg-orange-500 text-white hover:bg-orange-600'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {Boolean(member.isRegistered) ? '✅ 登録済み' : '🤝 LINEで招待'}
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {familyMembers.length === 0 && (
-              <div className="text-center py-12 bg-orange-100 rounded-lg">
-                <p className="text-2xl font-bold text-gray-700 mb-2">家族メンバーが登録されていません</p>
-                <p className="text-lg text-gray-600">「➕ 追加」ボタンから家族メンバーを追加してください</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 共有設定セクション */}
-        <div className="bg-blue-50 rounded-lg border-2 border-blue-300 p-4 md:p-6">
+          {/* 共有設定セクション（QRコードの直下） */}
+          <div className="bg-blue-50 rounded-lg border-2 border-blue-300 p-4 md:p-6 mb-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
             📤 共有設定
           </h2>
@@ -865,6 +749,30 @@ export default function FamilyPage() {
                 />
               </div>
             </label>
+          </div>
+        </div>
+
+          {/* 家族メンバーリスト（名前と削除のみ） */}
+          <div className="space-y-3">
+            {familyMembers.map((member) => (
+              <div key={member.id} className="bg-white rounded-lg border-2 border-orange-200 px-4 py-3 flex justify-between items-center">
+                <span className="text-lg font-bold text-gray-800">
+                  {member.name || '（名前未設定）'}
+                </span>
+                <button
+                  onClick={() => removeFamilyMember(member.id)}
+                  className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 font-medium text-sm"
+                >
+                  🗑️ 削除
+                </button>
+              </div>
+            ))}
+            {familyMembers.length === 0 && (
+              <div className="text-center py-8 bg-orange-100 rounded-lg">
+                <p className="text-lg font-bold text-gray-700 mb-1">家族メンバーが登録されていません</p>
+                <p className="text-sm text-gray-600">「➕ 追加」ボタンから家族メンバーを追加してください</p>
+              </div>
+            )}
           </div>
         </div>
 
