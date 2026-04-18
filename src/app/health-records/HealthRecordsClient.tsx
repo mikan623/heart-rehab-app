@@ -322,25 +322,24 @@ export default function Home() {
       .replace(/[，,]/g, '.')
       .replace(/[。．]/g, '.');
 
-  // NOTE:
-  // - 「最大値へ自動補正（クランプ）」はしない
-  // - 入力は「桁数上限で打ち止め」まで（範囲チェックは validateAll / API で実施）
-  const sanitizeInt = (raw: string, opts: { maxDigits?: number } = {}) => {
-    const { maxDigits = 3 } = opts;
+  const sanitizeInt = (raw: string, opts: { maxDigits?: number; max?: number } = {}) => {
+    const { maxDigits = 3, max } = opts;
     const digits = toHalfWidthNumberLike(raw)
       .replace(/\D/g, '')
       .replace(/^0+(?=\d)/, '') // 先頭0整理（"0"は残す）
       .slice(0, maxDigits);
     // 「0だけ」は入力させない
     if (digits === '0') return '';
+    // 最大値を超えたらクランプ
+    if (max !== undefined && digits !== '' && Number(digits) > max) return String(max);
     return digits;
   };
 
   const sanitizeDecimal = (
     raw: string,
-    opts: { maxDecimals?: number; maxIntDigits?: number } = {}
+    opts: { maxDecimals?: number; maxIntDigits?: number; max?: number } = {}
   ) => {
-    const { maxDecimals = 2, maxIntDigits = 3 } = opts;
+    const { maxDecimals = 2, maxIntDigits = 3, max } = opts;
     const v0 = toHalfWidthNumberLike(raw);
     const cleaned = v0.replace(/[^0-9.]/g, '');
     const [intPartRaw, decPartRaw = ''] = cleaned.split('.');
@@ -349,15 +348,21 @@ export default function Home() {
       .slice(0, maxIntDigits);
     const decPart = decPartRaw.slice(0, maxDecimals);
     const hasDot = cleaned.includes('.');
+    let result: string;
     // 小数だけ入力されるケース: ".5" -> "0.5"
     if (hasDot) {
-      if (decPart.length) return `${intPart || '0'}.${decPart}`;
-      // 末尾が "." の場合は保持（入力途中を許可）
-      return `${intPart || '0'}.`;
+      if (decPart.length) result = `${intPart || '0'}.${decPart}`;
+      else result = `${intPart || '0'}.`; // 末尾が "." の場合は保持（入力途中を許可）
+    } else if ((intPart || '') === '0' && maxDecimals > 0) {
+      result = '0.'; // 「0だけ」は小数入力へ誘導
+    } else {
+      result = intPart;
     }
-    // 「0だけ」は小数入力へ誘導（0. にする）
-    if ((intPart || '') === '0' && maxDecimals > 0) return '0.';
-    return intPart;
+    // 最大値を超えたらクランプ（末尾"."中の入力途中はスキップ）
+    if (max !== undefined && result !== '' && !result.endsWith('.') && Number(result) > max) {
+      return String(max);
+    }
+    return result;
   };
 
   const clearFieldError = (key: string) => {
@@ -452,15 +457,14 @@ export default function Home() {
     const diaN = dia ? Number(dia) : NaN;
     const pulseN = pulse ? Number(pulse) : NaN;
 
-    if (sys && (!Number.isFinite(sysN) || sysN <= 0 || sysN >= 300)) {
-      add('bloodPressure.systolic', '収縮期血圧（上）は 1〜299 mmHg の範囲で入力してください');
+    if (sys && (!Number.isFinite(sysN) || sysN < 50 || sysN > 250)) {
+      add('bloodPressure.systolic', '収縮期血圧（上）は 50〜250 mmHg の範囲で入力してください');
     }
-    if (dia && (!Number.isFinite(diaN) || diaN <= 0 || diaN >= 300)) {
-      add('bloodPressure.diastolic', '拡張期血圧（下）は 1〜299 mmHg の範囲で入力してください');
+    if (dia && (!Number.isFinite(diaN) || diaN < 20 || diaN > 200)) {
+      add('bloodPressure.diastolic', '拡張期血圧（下）は 20〜200 mmHg の範囲で入力してください');
     }
-    // 脈拍: 1〜299
-    if (pulse && (!Number.isFinite(pulseN) || pulseN <= 0 || pulseN >= 300)) {
-      add('pulse', '脈拍は 1〜299 回/分 の範囲で入力してください');
+    if (pulse && (!Number.isFinite(pulseN) || pulseN < 20 || pulseN > 200)) {
+      add('pulse', '脈拍は 20〜200 回/分 の範囲で入力してください');
     }
 
     if (weight) {
@@ -1262,8 +1266,9 @@ export default function Home() {
           </div>
 
           {formError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {formError}
+            <div className="mb-4 rounded-xl border-2 border-red-300 bg-red-50 px-4 py-3 flex items-center gap-3">
+              <span className="text-2xl flex-shrink-0">⚠️</span>
+              <p className="text-base font-semibold text-red-700">{formError}</p>
             </div>
           )}
           {/* エラー列挙（上部まとめ表示）は廃止し、各入力欄の直下に表示する */}
@@ -1315,7 +1320,9 @@ export default function Home() {
               {getSectionErrorMessages('bloodPressure').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('bloodPressure').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1339,7 +1346,9 @@ export default function Home() {
               {getSectionErrorMessages('pulse').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('pulse').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1363,7 +1372,9 @@ export default function Home() {
               {getSectionErrorMessages('weight').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('weight').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1389,7 +1400,9 @@ export default function Home() {
               {getSectionErrorMessages('exercise').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('exercise').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1411,7 +1424,9 @@ export default function Home() {
               {getSectionErrorMessages('meal').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('meal').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1435,7 +1450,9 @@ export default function Home() {
               {getSectionErrorMessages('medication').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('medication').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1461,7 +1478,9 @@ export default function Home() {
               {getSectionErrorMessages('dailyLife').length > 0 && (
                 <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('dailyLife').map((m, i) => (
-                    <p key={i} className="text-xs text-red-600">{m}</p>
+                    <p key={i} className="flex items-center gap-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                      <span className="flex-shrink-0">⚠️</span>{m}
+                    </p>
                   ))}
                 </div>
               )}
@@ -1496,29 +1515,33 @@ export default function Home() {
                 </label>
                 <input
                   type="number"
-                  min={1}
+                  min={50}
+                  max={250}
                   inputMode="numeric"
                   onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.systolic || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3, max: 250 });
                     clearFieldError('bloodPressure.systolic');
                       setHealthRecord({
                         ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, systolic: value },
                       });
                   }}
-                  placeholder="1〜299"
+                  placeholder="50〜250"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.systolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
                       style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['bloodPressure.systolic'] ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.systolic']}</p>
+                  <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <p className="text-sm font-semibold text-red-700">{fieldErrors['bloodPressure.systolic']}</p>
+                  </div>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-500">1〜299 mmHg（整数）</p>
+                  <p className="mt-2 text-xs text-gray-500">50〜250 mmHg（整数）</p>
                 )}
               </div>
               <div className="flex-1">
@@ -1527,29 +1550,33 @@ export default function Home() {
                 </label>
                 <input
                   type="number"
-                  min={1}
+                  min={20}
+                  max={200}
                   inputMode="numeric"
                   onKeyDown={blockInvalidKeysInt}
                   value={healthRecord?.bloodPressure?.diastolic || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3, max: 200 });
                     clearFieldError('bloodPressure.diastolic');
                       setHealthRecord({
                         ...healthRecord,
                       bloodPressure: { ...healthRecord?.bloodPressure, diastolic: value },
                       });
                   }}
-                  placeholder="1〜299"
+                  placeholder="20〜200"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['bloodPressure.diastolic'] ? 'border-red-400 focus:border-red-500' : 'border-orange-300 focus:border-orange-500'
                   }`}
                       style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['bloodPressure.diastolic'] ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors['bloodPressure.diastolic']}</p>
+                  <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <p className="text-sm font-semibold text-red-700">{fieldErrors['bloodPressure.diastolic']}</p>
+                  </div>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-500">1〜299 mmHg（整数）</p>
+                  <p className="mt-2 text-xs text-gray-500">20〜200 mmHg（整数）</p>
                 )}
               </div>
             </div>
@@ -1590,17 +1617,18 @@ export default function Home() {
               <div className="flex-1">
               <input
                 type="number"
-                  min={1}
+                  min={20}
+                  max={200}
                 inputMode="numeric"
                   onKeyDown={blockInvalidKeysInt}
                 value={healthRecord?.pulse || ''}
                 onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeInt(e.target.value, { maxDigits: 3 });
+                    const value = sanitizeInt(e.target.value, { maxDigits: 3, max: 200 });
                     clearFieldError('pulse');
                     setHealthRecord({ ...healthRecord, pulse: value });
                 }}
-                  placeholder="1〜299"
+                  placeholder="20〜200"
                   className={`w-full px-4 py-3 text-xl border-2 rounded-lg focus:outline-none placeholder:text-gray-400 ${
                     fieldErrors['pulse']
                       ? 'border-red-400 focus:border-red-500'
@@ -1609,9 +1637,12 @@ export default function Home() {
                   style={{ WebkitAppearance: 'textfield' }}
               />
                 {fieldErrors['pulse'] ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors['pulse']}</p>
+                  <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <p className="text-sm font-semibold text-red-700">{fieldErrors['pulse']}</p>
+                  </div>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-500">1〜299 回/分（整数）</p>
+                  <p className="mt-2 text-xs text-gray-500">20〜200 回/分（整数）</p>
                 )}
               </div>
               <span className="text-xl text-gray-600 font-semibold whitespace-nowrap">回/分</span>
@@ -1660,7 +1691,7 @@ export default function Home() {
                   value={healthRecord?.weight || ''}
                   onChange={(e) => {
                     setFormError(null);
-                    const value = sanitizeDecimal(e.target.value, { maxIntDigits: 3, maxDecimals: 2 });
+                    const value = sanitizeDecimal(e.target.value, { maxIntDigits: 3, maxDecimals: 2, max: 200 });
                     clearFieldError('weight');
                     setHealthRecord({ ...healthRecord, weight: value });
                   }}
@@ -1683,7 +1714,10 @@ export default function Home() {
                       style={{ WebkitAppearance: 'textfield' }}
                 />
                 {fieldErrors['weight'] ? (
-                  <p className="mt-2 text-sm text-red-600">{fieldErrors['weight']}</p>
+                  <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <p className="text-sm font-semibold text-red-700">{fieldErrors['weight']}</p>
+                  </div>
                 ) : (
                   <p className="mt-2 text-xs text-gray-500">0より大きい〜200 kg（小数OK・最大2桁）</p>
                 )}
@@ -1757,12 +1791,13 @@ export default function Home() {
                     <input
                       type="number"
                       min={1}
+                      max={1440}
                       inputMode="numeric"
                       onKeyDown={blockInvalidKeysInt}
                       value={healthRecord?.exercise?.duration || ''}
                       onChange={(e) => {
                         setFormError(null);
-                        const value = sanitizeInt(e.target.value, { maxDigits: 4 });
+                        const value = sanitizeInt(e.target.value, { maxDigits: 4, max: 1440 });
                         clearFieldError('exercise.duration');
                           setHealthRecord({
                             ...healthRecord,
@@ -1778,7 +1813,10 @@ export default function Home() {
                           style={{ WebkitAppearance: 'textfield' }}
                     />
                     {fieldErrors['exercise.duration'] ? (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors['exercise.duration']}</p>
+                      <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        <span className="flex-shrink-0">⚠️</span>
+                        <p className="text-sm font-semibold text-red-700">{fieldErrors['exercise.duration']}</p>
+                      </div>
                     ) : (
                       <p className="mt-2 text-xs text-gray-500">1〜1440 分（整数）</p>
                     )}
@@ -1936,7 +1974,10 @@ export default function Home() {
               />
               <div className="mt-2 flex items-center justify-between gap-2">
                 {fieldErrors['meal.other'] ? (
-                  <p className="text-sm text-red-600">{fieldErrors['meal.other']}</p>
+                  <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <span className="flex-shrink-0">⚠️</span>
+                    <p className="text-sm font-semibold text-red-700">{fieldErrors['meal.other']}</p>
+                  </div>
                 ) : (
                   <p className="text-xs text-gray-500">最大 200 文字</p>
                 )}
@@ -2171,7 +2212,10 @@ export default function Home() {
             />
             <div className="mt-2 flex items-center justify-between gap-2">
               {fieldErrors['dailyLife'] ? (
-                <p className="text-sm text-red-600">{fieldErrors['dailyLife']}</p>
+                <div className="mt-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <span className="flex-shrink-0">⚠️</span>
+                  <p className="text-sm font-semibold text-red-700">{fieldErrors['dailyLife']}</p>
+                </div>
               ) : (
                 <p className="text-xs text-gray-500">最大 400 文字</p>
               )}

@@ -23,6 +23,8 @@ type Props = {
   rightContent?: React.ReactNode;
   /** LINEアプリ内表示かどうか（line-app-header クラス付与） */
   isLineApp?: boolean;
+  /** ヘッダー右上に表示するユーザー名ラベル */
+  userLabel?: string;
 };
 
 export default function PageHeader({
@@ -36,6 +38,7 @@ export default function PageHeader({
   topPaddingPx,
   rightContent,
   isLineApp = false,
+  userLabel,
 }: Props) {
   const paddingTop =
     lineSafeAreaTop !== undefined
@@ -91,13 +94,25 @@ export default function PageHeader({
             renderTitle(desktopTitleClassName)
           )}
         </div>
-        {right}
+        <div className="flex items-center gap-3">
+          {userLabel && (
+            <span className="text-sm font-medium text-gray-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+              {userLabel}
+            </span>
+          )}
+          {right}
+        </div>
       </div>
 
-      {/* スマホ版：縦並び */}
+      {/* スマホ版：タイトル行にユーザー名を右端表示 */}
       <div className="md:hidden">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
           {renderTitle(mobileTitleClassName)}
+          {userLabel && (
+            <span className="text-xs font-medium text-gray-600 bg-orange-50 px-2 py-1 rounded-full border border-orange-200 flex-shrink-0">
+              {userLabel}
+            </span>
+          )}
         </div>
         <div className="flex justify-center">{right}</div>
       </div>
