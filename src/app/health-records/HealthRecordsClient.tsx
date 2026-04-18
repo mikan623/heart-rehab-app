@@ -131,6 +131,19 @@ export default function Home() {
   const [printTableRows, setPrintTableRows] = useState<React.ReactNode[]>([]);
   const [printBloodDataList, setPrintBloodDataList] = useState<PrintBloodData[]>([]);
   const [printBloodDataStatus, setPrintBloodDataStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [printMonth, setPrintMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [printMonthAverages, setPrintMonthAverages] = useState<{
+    systolic: number | null;
+    diastolic: number | null;
+    pulse: number | null;
+    weight: number | null;
+    exerciseDays: number;
+    medicationDays: number;
+    totalDays: number;
+  }>({ systolic: null, diastolic: null, pulse: null, weight: null, exerciseDays: 0, medicationDays: 0, totalDays: 0 });
   const createEmptyHealthRecord = (): HealthRecord => ({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -201,38 +214,88 @@ export default function Home() {
     setIsAuthenticated(true);
   }, [router]);
   
-  // ハイドレーション対策: クライアント側で作成日とテーブルデータを設定
+  // ハイドレーション対策: クライアント側で作成日とテーブルデータを設定（printMonth変更時も再計算）
   useEffect(() => {
     setPrintCreatedDate(new Date().toLocaleString('ja-JP'));
-    
-    // 印刷用テーブル行を生成
+
     try {
       const saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
+
+      // 選択月でフィルタリング
       const rows: React.ReactNode[] = [];
-      Object.entries(saved).forEach(([date, times]) => {
-        Object.entries(times).forEach(([time, record]) => {
-          if (!record) return;
-          rows.push(
-            <tr key={`${date}-${time}`}>
-              <td className="border border-gray-400 p-2">{date}</td>
-              <td className="border border-gray-400 p-2">{formatTime24h(time)}</td>
-              <td className="border border-gray-400 p-2">{record.bloodPressure?.systolic || ''}/{record.bloodPressure?.diastolic || ''}</td>
-              <td className="border border-gray-400 p-2">{record.pulse || ''}</td>
-              <td className="border border-gray-400 p-2">{record.weight || ''}</td>
-              <td className="border border-gray-400 p-2">{record.exercise?.type || ''} {record.exercise?.duration || ''}</td>
-              <td className="border border-gray-400 p-2">主食: {Array.isArray(record.meal?.staple) ? record.meal.staple.join(', ') : record.meal?.staple || ''} 主菜: {Array.isArray(record.meal?.mainDish) ? record.meal.mainDish.join(', ') : record.meal?.mainDish || ''} 副菜: {Array.isArray(record.meal?.sideDish) ? record.meal.sideDish.join(', ') : record.meal?.sideDish || ''} その他: {record.meal?.other || ''}</td>
-              <td className="border border-gray-400 p-2">{record.medicationTaken ? '○' : '-'}</td>
-              <td className="border border-gray-400 p-2">{record.dailyLife || '-'}</td>
-            </tr>
-          );
+      const sysArr: number[] = [];
+      const diaArr: number[] = [];
+      const pulseArr: number[] = [];
+      const weightArr: number[] = [];
+      let exerciseDays = 0;
+      let medicationDays = 0;
+      const dateSeen = new Set<string>();
+
+      Object.entries(saved)
+        .filter(([date]) => date.startsWith(printMonth))
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([date, times]) => {
+          Object.entries(times).forEach(([time, record]) => {
+            if (!record) return;
+            rows.push(
+              <tr key={`${date}-${time}`}>
+                <td className="border border-gray-400 p-2 text-xs">{date}</td>
+                <td className="border border-gray-400 p-2 text-xs">{formatTime24h(time)}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.bloodPressure?.systolic || ''}/{record.bloodPressure?.diastolic || ''}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.pulse || ''}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.weight || ''}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.exercise?.type || ''}{record.exercise?.duration ? ` ${record.exercise.duration}分` : ''}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.medicationTaken ? '○' : '-'}</td>
+                <td className="border border-gray-400 p-2 text-xs">{record.dailyLife || '-'}</td>
+              </tr>
+            );
+            // 平均値計算用データ収集
+            const sys = Number(record.bloodPressure?.systolic);
+            const dia = Number(record.bloodPressure?.diastolic);
+            const pls = Number(record.pulse);
+            const wgt = Number(record.weight);
+            if (!isNaN(sys) && sys > 0) sysArr.push(sys);
+            if (!isNaN(dia) && dia > 0) diaArr.push(dia);
+            if (!isNaN(pls) && pls > 0) pulseArr.push(pls);
+            if (!isNaN(wgt) && wgt > 0) weightArr.push(wgt);
+            if (!dateSeen.has(date)) {
+              dateSeen.add(date);
+              if (record.exercise?.duration) exerciseDays++;
+              if (record.medicationTaken) medicationDays++;
+            }
+          });
         });
+
+      setPrintTableRows(rows.length > 0 ? rows : [
+        <tr key="empty"><td className="border border-gray-400 p-2 text-center text-sm text-gray-500" colSpan={8}>この月の記録はありません</td></tr>
+      ]);
+
+      const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null;
+      setPrintMonthAverages({
+        systolic: avg(sysArr),
+        diastolic: avg(diaArr),
+        pulse: avg(pulseArr),
+        weight: avg(weightArr),
+        exerciseDays,
+        medicationDays,
+        totalDays: dateSeen.size,
       });
-      setPrintTableRows(rows.length > 0 ? rows : [<tr key="empty"><td className="border border-gray-400 p-2" colSpan={9}>データなし</td></tr>]);
     } catch {
-      setPrintTableRows([<tr key="error"><td className="border border-gray-400 p-2" colSpan={9}>データ取得エラー</td></tr>]);
+      setPrintTableRows([<tr key="error"><td className="border border-gray-400 p-2" colSpan={8}>データ取得エラー</td></tr>]);
     }
+  }, [printMonth]);
+
+  // NavigationBar からの印刷トリガーを受け取る
+  useEffect(() => {
+    const handleTriggerPrint = (e: Event) => {
+      const month = (e as CustomEvent<{ month: string }>).detail?.month;
+      if (month) setPrintMonth(month);
+      setTimeout(() => window.print(), 100);
+    };
+    window.addEventListener('triggerPrint', handleTriggerPrint);
+    return () => window.removeEventListener('triggerPrint', handleTriggerPrint);
   }, []);
-  
+
   // PDF印刷用：血液検査/CPXデータも取得
   useEffect(() => {
     const fetchBloodDataForPrint = async () => {
@@ -2294,6 +2357,7 @@ export default function Home() {
               })()}
             </button>
           </div>
+
         </section>
 
       </main>
@@ -2416,8 +2480,13 @@ export default function Home() {
       {/* PDF印刷用サマリーセクション（print-onlyで表示） */}
       <style>{`
         @media print {
-          main {
-            display: none;
+          main,
+          header,
+          footer,
+          nav,
+          [class*="sticky"],
+          [class*="fixed"] {
+            display: none !important;
           }
           .print-summary {
             display: block !important;
@@ -2432,8 +2501,51 @@ export default function Home() {
       <div className="print-summary hidden print:block bg-white p-8">
         {/* タイトル */}
         <h1 className="text-2xl font-bold text-center mb-2">心臓リハビリ手帳</h1>
-        <p className="text-center text-gray-600 mb-1">健康記録サマリー</p>
-        <p className="text-center text-sm text-gray-500 mb-6">作成日: {printCreatedDate}</p>
+        <p className="text-center text-gray-600 mb-1">健康記録サマリー（{printMonth.replace('-', '年')}月）</p>
+        <p className="text-center text-sm text-gray-500 mb-4">作成日: {printCreatedDate}</p>
+
+        {/* 月次サマリー */}
+        <h2 className="text-xl font-bold text-red-600 mb-3">【{printMonth.replace('-', '年')}月　月次まとめ】</h2>
+        <div className="border-2 border-red-400 rounded p-4 mb-8 bg-red-50">
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">平均血圧</p>
+              <p className="text-xl font-bold text-red-700">
+                {printMonthAverages.systolic ?? '-'}/{printMonthAverages.diastolic ?? '-'}
+              </p>
+              <p className="text-xs text-gray-500">mmHg</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">平均脈拍</p>
+              <p className="text-xl font-bold text-pink-700">
+                {printMonthAverages.pulse ?? '-'}
+              </p>
+              <p className="text-xs text-gray-500">回/分</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">平均体重</p>
+              <p className="text-xl font-bold text-yellow-700">
+                {printMonthAverages.weight ?? '-'}
+              </p>
+              <p className="text-xs text-gray-500">kg</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">運動した日</p>
+              <p className="text-xl font-bold text-green-700">{printMonthAverages.exerciseDays}</p>
+              <p className="text-xs text-gray-500">日 / {printMonthAverages.totalDays}日</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">服薬した日</p>
+              <p className="text-xl font-bold text-blue-700">{printMonthAverages.medicationDays}</p>
+              <p className="text-xs text-gray-500">日 / {printMonthAverages.totalDays}日</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-gray-600 mb-1">記録日数</p>
+              <p className="text-xl font-bold text-gray-700">{printMonthAverages.totalDays}</p>
+              <p className="text-xs text-gray-500">日</p>
+            </div>
+          </div>
+        </div>
 
         {(() => {
           let p: Record<string, unknown> = {};
@@ -2589,19 +2701,18 @@ export default function Home() {
         })()}
 
         {/* 健康記録テーブル */}
-        <h2 className="text-xl font-bold text-red-600 mb-4">健康記録</h2>
-        <table className="w-full border-collapse border border-gray-400 text-sm">
+        <h2 className="text-xl font-bold text-red-600 mb-4">【日別記録】</h2>
+        <table className="w-full border-collapse border border-gray-400 text-xs">
           <thead>
             <tr className="bg-gray-200">
               <th className="border border-gray-400 p-2">日付</th>
               <th className="border border-gray-400 p-2">時間</th>
-              <th className="border border-gray-400 p-2">血圧</th>
+              <th className="border border-gray-400 p-2">血圧(上/下)</th>
               <th className="border border-gray-400 p-2">脈拍</th>
               <th className="border border-gray-400 p-2">体重</th>
               <th className="border border-gray-400 p-2">運動</th>
-              <th className="border border-gray-400 p-2">食事</th>
-              <th className="border border-gray-400 p-2">服薬確認</th>
-              <th className="border border-gray-400 p-2">日常生活</th>
+              <th className="border border-gray-400 p-2">服薬</th>
+              <th className="border border-gray-400 p-2">自覚症状</th>
             </tr>
           </thead>
           <tbody>

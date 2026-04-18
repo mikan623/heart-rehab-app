@@ -107,6 +107,11 @@ export default function NavigationBar() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showPdfOptions, setShowPdfOptions] = useState(false);
+  const [printMonth, setPrintMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
@@ -837,18 +842,41 @@ export default function NavigationBar() {
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'contact' ? 'click-animate' : ''}`}>
                 ✉️ お問い合わせ
               </button>
-              <button
-                onClick={() => {
-                  setActiveButton('pdf');
-                  setTimeout(() => {
-                  exportToPDF();
-                  setShowSettingsMenu(false);
-                    setActiveButton(null);
-                  }, 150);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'pdf' ? 'click-animate' : ''}`}>
-                📄 PDF印刷
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setActiveButton('pdf');
+                    setShowPdfOptions((prev) => !prev);
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'pdf' ? 'click-animate' : ''}`}>
+                  📄 PDF印刷
+                </button>
+                {showPdfOptions && (
+                  <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-[220px]">
+                    <p className="text-xs text-gray-500 mb-2">診察時に医師へ渡すPDFを印刷できます</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">対象月：</label>
+                      <input
+                        type="month"
+                        value={printMonth}
+                        onChange={(e) => setPrintMonth(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-orange-300 rounded text-sm focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowPdfOptions(false);
+                        setShowSettingsMenu(false);
+                        setActiveButton(null);
+                        window.dispatchEvent(new CustomEvent('triggerPrint', { detail: { month: printMonth } }));
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 active:scale-95 transition text-sm"
+                    >
+                      📄 診察持参PDFを印刷
+                    </button>
+                  </div>
+                )}
+              </div>
               <hr className="my-1" />
               <button
                 onClick={() => {
