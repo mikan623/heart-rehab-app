@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
-import { getCurrentUserId, getSession, isLineLoggedIn } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 // （デスクトップナビは NavigationBar に統一）
 
@@ -86,12 +84,13 @@ interface BloodData {
   createdAt: string;
 }
 
-export default function BloodDataClient() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [bloodDataList, setBloodDataList] = useState<BloodData[]>([]);
+type Props = {
+  userId: string;
+  initialBloodDataList: BloodData[];
+};
+
+export default function BloodDataClient({ userId, initialBloodDataList }: Props) {
+  const [bloodDataList, setBloodDataList] = useState<BloodData[]>(initialBloodDataList);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -323,39 +322,6 @@ export default function BloodDataClient() {
     if (parent) handleEditCPX(parent);
   };
 
-  // 認証チェック
-  useEffect(() => {
-    const session = getSession();
-
-    // まずはメールセッションがあればそれを採用
-    if (session?.userId) {
-      setUserId(session.userId);
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // LINEログイン判定（lineLoginStateが復元できる可能性あり）
-    const lineLoggedIn = isLineLoggedIn();
-    const resolvedUserId = getCurrentUserId();
-
-    if (!lineLoggedIn || !resolvedUserId) {
-      router.push('/');
-      setIsLoading(false);
-      return;
-    }
-
-    setUserId(resolvedUserId);
-    setIsAuthenticated(true);
-    setIsLoading(false);
-  }, [router]);
-
-  // 血液データリストを取得
-  useEffect(() => {
-    if (userId) {
-      fetchBloodDataList();
-    }
-  }, [userId]);
 
   const fetchBloodDataList = async () => {
     if (!userId) return;
@@ -589,22 +555,6 @@ export default function BloodDataClient() {
   const handleRemoveCPXRow = (index: number) => {
     setCpxTests(cpxTests.filter((_, i) => i !== index));
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">

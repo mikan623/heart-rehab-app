@@ -1,11 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import { getCurrentUserId, getSession, isLineLoggedIn } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { readJsonOrThrow } from "@/lib/readJson";
-import type { Liff, LiffProfile } from "@/types/liff";
 
 
 // 健康記録の型定義
@@ -52,10 +48,14 @@ const getProfileHeight = (value: unknown): unknown =>
 const getApiRecords = (value: unknown): ApiHealthRecord[] =>
   isRecord(value) && Array.isArray(value.records) ? value.records : [];
 
-export default function CalendarPage() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [heightCm, setHeightCm] = useState<number | null>(null);
+type Props = {
+  userId: string;
+  initialSavedRecords: SavedRecords;
+  initialHeightCm: number | null;
+};
+
+export default function CalendarPage({ userId, initialSavedRecords, initialHeightCm }: Props) {
+  const [heightCm, setHeightCm] = useState<number | null>(initialHeightCm);
 
   const today = new Date();
   const year = today.getFullYear();
@@ -172,8 +172,8 @@ export default function CalendarPage() {
 
   // localStorageキーをユーザーIDで個別化
   const getStorageKey = (baseKey: string) => {
-    if (user?.userId) {
-      return `${baseKey}_${user.userId}`;
+    if (userId) {
+      return `${baseKey}_${userId}`;
     }
     // ローカル開発時はユーザーIDなしでも動くようフォールバック
     return `${baseKey}_local`;
@@ -212,20 +212,15 @@ export default function CalendarPage() {
   const [recentStamp, setRecentStamp] = useState<{ date: string; time: string } | null>(null);
 
   // 記録データを保存する状態を追加
-  const [savedRecords, setSavedRecords] = useState<SavedRecords>({});
-  const [isLoading, setIsLoading] = useState(true);
-  
+  const [savedRecords, setSavedRecords] = useState<SavedRecords>(initialSavedRecords);
+  const [isLoading, setIsLoading] = useState(false);
+
   // 保存状態を管理
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // 詳細表示用の状態を追加
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
-
-  // LIFF関連の状態を追加
-  const [liff, setLiff] = useState<Liff | null>(null);
-  const [user, setUser] = useState<LiffProfile | null>(null);
-  const [isLiffReady, setIsLiffReady] = useState(false);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   type FetchResult<T = unknown> =
@@ -260,141 +255,6 @@ export default function CalendarPage() {
   const [isLineApp, setIsLineApp] = useState(false);
   const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
 
-  // 認証チェック
-  useEffect(() => {
-    const session = getSession();
-    
-    // メールログインセッション優先
-    if (session) {
-      console.log('📧 メールログイン確認');
-      setUser({
-        userId: session.userId,
-        displayName: session.userName
-      });
-      setIsAuthenticated(true);
-      return;
-    }
-
-    // LINE ログイン判定（シンプル版 - 即座に判定）
-    if (isLineLoggedIn()) {
-      console.log('✅ LINE ログイン確認');
-      setIsAuthenticated(true);
-      return;
-    }
-
-    // ログインなし → ホームへ
-    console.log('❌ ログインなし');
-    router.push('/');
-  }, [router]);
-
-  // LIFF初期化とLINEアプリ検出
-  useEffect(() => {
-    const initLiff = async () => {
-      try {
-        // メールログインセッションがある場合はLIFF初期化をスキップ
-        const session = getSession();
-        if (session) {
-          console.log('📧 メールログイン検出: LIFF初期化をスキップ');
-          setIsLiffReady(true);
-          return;
-        }
-
-        // ローカル環境の場合はLIFF機能をスキップ
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          console.log('ローカル環境: LIFF機能をスキップ');
-          setIsLiffReady(true);
-          return;
-        }
-
-        if (typeof window !== 'undefined' && window.liff) {
-          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-          if (!liffId) {
-            console.warn('LIFF ID missing; skipping init');
-            setIsLiffReady(true);
-            return;
-          }
-          await window.liff.init({ 
-            liffId
-          });
-          
-          setLiff(window.liff);
-          
-          if (window.liff.isLoggedIn()) {
-            const profile = await window.liff.getProfile();
-            setUser(profile);
-            console.log('LINEユーザー情報:', profile);
-
-            // LINEアプリ内で実行されているかチェック
-            if (window.liff.isInClient()) {
-              console.log('LINEアプリ内で実行中');
-              setIsLineApp(true);
-              
-              // LINEアプリ内の安全エリアを設定
-              const handleResize = () => {
-                const vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-                
-                const statusBarHeight = window.screen.height - window.innerHeight > 100 ? 44 : 20;
-                setLineSafeArea({
-                  top: statusBarHeight,
-                  bottom: 0
-                });
-                
-                console.log('LINEアプリ検出:', {
-                  isLineApp: true,
-                  safeArea: { top: statusBarHeight, bottom: 0 },
-                  windowHeight: window.innerHeight,
-                  screenHeight: window.screen.height
-                });
-              };
-              
-              handleResize();
-              window.addEventListener('resize', handleResize);
-              window.addEventListener('orientationchange', () => {
-                setTimeout(handleResize, 100);
-              });
-            } else {
-              console.log('ブラウザで実行中');
-              setIsLineApp(false);
-            }
-          } else {
-            window.liff.login();
-          }
-        }
-        setIsLiffReady(true);
-      } catch (error) {
-        console.error('LIFF初期化エラー:', error);
-        setIsLiffReady(true);
-      }
-    };
-    
-    initLiff();
-  }, []);
-
-  // プロフィール身長（BMI用）を取得
-  useEffect(() => {
-    const fetchHeight = async () => {
-      if (!isAuthenticated) return;
-      const userId = getCurrentUserId();
-      if (!userId) return;
-      try {
-        const { ok, data } = await fetchJsonWithRetry(`/api/profiles?userId=${encodeURIComponent(userId)}`);
-        if (ok) {
-          const hRaw = getProfileHeight(data);
-          const h =
-            hRaw === null || hRaw === undefined || hRaw === ''
-              ? null
-              : (typeof hRaw === 'number' ? hRaw : Number(hRaw));
-          setHeightCm(h !== null && Number.isFinite(h) && h > 0 ? h : loadLocalProfileHeightCm(userId));
-        } else {
-          setHeightCm(loadLocalProfileHeightCm(userId));
-        }
-      } catch {
-        setHeightCm(loadLocalProfileHeightCm(userId));
-      }
-    };
-    fetchHeight();
-  }, [isAuthenticated, user?.userId]);
 
   // fetchHealthRecords関数を追加
   const fetchHealthRecords = async (userId: string) => {
@@ -450,15 +310,8 @@ export default function CalendarPage() {
     }
   };
 
-  // データベースから健康記録を取得
+  // 直近の記録ハイライト（健康記録ページから遷移してきた場合など）
   useEffect(() => {
-    if (!isAuthenticated) return;
-    // userId が確定してから取得（user-1フォールバックで空表示になるのを防ぐ）
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) return;
-    fetchHealthRecords(currentUserId);
-    
-    // 直近の記録（健康記録ページから遷移してきた場合など）をチェック
     if (typeof window !== 'undefined') {
       try {
         const raw = localStorage.getItem('lastSavedRecord');
@@ -471,7 +324,6 @@ export default function CalendarPage() {
             typeof parsed.savedAt === 'number'
           ) {
             const elapsed = Date.now() - parsed.savedAt;
-            // 5分以内ならハイライト対象にする
             if (elapsed <= 5 * 60 * 1000) {
               setRecentStamp({ date: parsed.date, time: parsed.time });
             } else {
@@ -483,7 +335,8 @@ export default function CalendarPage() {
         console.log('⚠️ lastSavedRecord 読み込みエラー（無視）:', e);
       }
     }
-  }, [isAuthenticated, isLiffReady, user?.userId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // カレンダー生成
   const generateCalendarDays = (date: Date) => {
@@ -641,7 +494,7 @@ export default function CalendarPage() {
       // user stateはLIFF初期化後にセットされる。
       // ローカル環境ではLIFFがスキップされるためuserはnullのまま。
       // そのため、user stateがあればそれを使用し、なければデフォルトの'user-1'を使用する。
-      const currentUserId = user?.userId || 'user-1';
+      const currentUserId = userId;
       
       console.log('💾 カレンダー: 編集した記録をデータベースに保存中...', { userId: currentUserId, date, time });
       
@@ -671,7 +524,7 @@ export default function CalendarPage() {
       });
       
       if (response.ok) {
-        const result = await readJsonOrThrow(response);
+        const result = await response.json();
         console.log('✅ カレンダー: データベース保存成功:', result);
         
         // データベースから最新のデータを再取得してUIを更新
@@ -686,7 +539,7 @@ export default function CalendarPage() {
           setSaveStatus('idle');
         }, 3000);
       } else {
-        const errorData = await readJsonOrThrow(response);
+        const errorData = await response.json();
         console.error('❌ カレンダー: データベース保存失敗:', errorData);
         const details =
           isRecord(errorData) && typeof errorData.details === 'string'
@@ -714,7 +567,7 @@ export default function CalendarPage() {
     if (!ok) return;
     
     try {
-      const currentUserId = user?.userId || 'user-1';
+      const currentUserId = userId;
       
       // UIを即時反映
       setSavedRecords((prev) => {
@@ -786,7 +639,7 @@ export default function CalendarPage() {
   }
   `;
 
-  return isAuthenticated ? (
+  return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
         {/* LINEアプリ用スタイル & スタンプアニメーション */}
         {typeof window !== 'undefined' && (
@@ -1631,10 +1484,6 @@ export default function CalendarPage() {
         {/* メインコンテンツの下部パディング（フッター対応） */}
         <div className="md:hidden h-20"></div>
       </main>
-    </div>
-  ) : (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

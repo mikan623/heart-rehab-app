@@ -1,10 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import type { Liff, LiffProfile } from "@/types/liff";
 
 interface UserProfile {
   userId: string;
@@ -21,34 +19,42 @@ interface UserProfile {
   emergencyContact: string;
 }
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isEmailLogin, setIsEmailLogin] = useState(false);
-  const [profile, setProfile] = useState<UserProfile>({
-    userId: '',
-    displayName: '',
-    email: '',
-    age: '',
-    gender: '',
-    height: '',
-    targetWeight: '',
-    diseases: [],
-    riskFactors: [],
-    medications: '',
-    physicalFunction: '',
-    emergencyContact: '',
-  });
-  const [isLoading, setIsLoading] = useState(true);
+type InitialProfile = {
+  userId: string;
+  displayName: string | null;
+  age: number | null;
+  gender: string | null;
+  height: number | null;
+  targetWeight: number | null;
+  diseases: string[];
+  riskFactors: string[];
+  medications: string | null;
+  physicalFunction: string | null;
+  emergencyContact: string | null;
+} | null;
 
-  // 🆕 追加：LINEアプリ最適化用の状態
-  const [isLineApp, setIsLineApp] = useState(false);
-  const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
-  const [liff, setLiff] = useState<Liff | null>(null);
-  const [user, setUser] = useState<LiffProfile | null>(null);
-  
-  // （プロフィール画面での「LINE連携」機能は廃止。LINEログイン自体は維持）
-  
+type Props = {
+  userId: string;
+  initialProfile: InitialProfile;
+};
+
+export default function ProfilePage({ userId, initialProfile }: Props) {
+  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile>({
+    userId,
+    displayName: initialProfile?.displayName ?? '',
+    email: '',
+    age: initialProfile?.age != null ? String(initialProfile.age) : '',
+    gender: initialProfile?.gender ?? '',
+    height: initialProfile?.height != null ? String(initialProfile.height) : '',
+    targetWeight: initialProfile?.targetWeight != null ? String(initialProfile.targetWeight) : '',
+    diseases: initialProfile?.diseases ?? [],
+    riskFactors: initialProfile?.riskFactors ?? [],
+    medications: initialProfile?.medications ?? '',
+    physicalFunction: initialProfile?.physicalFunction ?? '',
+    emergencyContact: initialProfile?.emergencyContact ?? '',
+  });
+
   // 保存状態を管理
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -82,245 +88,6 @@ export default function ProfilePage() {
     '家族歴',
   ];
 
-  // 認証チェック
-  useEffect(() => {
-    const session = getSession();
-    
-    // メールログインセッション優先
-    if (session) {
-      setIsAuthenticated(true);
-      setIsEmailLogin(true);
-      return;
-    }
-
-    // LINE ログイン判定（シンプル版 - 即座に判定）
-    if (isLineLoggedIn()) {
-      console.log('✅ LINE ログイン確認');
-      setIsAuthenticated(true);
-      setIsEmailLogin(false);
-      return;
-    }
-
-    // ログインなし → ホームへ
-    console.log('❌ ログインなし');
-    router.push('/');
-  }, [router]);
-
-  // （プロフィール画面での「LINE連携状態チェック」は廃止）
-
-  useEffect(() => {
-    const initLiff = async () => {
-      try {
-        const session = getSession();
-        
-        // メールログインの場合
-        if (session) {
-          console.log('📧 メールログインユーザー: プロフィール初期化', { userId: session.userId, userName: session.userName });
-          
-          // 🆕 メールログインユーザーのプロフィールをデータベースから取得
-          try {
-            const url = `/api/profiles?userId=${encodeURIComponent(session.userId)}`;
-            console.log('🔍 APIをリクエスト:', url);
-            const response = await fetch(url);
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('📊 APIレスポンス:', data);
-              
-              if (data.profile) {
-                // データベースにプロフィールがある場合
-                console.log('✅ メールログインユーザーのプロフィールをデータベースから取得', data.profile);
-                setProfile({
-                  userId: session.userId,
-                  displayName: data.profile.displayName || session.userName,
-                  email: session.userId,
-                  age: data.profile.age?.toString() || '',
-                  gender: data.profile.gender || '',
-                  height: data.profile.height?.toString() || '',
-                  targetWeight: data.profile.targetWeight?.toString() || '',
-                  diseases: data.profile.diseases || [],
-                  riskFactors: data.profile.riskFactors || [],
-                  medications: data.profile.medications || '',
-                  physicalFunction: data.profile.physicalFunction || '',
-                  emergencyContact: data.profile.emergencyContact || '',
-                });
-              } else {
-                // データベースにない場合は、基本情報のみセット
-                console.log('📝 メールログインユーザーのプロフィール未登録、基本情報から初期化');
-                setProfile(prev => ({
-                  ...prev,
-                  userId: session.userId,
-                  displayName: session.userName,
-                  email: session.userId,
-                }));
-              }
-            } else {
-              const errorData = await response.json();
-              console.log('⚠️ プロフィール取得失敗（ステータス:', response.status, '）:', errorData);
-              setProfile(prev => ({
-                ...prev,
-                userId: session.userId,
-                displayName: session.userName,
-                email: session.userId,
-              }));
-            }
-          } catch (error) {
-            console.log('⚠️ プロフィール取得エラー:', error);
-            setProfile(prev => ({
-              ...prev,
-              userId: session.userId,
-              displayName: session.userName,
-              email: session.userId,
-            }));
-          }
-          
-          // メールログイン時はLIFF初期化（LINE連携）は行わない
-          
-          setIsLoading(false);
-          return;
-        }
-        
-        if (typeof window !== 'undefined' && window.liff) {
-          const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-          if (!liffId) {
-            console.warn('LIFF ID missing; skipping init');
-            setIsLoading(false);
-            return;
-          }
-          await window.liff.init({ 
-            liffId
-          });
-          
-          setLiff(window.liff);
-          
-          if (window.liff.isLoggedIn()) {
-            const liffProfile = await window.liff.getProfile();
-            setUser(liffProfile);
-            
-            // 🆕 LINE ログイン状態をメモリに保存
-            setLineLogin(liffProfile.userId, liffProfile.displayName);
-            console.log('✅ LINE ログイン状態をメモリに保存');
-            
-            // Supabase に保存（背景で実行、エラー無視）
-            setLineLoggedInDB(liffProfile.userId, true, liffProfile.userId)
-              .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
-              .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
-            
-            // 📧 LINE プロフィールからメールアドレスを取得
-            try {
-              const liffIdToken = await window.liff.getIDToken();
-              const decodedToken = JSON.parse(atob(liffIdToken.split('.')[1]));
-              const email = decodedToken.email || '';
-              
-              console.log('📧 LINE メールアドレス取得:', email);
-              
-              // プロフィールにメールを自動入力
-              setProfile(prev => ({
-                ...prev,
-                userId: liffProfile.userId,
-                displayName: liffProfile.displayName || prev.displayName,
-                email: email || prev.email,
-              }));
-            } catch (error) {
-              console.log('⚠️ メールアドレス取得エラー（無視）:', error);
-              // メール取得失敗時は displayName だけセット
-              setProfile(prev => ({
-                ...prev,
-                userId: liffProfile.userId,
-                displayName: liffProfile.displayName || prev.displayName,
-              }));
-            }
-            
-            // LINEアプリ内判定
-            if (window.liff.isInClient()) {
-              setIsLineApp(true);
-              
-              const handleResize = () => {
-                const vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-                
-                const statusBarHeight = window.screen.height - window.innerHeight > 100 ? 44 : 20;
-                setLineSafeArea({
-                  top: statusBarHeight,
-                  bottom: 0
-                });
-              };
-              
-              handleResize();
-              window.addEventListener('resize', handleResize);
-            }
-  
-            // 🆕 データベースからプロフィール取得を試みる
-            try {
-              const response = await apiFetch(`/api/profiles?userId=${liffProfile.userId}`);
-              
-              if (response.ok) {
-                const data = await response.json();
-                
-                if (data.profile) {
-                  // データベースにプロフィールがある場合
-                  console.log('✅ プロフィールをデータベースから取得');
-                  setProfile({
-                    userId: liffProfile.userId,
-                    displayName: data.profile.displayName || liffProfile.displayName,  // ✅ LINE名が優先
-                    age: data.profile.age?.toString() || '',
-                    gender: data.profile.gender || '',
-                    height: data.profile.height?.toString() || '',
-                    targetWeight: data.profile.targetWeight?.toString() || '',
-                    diseases: data.profile.diseases || [],
-                    riskFactors: data.profile.riskFactors || [],
-                    medications: data.profile.medications || '',
-                    physicalFunction: data.profile.physicalFunction || '',
-                    emergencyContact: data.profile.emergencyContact || '',
-                  });
-                } else {
-                  // データベースにない場合は、LINE プロフィールから初期化
-                  console.log('📝 データベースにプロフィールなし、LINE プロフィールから初期化');
-                  setProfile({
-                    userId: liffProfile.userId,
-                    displayName: liffProfile.displayName,  // ✅ LINE名を自動入力
-                    age: '',
-                    gender: '',
-                    height: '',
-                    targetWeight: '',
-                    diseases: [],
-                    riskFactors: [],
-                    medications: '',
-                    physicalFunction: '',
-                    emergencyContact: '',
-                  });
-                }
-              }
-            } catch (error) {
-              console.error('プロフィール取得エラー:', error);
-              // エラー時は LINE プロフィールから初期化
-              setProfile({
-                userId: liffProfile.userId,
-                displayName: liffProfile.displayName,  // ✅ LINE名を自動入力
-                age: '',
-                gender: '',
-                height: '',
-                targetWeight: '',
-                diseases: [],
-                riskFactors: [],
-                medications: '',
-                physicalFunction: '',
-                emergencyContact: '',
-              });
-            }
-          } else {
-            window.liff.login();
-          }
-        }
-      } catch (error) {
-        console.error('LIFF初期化エラー:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    initLiff();
-  }, []);
 
   const handleDiseaseToggle = (disease: string) => {
     setProfile(prev => ({
@@ -390,37 +157,10 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
-      {/* LINEアプリ用スタイル */}
-      {typeof window !== 'undefined' && isLineApp && (
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            .line-app-container input,
-            .line-app-container select,
-            .line-app-container textarea {
-              font-size: 16px !important;
-              transform: translateZ(0);
-            }
-            .line-app-container input[type="number"] {
-              -webkit-appearance: textfield;
-              -moz-appearance: textfield;
-            }
-          `
-        }} />
-      )}
       <PageHeader
         title="プロフィール設定"
-        isLineApp={isLineApp}
-        lineSafeAreaTop={isLineApp ? lineSafeArea.top : undefined}
       />
 
       {/* メインコンテンツ */}
@@ -430,17 +170,6 @@ export default function ProfilePage() {
         <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">👤 基本情報</h2>
 
-          {/* LINE プロフィール画像を表示 */}
-          {user?.pictureUrl && (
-            <div className="mb-6 flex justify-center">
-              <img
-                src={user.pictureUrl}
-                alt={user.displayName}
-                className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-orange-300 shadow-md object-cover"
-              />
-            </div>
-          )}
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* 名前 */}
             <div>
@@ -605,10 +334,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-    </div>
-  ) : (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

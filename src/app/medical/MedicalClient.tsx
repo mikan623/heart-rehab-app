@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { clearLineLogin, clearSession, getCurrentUserId } from '@/lib/auth';
+import { clearLineLogin, clearSession } from '@/lib/auth';
 import PageHeader from '@/components/PageHeader';
 import { apiFetch } from '@/lib/api';
 
@@ -112,7 +112,9 @@ interface CPXTest {
   createdAt: string;
 }
 
-export default function MedicalClient() {
+type Props = { userId: string };
+
+export default function MedicalClient({ userId }: Props) {
   const [searchName, setSearchName] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [inviteStatusByPatientId, setInviteStatusByPatientId] = useState<Record<string, 'pending' | 'accepted' | 'declined'>>({});
@@ -124,7 +126,7 @@ export default function MedicalClient() {
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteLoadingId, setInviteLoadingId] = useState<string | null>(null);
-  const providerId = getCurrentUserId();
+  const providerId = userId;
   const [commentTarget, setCommentTarget] = useState<{ recordId: string; patientId: string; date: string; time: string } | null>(null);
   const [commentText, setCommentText] = useState('');
   const [commentSaving, setCommentSaving] = useState(false);

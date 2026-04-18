@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import PageHeader from "@/components/PageHeader";
-import { getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { buildLiffUrl } from "@/lib/liffUrl";
 
@@ -35,27 +33,33 @@ const normalizeFamilyMembers = (raw: unknown): FamilyMember[] => {
     .filter((m) => m.id || m.name || m.email);
 };
 
-export default function FamilyPage() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+type Props = {
+  userId: string;
+  initialFamilyMembers: FamilyMember[];
+  initialReminderEnabled: boolean;
+  initialReminderTime: string;
+  initialSelfLinkCode: string | null;
+};
 
-  // 🆕 追加：LINEミニアプリ最適化用の状態
-  const [isLineApp, setIsLineApp] = useState(false);
-  const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
+export default function FamilyPage({ userId, initialFamilyMembers, initialReminderEnabled, initialReminderTime, initialSelfLinkCode }: Props) {
+  const currentUserId = userId;
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(initialFamilyMembers);
+
+  // 🆕 追加：LINEミニアプリ最適化用の状態（デフォルト値）
+  const [isLineApp] = useState(false);
+  const [lineSafeArea] = useState({ top: 0, bottom: 0 });
 
   // 家族用招待QRコード用の状態（全体用）
   const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
 
   // 記録忘れリマインダー設定
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderTime, setReminderTime] = useState('21:00');
+  const [reminderEnabled, setReminderEnabled] = useState(initialReminderEnabled);
+  const [reminderTime, setReminderTime] = useState(initialReminderTime);
 
   // 本人用招待コード（公式LINEとの連携用）
-  const [selfLinkCode, setSelfLinkCode] = useState<string | null>(null);
+  const [selfLinkCode, setSelfLinkCode] = useState<string | null>(initialSelfLinkCode);
+  const isFirstRender = useRef(true);
 
   // 本人用招待コードを取得
   const fetchSelfLinkCode = async (userId: string) => {
@@ -75,87 +79,27 @@ export default function FamilyPage() {
     }
   };
 
-  // 認証チェック
+
+  // 設定変更時に保存（localStorage + DB）。初回レンダー（SSRからの初期値）はスキップ
   useEffect(() => {
-    const session = getSession();
-    
-    // メールログインセッション優先
-    if (session) {
-      // 患者IDとしてメールログインのユーザーIDを使用
-      setCurrentUserId(session.userId);
-      setIsAuthenticated(true);
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
-
-    // LINE ログイン判定（シンプル版 - 即座に判定）
-    if (isLineLoggedIn()) {
-      console.log('✅ LINE ログイン確認');
-      setIsAuthenticated(true);
-      return;
-    }
-
-    // ログインなし → ホームへ
-    console.log('❌ ログインなし');
-    router.push('/');
-  }, [router]);
-
-  // 記録忘れリマインダー設定＋本人用招待コードを読み込み（DB優先・localStorageはフォールバック）
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (typeof window === 'undefined') return;
-
-      // まず localStorage から暫定値を読み込み（ちらつき防止）
-      const savedEnabled = localStorage.getItem('reminderEnabled');
-      const savedTime = localStorage.getItem('reminderTime');
-      if (savedEnabled !== null) {
-        setReminderEnabled(savedEnabled === 'true');
-      }
-      if (savedTime) {
-        setReminderTime(savedTime);
-      }
-
-      // currentUserId が分かったら DB から正式な値や本人コードを取得
-      if (!currentUserId) return;
-      try {
-        const res = await apiFetch(`/api/reminder-settings?userId=${encodeURIComponent(currentUserId)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setReminderEnabled(data.reminderEnabled ?? false);
-          if (data.reminderTime) {
-            setReminderTime(data.reminderTime);
-          }
-        }
-
-        // 本人用招待コードも取得
-        await fetchSelfLinkCode(currentUserId);
-      } catch (error) {
-        console.error('❌ リマインダー設定 or self-link-code 取得エラー:', error);
-      }
-    };
-
-    loadSettings();
-  }, [currentUserId]);
-
-  // 設定変更時に保存（localStorage + DB）
-  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // localStorage
     localStorage.setItem('reminderEnabled', String(reminderEnabled));
     localStorage.setItem('reminderTime', reminderTime);
 
-    // DB（ユーザーIDが分かっているときのみ）
+    // DB
     const saveToDb = async () => {
       if (!currentUserId) return;
       try {
         await apiFetch('/api/reminder-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: currentUserId,
-            reminderEnabled,
-            reminderTime,
-          }),
+          body: JSON.stringify({ userId: currentUserId, reminderEnabled, reminderTime }),
         });
       } catch (error) {
         console.error('❌ リマインダー設定保存エラー:', error);
@@ -170,138 +114,6 @@ export default function FamilyPage() {
     (member) => Boolean(member.lineUserId) && Boolean(member.isRegistered)
   );
 
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        // メールログインセッションがある場合：LIFF初期化はスキップしつつ、家族情報はDBから取得
-        const session = getSession();
-        if (session) {
-          console.log('📧 メールログイン検出: 家族メンバーをDBから取得');
-          try {
-            const response = await apiFetch(`/api/family-members?userId=${session.userId}`);
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ 家族メンバーをデータベースから取得(メールログイン):', data.familyMembers.length);
-              setFamilyMembers(data.familyMembers);
-            } else {
-              console.error('データベース取得エラー(メールログイン)、localStorageから読み込み');
-              const savedFamily = localStorage.getItem('familyMembers');
-              if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily);
-                const convertedFamily = normalizeFamilyMembers(parsedFamily);
-                setFamilyMembers(convertedFamily);
-              }
-            }
-          } catch (error) {
-            console.error('家族メンバー取得エラー(メールログイン):', error);
-          } finally {
-          setIsLoading(false);
-          }
-          return;
-        }
-
-        // LIFF初期化処理
-        if (typeof window !== 'undefined' && window.liff) {
-          try {
-            const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-            if (!liffId) {
-              console.warn('LIFF ID missing; skipping init');
-              // LIFFが使えない/未設定の場合はフォールバックでlocalStorageから読み込み
-              const savedFamily = localStorage.getItem('familyMembers');
-              if (savedFamily) {
-                const parsedFamily = JSON.parse(savedFamily);
-                const convertedFamily = normalizeFamilyMembers(parsedFamily);
-                setFamilyMembers(convertedFamily);
-              } else {
-                setFamilyMembers([]);
-              }
-              return;
-            }
-            await window.liff.init({ liffId });
-            console.log('LIFF initialized successfully');
-            
-            // ログインチェック
-            if (window.liff.isLoggedIn()) {
-              const profile = await window.liff.getProfile();
-              const userId = profile.userId;
-              setCurrentUserId(userId);
-              
-              // 🆕 LINE ログイン状態をメモリに保存
-              setLineLogin(userId, profile.displayName);
-              console.log('✅ LINE ログイン状態をメモリに保存');
-              
-              // Supabase に保存（背景で実行、エラー無視）
-              setLineLoggedInDB(userId, true, userId)
-                .then(() => console.log('✅ LINE ログイン状態を Supabase に保存'))
-                .catch((error) => console.error('⚠️ Supabase 保存失敗（無視）:', error));
-
-              // 🆕 LINEアプリ内判定
-              if (window.liff.isInClient()) {
-                setIsLineApp(true);
-                
-                const handleResize = () => {
-                  const vh = window.innerHeight * 0.01;
-                  document.documentElement.style.setProperty('--vh', `${vh}px`);
-                  
-                  const statusBarHeight = window.screen.height - window.innerHeight > 100 ? 44 : 20;
-                  setLineSafeArea({
-                    top: statusBarHeight,
-                    bottom: 0
-                  });
-                };
-                
-                handleResize();
-                window.addEventListener('resize', handleResize);
-              }
-              
-              // 🆕 データベースから家族メンバーを取得
-              const response = await apiFetch(`/api/family-members?userId=${userId}`);
-              
-              if (response.ok) {
-                const data = await response.json();
-                console.log('✅ 家族メンバーをデータベースから取得:', data.familyMembers.length);
-                setFamilyMembers(data.familyMembers);
-              } else {
-                console.error('データベース取得エラー、localStorageから読み込み');
-                // フォールバック: localStorageから読み込み
-                const savedFamily = localStorage.getItem('familyMembers');
-                if (savedFamily) {
-                  const parsedFamily = JSON.parse(savedFamily);
-                  const convertedFamily = normalizeFamilyMembers(parsedFamily);
-                  setFamilyMembers(convertedFamily);
-                }
-              }
-            }
-          } catch (error: unknown) {
-            console.error('LIFF initialization failed:', error);
-            // エラー時はlocalStorageから読み込み
-            const savedFamily = localStorage.getItem('familyMembers');
-            if (savedFamily) {
-              const parsedFamily = JSON.parse(savedFamily);
-              const convertedFamily = normalizeFamilyMembers(parsedFamily);
-              setFamilyMembers(convertedFamily);
-            }
-          }
-        } else {
-          // LIFFが使えない場合（ローカル環境）
-          const savedFamily = localStorage.getItem('familyMembers');
-          if (savedFamily) {
-            const parsedFamily = JSON.parse(savedFamily);
-            const convertedFamily = normalizeFamilyMembers(parsedFamily);
-            setFamilyMembers(convertedFamily);
-          } else {
-            setFamilyMembers([]);
-          }
-        }
-      } catch (error) {
-        console.error('初期化エラー:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    initData();
-  }, []);
 
   // 家族用招待QRコードを生成（家族メンバー共通）
   const generateFamilyInviteQr = async () => {
@@ -384,24 +196,7 @@ export default function FamilyPage() {
 
   // ※ 共有設定画面では、記録忘れリマインダーのON/OFFと時刻のみを管理します。
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
-
-  // 認証されていない場合はローディング画面
-  if (!isAuthenticated) {
   return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* 🆕 LINEアプリ用スタイル */}
       {typeof window !== 'undefined' && isLineApp && (
@@ -614,10 +409,6 @@ export default function FamilyPage() {
           </section>
         )}
       </main>
-    </div>
-  ) : (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }

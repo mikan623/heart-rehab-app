@@ -1,11 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getSession, isLineLoggedIn, getCurrentUserId, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
-import type { AuthSession } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
-import { readJsonOrThrow } from "@/lib/readJson";
 
 // （デスクトップナビは NavigationBar に統一）
 import {
@@ -54,7 +49,6 @@ type HealthRecordApi = {
   dailyLife?: string | null;
 };
 
-type HealthRecordsResponse = { records?: HealthRecordApi[] };
 
 interface WeekData {
   labels: string[]; // X軸ラベル ('12/20 09:00', '12/20 10:00'...)
@@ -73,18 +67,19 @@ interface WeekData {
 type TimeSlot = 'morning' | 'noon' | 'night';
 type ActiveMetric = 'bloodPressure' | 'pulse' | 'weight' | 'bmi';
 
-export default function GraphPage() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [savedRecords, setSavedRecords] = useState<{ [key: string]: { [key: string]: HealthRecord } }>({});
-  const [user, setUser] = useState<AuthSession | null>(null);
-  const [targetWeight, setTargetWeight] = useState<number | null>(null);
-  const [heightCm, setHeightCm] = useState<number | null>(null);
+type Props = {
+  userId: string;
+  initialSavedRecords: { [date: string]: { [time: string]: HealthRecord } };
+  initialTargetWeight: number | null;
+  initialHeightCm: number | null;
+};
+
+export default function GraphPage({ userId, initialSavedRecords, initialTargetWeight, initialHeightCm }: Props) {
+  const [savedRecords, setSavedRecords] = useState<{ [key: string]: { [key: string]: HealthRecord } }>(initialSavedRecords);
+  const [targetWeight, setTargetWeight] = useState<number | null>(initialTargetWeight);
+  const [heightCm, setHeightCm] = useState<number | null>(initialHeightCm);
   const [activeMetric, setActiveMetric] = useState<ActiveMetric>('bloodPressure');
   const [activeSlot, setActiveSlot] = useState<'all' | TimeSlot>('all');
-  const [isLineApp, setIsLineApp] = useState(false);
-  const [lineSafeArea, setLineSafeArea] = useState({ top: 0, bottom: 0 });
   const [weekOffset, setWeekOffset] = useState(0); // 0 = 現在週、-1 = 先週
   const [weekData, setWeekData] = useState<WeekData | null>(null);
   // 7日間平均表示は不要になったため削除
@@ -102,15 +97,6 @@ export default function GraphPage() {
     if (!y || !m || !d) return null;
     const dt = new Date(y, m - 1, d);
     return Number.isNaN(dt.getTime()) ? null : dt;
-  };
-
-  // APIからのdate文字列をグラフ用キーに正規化
-  const normalizeDateKey = (raw: string | undefined) => {
-    if (!raw) return '';
-    // ISO形式なら T で分割
-    if (raw.includes('T')) return raw.split('T')[0];
-    // スラッシュ区切りをハイフンに
-    return raw.replace(/\//g, '-');
   };
 
   // 正常範囲の薄塗り（血圧・脈拍）
@@ -144,7 +130,7 @@ export default function GraphPage() {
   };
 
   const localStorageKey = (baseKey: string, overrideUserId?: string) => {
-    const resolvedUserId = overrideUserId || user?.userId;
+    const resolvedUserId = overrideUserId || userId;
     if (resolvedUserId) {
       return `${baseKey}_${resolvedUserId}`;
     }
@@ -227,127 +213,40 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
     return 'night';
   };
 
-  // 認証チェック
+  // ローカルストレージのバックアップをマージ（SSR初期データに追加）
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    const localSaved = loadLocalRecords(userId);
+    if (Object.keys(localSaved).length === 0) return;
+    setSavedRecords((prev) => {
+      const merged = { ...prev };
+      Object.entries(localSaved).forEach(([dateKey, times]) => {
+        const normalizedDate = dateKey.includes('T') ? dateKey.split('T')[0] : dateKey.replace(/\//g, '-');
+        if (!normalizedDate) return;
+        if (!merged[normalizedDate]) merged[normalizedDate] = {};
+        Object.entries(times).forEach(([timeKey, entry]) => {
+          merged[normalizedDate][timeKey] = {
+            bloodPressure: entry.bloodPressure || { systolic: '', diastolic: '' },
+            pulse: entry.pulse?.toString?.() || '',
+            weight: entry.weight?.toString?.() || '',
+            medicationTaken: entry.medicationTaken ?? false,
+            dailyLife: entry.dailyLife || '',
+          };
+        });
+      });
+      return merged;
+    });
 
-    const session = getSession();
-    if (session) {
-      setUser(session);
-      setIsAuthenticated(true);
-    } else if (isLineLoggedIn() && typeof window.liff !== 'undefined') {
-      setIsAuthenticated(true);
-    } else {
-      router.push('/');
-      return;
+    // ローカルストレージのプロフィールでフォールバック
+    if (initialTargetWeight === null) {
+      const tw = loadLocalProfileTargetWeight(userId);
+      if (tw !== null) setTargetWeight(tw);
     }
-
-    // LINE アプリのセーフエリア検出
-    if (typeof window.liff !== 'undefined') {
-      try {
-        const inlineTop = window.liff.getInlineTopAreaHeight?.() || 0;
-        const inlineBottom = window.liff.getInlineBottomAreaHeight?.() || 0;
-        setLineSafeArea({ top: inlineTop, bottom: inlineBottom });
-        setIsLineApp(true);
-      } catch (error) {
-        console.log('Not in LINE app');
-      }
+    if (initialHeightCm === null) {
+      const h = loadLocalProfileHeightCm(userId);
+      if (h !== null) setHeightCm(h);
     }
-
-    // ヘルスレコード取得
-    const fetchRecords = async () => {
-      try {
-        const userId = getCurrentUserId();
-        if (!userId) return;
-
-        const res = await apiFetch(`/api/health-records?userId=${encodeURIComponent(userId)}`);
-        if (res.ok) {
-          const data = await readJsonOrThrow(res);
-          const records =
-            isRecord(data) && Array.isArray(data.records)
-              ? data.records.filter(isHealthRecordApi)
-              : [];
-
-          // 日付→時刻→記録 のマップに整形
-          const grouped: { [date: string]: { [time: string]: HealthRecord } } = {};
-          records.forEach((r: HealthRecordApi) => {
-            const date = normalizeDateKey(r.date);
-            const time = r.time || '08:00';
-            if (!grouped[date]) grouped[date] = {};
-            const systolic = r.bloodPressure?.systolic;
-            const diastolic = r.bloodPressure?.diastolic;
-            grouped[date][time] = {
-              bloodPressure: {
-                systolic: systolic === null || systolic === undefined ? '' : String(systolic),
-                diastolic: diastolic === null || diastolic === undefined ? '' : String(diastolic),
-              },
-              pulse: r.pulse === null || r.pulse === undefined ? '' : String(r.pulse),
-              weight: r.weight === null || r.weight === undefined ? '' : String(r.weight),
-              medicationTaken: r.medicationTaken ?? false,
-              dailyLife: r.dailyLife || '',
-            };
-          });
-
-          // ローカルストレージのバックアップもマージ
-          const localSaved = loadLocalRecords(userId);
-          Object.entries(localSaved).forEach(([dateKey, times]) => {
-            const normalizedDate = normalizeDateKey(dateKey);
-            if (!normalizedDate) return;
-            if (!grouped[normalizedDate]) grouped[normalizedDate] = {};
-            Object.entries(times).forEach(([timeKey, entry]) => {
-              grouped[normalizedDate][timeKey] = {
-                bloodPressure: entry.bloodPressure || { systolic: '', diastolic: '' },
-                pulse: entry.pulse?.toString?.() || '',
-                weight: entry.weight?.toString?.() || '',
-                medicationTaken: entry.medicationTaken ?? false,
-                dailyLife: entry.dailyLife || '',
-              };
-            });
-          });
-
-          setSavedRecords(grouped);
-        }
-
-        // プロフィール（目標体重）を取得
-        try {
-          const profileRes = await apiFetch(`/api/profiles?userId=${encodeURIComponent(userId)}`);
-          if (profileRes.ok) {
-            const profileData = await readJsonOrThrow(profileRes);
-            const profile = isRecord(profileData) && isRecord(profileData.profile) ? profileData.profile : {};
-            const twRaw = profile.targetWeight;
-            const hRaw = profile.height;
-            const h =
-              hRaw === null || hRaw === undefined || hRaw === ''
-                ? null
-                : (typeof hRaw === 'number' ? hRaw : Number(hRaw));
-            setHeightCm(h !== null && Number.isFinite(h) && h > 0 ? h : loadLocalProfileHeightCm(userId));
-            const tw =
-              twRaw === null || twRaw === undefined || twRaw === ''
-                ? null
-                : (typeof twRaw === 'number' ? twRaw : Number(twRaw));
-            if (tw !== null && Number.isFinite(tw)) {
-              setTargetWeight(tw);
-            } else {
-              // APIに無い場合はローカルストレージも見る
-              setTargetWeight(loadLocalProfileTargetWeight(userId));
-            }
-          } else {
-            setTargetWeight(loadLocalProfileTargetWeight(userId));
-            setHeightCm(loadLocalProfileHeightCm(userId));
-          }
-        } catch {
-          setTargetWeight(loadLocalProfileTargetWeight(userId));
-          setHeightCm(loadLocalProfileHeightCm(userId));
-        }
-      } catch (error) {
-        console.error('Failed to fetch records:', error);
-    } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRecords();
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // 1週間分のデータを取得・集計
   useEffect(() => {
@@ -424,25 +323,6 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
 
     setWeekData(data);
   }, [savedRecords, weekOffset, heightCm]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
-          <p className="mt-4 text-orange-700">データを読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
-      </div>
-    );
-  }
 
   // グラフデータの生成
   const hasPoints = !!weekData && (weekData.labels?.length ?? 0) > 0;

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
-import { getCurrentUserId } from '@/lib/auth';
 
 type InviteStatus = 'pending' | 'accepted' | 'declined' | string;
 
@@ -87,12 +86,18 @@ const getComments = (value: unknown): CommentItem[] =>
 const getLabComments = (value: unknown): LabCommentItem[] =>
   isRecord(value) && Array.isArray(value.comments) ? value.comments.filter(isLabCommentItem) : [];
 
-export default function MessagesClient() {
-  const userId = useMemo(() => getCurrentUserId(), []);
-  const [invites, setInvites] = useState<InviteItem[]>([]);
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [labComments, setLabComments] = useState<LabCommentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+type Props = {
+  userId: string;
+  initialInvites: InviteItem[];
+  initialComments: CommentItem[];
+  initialLabComments: LabCommentItem[];
+};
+
+export default function MessagesClient({ userId, initialInvites, initialComments, initialLabComments }: Props) {
+  const [invites, setInvites] = useState<InviteItem[]>(initialInvites);
+  const [comments, setComments] = useState<CommentItem[]>(initialComments);
+  const [labComments, setLabComments] = useState<LabCommentItem[]>(initialLabComments);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -170,17 +175,12 @@ export default function MessagesClient() {
     }
   };
 
+  // 未読リセット（ページを開いた時点でリセット）
   useEffect(() => {
-    (async () => {
-      await fetchAll();
-      // このページを開いたら未読をリセット（次回以降のバッジ計算に使う）
-      // ユーザーIDごとに保持（複数アカウント/ロール切替でも取りこぼさない）
-      if (typeof window !== 'undefined' && userId) {
-        localStorage.setItem(`messagesLastSeen_${userId}`, String(Date.now()));
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (typeof window !== 'undefined' && userId) {
+      localStorage.setItem(`messagesLastSeen_${userId}`, String(Date.now()));
+    }
+  }, [userId]);
 
   const respond = async (inviteId: string, action: 'accept' | 'decline') => {
     if (!userId) return;
