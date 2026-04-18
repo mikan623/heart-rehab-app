@@ -56,21 +56,22 @@ type Props = {
 
 export default function CalendarPage({ userId, initialSavedRecords, initialHeightCm }: Props) {
   const [heightCm, setHeightCm] = useState<number | null>(initialHeightCm);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth() + 1;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(''); // 選択された時間
-  const [desktopDateTime, setDesktopDateTime] = useState(() => {
+  const [desktopDateTime, setDesktopDateTime] = useState('');
+  useEffect(() => {
+    setIsMounted(true);
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
-    return `${y}-${m}-${d}T${hh}:${mm}`;
-  });
+    setDesktopDateTime(`${y}-${m}-${d}T${hh}:${mm}`);
+    setCurrentMonth(new Date());
+  }, []);
   const [healthRecord, setHealthRecord] = useState({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -709,7 +710,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
             <div className="flex-1 flex items-center">
               {/* 年月は中央寄せ */}
               <div className="flex-1 flex justify-center">
-            <h2 className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+            <h2 suppressHydrationWarning className="text-xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
               📅 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
             </h2>
               </div>
@@ -756,7 +757,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
 
             {/* 日付グリッド */}
             {/*カレンダー表示部分（既存のJSX内）*/}
-            {isLoading ? (
+            {isLoading || !isMounted ? (
               <div className="flex justify-center items-center h-64">
                 <div className="text-gray-500">データを読み込み中...</div>
               </div>
