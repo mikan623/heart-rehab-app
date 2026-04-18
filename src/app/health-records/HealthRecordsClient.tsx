@@ -144,6 +144,14 @@ export default function Home() {
     medicationDays: number;
     totalDays: number;
   }>({ systolic: null, diastolic: null, pulse: null, weight: null, exerciseDays: 0, medicationDays: 0, totalDays: 0 });
+  const [printProfile, setPrintProfile] = useState<Record<string, unknown>>({});
+  const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: HealthRecord}}>({});
+  const [printDbRecords, setPrintDbRecords] = useState<Array<{
+    date: string; time: string;
+    bloodPressure: { systolic: number; diastolic: number };
+    pulse: number | null; weight: number | null;
+    exercise: unknown; dailyLife: string | null; medicationTaken: boolean | null;
+  }>>([]);
   const createEmptyHealthRecord = (): HealthRecord => ({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -214,14 +222,11 @@ export default function Home() {
     setIsAuthenticated(true);
   }, [router]);
   
-  // ハイドレーション対策: クライアント側で作成日とテーブルデータを設定（printMonth変更時も再計算）
+  // PDFテーブル: DBから取得したデータ（printDbRecords）を printMonth でフィルタして集計
   useEffect(() => {
     setPrintCreatedDate(new Date().toLocaleString('ja-JP'));
 
     try {
-      const saved = parseSavedRecords(JSON.parse(localStorage.getItem(getStorageKey('healthRecords')) || '{}'));
-
-      // 選択月でフィルタリング
       const rows: React.ReactNode[] = [];
       const sysArr: number[] = [];
       const diaArr: number[] = [];
@@ -231,46 +236,56 @@ export default function Home() {
       let medicationDays = 0;
       const dateSeen = new Set<string>();
 
-      Object.entries(saved)
-        .filter(([date]) => date.startsWith(printMonth))
-        .sort(([a], [b]) => a.localeCompare(b))
-        .forEach(([date, times]) => {
-          Object.entries(times).forEach(([time, record]) => {
-            if (!record) return;
-            rows.push(
-              <tr key={`${date}-${time}`}>
-                <td className="border border-gray-400 p-2 text-xs">{date}</td>
-                <td className="border border-gray-400 p-2 text-xs">{formatTime24h(time)}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.bloodPressure?.systolic || ''}/{record.bloodPressure?.diastolic || ''}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.pulse || ''}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.weight || ''}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.exercise?.type || ''}{record.exercise?.duration ? ` ${record.exercise.duration}分` : ''}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.medicationTaken ? '○' : '-'}</td>
-                <td className="border border-gray-400 p-2 text-xs">{record.dailyLife || '-'}</td>
-              </tr>
-            );
-            // 平均値計算用データ収集
-            const sys = Number(record.bloodPressure?.systolic);
-            const dia = Number(record.bloodPressure?.diastolic);
-            const pls = Number(record.pulse);
-            const wgt = Number(record.weight);
-            if (!isNaN(sys) && sys > 0) sysArr.push(sys);
-            if (!isNaN(dia) && dia > 0) diaArr.push(dia);
-            if (!isNaN(pls) && pls > 0) pulseArr.push(pls);
-            if (!isNaN(wgt) && wgt > 0) weightArr.push(wgt);
-            if (!dateSeen.has(date)) {
-              dateSeen.add(date);
-              if (record.exercise?.duration) exerciseDays++;
-              if (record.medicationTaken) medicationDays++;
-            }
-          });
+      // date は "2026-04-18T00:00:00.000Z" または "2026-04-18" 形式で返ってくる
+      const toDateStr = (d: string) => d.length > 10 ? d.slice(0, 10) : d;
+
+      printDbRecords
+        .filter((r) => toDateStr(r.date).startsWith(printMonth))
+        .sort((a, b) => {
+          const da = toDateStr(a.date);
+          const db = toDateStr(b.date);
+          return da !== db ? da.localeCompare(db) : a.time.localeCompare(b.time);
+        })
+        .forEach((record) => {
+          const dateStr = toDateStr(record.date);
+          const ex = (typeof record.exercise === 'object' && record.exercise !== null)
+            ? record.exercise as { type?: string; duration?: string }
+            : null;
+
+          rows.push(
+            <tr key={`${dateStr}-${record.time}`}>
+              <td className="border border-gray-400 p-2 text-xs">{dateStr}</td>
+              <td className="border border-gray-400 p-2 text-xs">{formatTime24h(record.time)}</td>
+              <td className="border border-gray-400 p-2 text-xs">{record.bloodPressure.systolic}/{record.bloodPressure.diastolic}</td>
+              <td className="border border-gray-400 p-2 text-xs">{record.pulse ?? ''}</td>
+              <td className="border border-gray-400 p-2 text-xs">{record.weight ?? ''}</td>
+              <td className="border border-gray-400 p-2 text-xs">{ex?.type || ''}{ex?.duration ? ` ${ex.duration}分` : ''}</td>
+              <td className="border border-gray-400 p-2 text-xs">{record.medicationTaken ? '○' : '-'}</td>
+              <td className="border border-gray-400 p-2 text-xs">{record.dailyLife || '-'}</td>
+            </tr>
+          );
+
+          const sys = record.bloodPressure.systolic;
+          const dia = record.bloodPressure.diastolic;
+          const pls = record.pulse;
+          const wgt = record.weight;
+          if (sys > 0) sysArr.push(sys);
+          if (dia > 0) diaArr.push(dia);
+          if (pls != null && pls > 0) pulseArr.push(pls);
+          if (wgt != null && wgt > 0) weightArr.push(wgt);
+          if (!dateSeen.has(dateStr)) {
+            dateSeen.add(dateStr);
+            if (ex?.duration) exerciseDays++;
+            if (record.medicationTaken) medicationDays++;
+          }
         });
 
       setPrintTableRows(rows.length > 0 ? rows : [
         <tr key="empty"><td className="border border-gray-400 p-2 text-center text-sm text-gray-500" colSpan={8}>この月の記録はありません</td></tr>
       ]);
 
-      const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null;
+      const avg = (arr: number[]) =>
+        arr.length > 0 ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null;
       setPrintMonthAverages({
         systolic: avg(sysArr),
         diastolic: avg(diaArr),
@@ -283,29 +298,74 @@ export default function Home() {
     } catch {
       setPrintTableRows([<tr key="error"><td className="border border-gray-400 p-2" colSpan={8}>データ取得エラー</td></tr>]);
     }
-  }, [printMonth]);
+  }, [printMonth, printDbRecords]);
 
-  // NavigationBar からの印刷トリガーを受け取る
+  // pendingPrint が true になったら、次の描画後に window.print() を呼ぶ
+  const [pendingPrint, setPendingPrint] = useState(false);
   useEffect(() => {
-    const handleTriggerPrint = (e: Event) => {
+    if (!pendingPrint) return;
+    setPendingPrint(false);
+    window.print();
+  }, [pendingPrint]);
+
+  // NavigationBar からの印刷トリガーを受け取る（毎回最新データを取得してから印刷）
+  useEffect(() => {
+    const handleTriggerPrint = async (e: Event) => {
       const month = (e as CustomEvent<{ month: string }>).detail?.month;
       if (month) setPrintMonth(month);
-      setTimeout(() => window.print(), 100);
+
+      // 最新データを並行取得
+      try {
+        const [recordsRes, profileRes, bloodRes] = await Promise.all([
+          apiFetch('/api/health-records'),
+          apiFetch('/api/profiles'),
+          apiFetch('/api/blood-data'),
+        ]);
+        if (recordsRes.ok) {
+          const data = await recordsRes.json();
+          if (Array.isArray(data?.records)) setPrintDbRecords(data.records);
+        }
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          if (data?.profile && typeof data.profile === 'object')
+            setPrintProfile(data.profile as Record<string, unknown>);
+        }
+        if (bloodRes.ok) {
+          const data = await bloodRes.json();
+          if (Array.isArray(data)) setPrintBloodDataList(data);
+        }
+      } catch (err) {
+        console.error('PDF: データ取得エラー', err);
+      }
+
+      // 状態更新 → React 再描画 → 印刷の順序を保証
+      setPendingPrint(true);
     };
-    window.addEventListener('triggerPrint', handleTriggerPrint);
-    return () => window.removeEventListener('triggerPrint', handleTriggerPrint);
+
+    window.addEventListener('triggerPrint', handleTriggerPrint as EventListener);
+    return () => window.removeEventListener('triggerPrint', handleTriggerPrint as EventListener);
   }, []);
 
-  // PDF印刷用：血液検査/CPXデータも取得
+  // PDF印刷用：健康記録をDBから取得
   useEffect(() => {
-    const fetchBloodDataForPrint = async () => {
-      if (!isAuthenticated) return;
-      const userId = getCurrentUserId();
-      if (!userId) return;
+    if (!isAuthenticated) return;
+    apiFetch('/api/health-records')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.records)) {
+          setPrintDbRecords(data.records);
+        }
+      })
+      .catch((e) => console.error('❌ PDF印刷: 健康記録取得エラー:', e));
+  }, [isAuthenticated]);
 
+  // PDF印刷用：血液検査/CPXデータも取得（APIはクッキー認証のみ使用）
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
       try {
         setPrintBloodDataStatus('loading');
-        const res = await apiFetch(`/api/blood-data?userId=${encodeURIComponent(userId)}`);
+        const res = await apiFetch('/api/blood-data');
         if (!res.ok) {
           setPrintBloodDataList([]);
           setPrintBloodDataStatus('error');
@@ -319,11 +379,24 @@ export default function Home() {
         setPrintBloodDataList([]);
         setPrintBloodDataStatus('error');
       }
-    };
-
-    fetchBloodDataForPrint();
+    })();
   }, [isAuthenticated]);
-  
+
+  // PDF印刷用：プロフィールをAPIから取得（APIはクッキー認証のみ使用）
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiFetch('/api/profiles')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        // API は { profile: {...} } 形式で返す
+        const profile = data?.profile;
+        if (profile && typeof profile === 'object') {
+          setPrintProfile(profile as Record<string, unknown>);
+        }
+      })
+      .catch(() => {/* プロフィール取得失敗は無視 */});
+  }, [isAuthenticated]);
+
   // （HealthRecord の再定義は不要。上の型を使用）
 
   // 時間を日本語表記に変換する関数
@@ -620,9 +693,6 @@ export default function Home() {
     // 全ページで heart.png に統一
     return '/heart.png';
   };
-
-  // 記録データを保存する状態を追加
-  const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: HealthRecord}}>({});
 
   // 詳細表示用の状態を追加
   const [showHeartRehabInfo, setShowHeartRehabInfo] = useState(false);
@@ -2548,16 +2618,13 @@ export default function Home() {
         </div>
 
         {(() => {
-          let p: Record<string, unknown> = {};
-          try {
-            const parsed = JSON.parse(localStorage.getItem(getStorageKey('profile')) || '{}');
-            p = isRecord(parsed) ? parsed : {};
-          } catch {
-            p = {};
-          }
+          const p = printProfile;
 
           const diseases = Array.isArray(p.diseases) ? p.diseases : [];
           const riskFactors = Array.isArray(p.riskFactors) ? p.riskFactors : [];
+
+          const str = (v: unknown, fallback = '未設定') =>
+            v != null && v !== '' ? String(v) : fallback;
 
           return (
             <>
@@ -2565,50 +2632,50 @@ export default function Home() {
               <h2 className="text-xl font-bold text-red-600 mb-4">【基本情報】</h2>
               <div className="grid grid-cols-2 gap-4 mb-8 border border-gray-400 p-4">
                 <div>
-                  <p className="font-semibold">お名前: {p.displayName || '未設定'}</p>
-          </div>
-          <div>
-                  <p className="font-semibold">年齢: {(p.age ?? '未設定')}歳</p>
-          </div>
-          <div>
-                  <p className="font-semibold">性別: {p.gender || '未設定'}</p>
-          </div>
-          <div>
-                  <p className="font-semibold">身長: {(p.height ?? '未設定')}cm</p>
+                  <p className="font-semibold">お名前: {str(p.displayName)}</p>
                 </div>
                 <div>
-                  <p className="font-semibold">目標体重: {(p.targetWeight ?? '未設定')}kg</p>
+                  <p className="font-semibold">年齢: {str(p.age)}歳</p>
                 </div>
                 <div>
-                  <p className="font-semibold">メール: {p.email || '未設定'}</p>
-          </div>
-        </div>
+                  <p className="font-semibold">性別: {str(p.gender)}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">身長: {str(p.height)}cm</p>
+                </div>
+                <div>
+                  <p className="font-semibold">目標体重: {str(p.targetWeight)}kg</p>
+                </div>
+                <div>
+                  <p className="font-semibold">メール: {str(p.email)}</p>
+                </div>
+              </div>
 
               {/* 医療情報（画像の項目） */}
               <h2 className="text-xl font-bold text-red-600 mb-4">【医療情報】</h2>
               <div className="border border-gray-400 p-4 mb-8">
                 <div className="mb-4">
                   <p className="font-semibold mb-2">基礎疾患:</p>
-                  <p className="ml-4">{diseases.length > 0 ? diseases.join('、') : '未設定'}</p>
+                  <p className="ml-4">{diseases.length > 0 ? diseases.map(String).join('、') : '未設定'}</p>
                 </div>
                 <div className="mb-4">
                   <p className="font-semibold mb-2">他の動脈硬化危険因子:</p>
-                  <p className="ml-4">{riskFactors.length > 0 ? riskFactors.join('、') : '未設定'}</p>
+                  <p className="ml-4">{riskFactors.length > 0 ? riskFactors.map(String).join('、') : '未設定'}</p>
                 </div>
                 <div className="mb-4">
                   <p className="font-semibold mb-2">服薬情報:</p>
-                  <p className="ml-4">{p.medications || '未設定'}</p>
+                  <p className="ml-4">{str(p.medications)}</p>
                 </div>
                 <div>
                   <p className="font-semibold mb-2">身体機能・制限事項:</p>
-                  <p className="ml-4">{p.physicalFunction || '未設定'}</p>
+                  <p className="ml-4">{str(p.physicalFunction)}</p>
                 </div>
               </div>
 
               {/* 緊急連絡先（画像の項目） */}
               <h2 className="text-xl font-bold text-red-600 mb-4">【緊急連絡先】</h2>
               <div className="border border-gray-400 p-4 mb-8">
-                <p className="font-semibold">{p.emergencyContact || '未設定'}</p>
+                <p className="font-semibold">{str(p.emergencyContact)}</p>
               </div>
             </>
           );
