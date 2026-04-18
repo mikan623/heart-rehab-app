@@ -6,11 +6,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const signature = request.headers.get('x-line-signature') || '';
-    
+
     // LINE Signature 検証
     const channelSecret = process.env.LINE_CHANNEL_SECRET;
     if (!channelSecret) {
       console.error('❌ LINE_CHANNEL_SECRET is not set');
+      return NextResponse.json({ error: 'Not configured' }, { status: 500 });
+    }
+
+    const internalApiSecret = process.env.INTERNAL_API_SECRET;
+    if (!internalApiSecret) {
+      console.error('❌ INTERNAL_API_SECRET is not set');
       return NextResponse.json({ error: 'Not configured' }, { status: 500 });
     }
 
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
-                      'x-internal-secret': channelSecret,
+                      'x-internal-secret': internalApiSecret,
                     },
                     body: JSON.stringify({
                       replyToken: event.replyToken,

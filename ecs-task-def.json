@@ -68,6 +68,10 @@
         {
           "name": "OPENAI_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:OPENAI_API_KEY-siduM2"
+        },
+        {
+          "name": "INTERNAL_API_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:920004594871:secret:INTERNAL_API_SECRET-Evx3Lg"
         }
       ],
       "logConfiguration": {
