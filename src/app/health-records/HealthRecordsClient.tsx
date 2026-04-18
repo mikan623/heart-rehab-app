@@ -90,6 +90,35 @@ type PrintCPXTest = {
   findings: string | null;
 };
 
+// SSR から渡される初期データの型
+type InitialProfile = {
+  displayName?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  height?: number | null;
+  targetWeight?: number | null;
+  diseases?: string[];
+  riskFactors?: string[];
+  medications?: string | null;
+  physicalFunction?: string | null;
+  emergencyContact?: string | null;
+} | null;
+
+type InitialRecord = {
+  id: string; date: string; time: string;
+  bloodPressure: { systolic: number; diastolic: number };
+  pulse: number | null; weight: number | null;
+  exercise: unknown; dailyLife: string | null; medicationTaken: boolean | null;
+};
+
+type Props = {
+  userId: string;
+  displayName: string;
+  initialProfile: InitialProfile;
+  initialRecords: InitialRecord[];
+  initialBloodData: PrintBloodData[];
+};
+
 // 食事ガイドデータ
 const MEAL_GUIDE = [
   { name: 'ハンバーガー', calories: '303Kcal', carbs: '31.2g', protein: '15.7g', salt: '1.7g' },
@@ -110,9 +139,14 @@ const MEAL_GUIDE = [
   { name: 'ハンバーガーセット', calories: '712Kcal', carbs: '56.2g', protein: '27.4g', salt: '8.5g' },
 ];
 
-export default function Home() {
+export default function Home({
+  userId,
+  displayName,
+  initialProfile,
+  initialRecords,
+  initialBloodData,
+}: Props) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const today = new Date();
   const year = today.getFullYear();
@@ -129,8 +163,8 @@ export default function Home() {
   });
   const [printCreatedDate, setPrintCreatedDate] = useState('');
   const [printTableRows, setPrintTableRows] = useState<React.ReactNode[]>([]);
-  const [printBloodDataList, setPrintBloodDataList] = useState<PrintBloodData[]>([]);
-  const [printBloodDataStatus, setPrintBloodDataStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [printBloodDataList, setPrintBloodDataList] = useState<PrintBloodData[]>(initialBloodData);
+  const [printBloodDataStatus, setPrintBloodDataStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('loaded');
   const [printMonth, setPrintMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -144,14 +178,11 @@ export default function Home() {
     medicationDays: number;
     totalDays: number;
   }>({ systolic: null, diastolic: null, pulse: null, weight: null, exerciseDays: 0, medicationDays: 0, totalDays: 0 });
-  const [printProfile, setPrintProfile] = useState<Record<string, unknown>>({});
+  const [printProfile, setPrintProfile] = useState<Record<string, unknown>>(
+    initialProfile ? { ...initialProfile } : {}
+  );
   const [savedRecords, setSavedRecords] = useState<{[key: string]: {[key: string]: HealthRecord}}>({});
-  const [printDbRecords, setPrintDbRecords] = useState<Array<{
-    date: string; time: string;
-    bloodPressure: { systolic: number; diastolic: number };
-    pulse: number | null; weight: number | null;
-    exercise: unknown; dailyLife: string | null; medicationTaken: boolean | null;
-  }>>([]);
+  const [printDbRecords, setPrintDbRecords] = useState<InitialRecord[]>(initialRecords);
   const createEmptyHealthRecord = (): HealthRecord => ({
     bloodPressure: { systolic: '', diastolic: '' },
     pulse: '',
@@ -197,30 +228,7 @@ export default function Home() {
     if (key.startsWith('dailyLife')) return setActiveSection('dailyLife');
   };
   
-  // 認証チェック
-  useEffect(() => {
-    const session = getSession();
-    
-    // メールログインセッション優先（LINE ログインより優先）
-    if (session) {
-      setUser({
-        userId: session.userId,
-        displayName: session.userName
-      });
-      setIsAuthenticated(true);
-      return;
-    }
-
-    // メールログインセッションがない場合のみ LINE ログインをチェック
-    const lineLoggedIn = isLineLoggedIn();
-    if (!lineLoggedIn) {
-      // ログインしていない場合はランディングページへ
-      router.push('/');
-      return;
-    }
-
-    setIsAuthenticated(true);
-  }, [router]);
+  // 認証はサーバー側（page.tsx）で完結 → クライアント側の認証チェック不要
   
   // PDFテーブル: DBから取得したデータ（printDbRecords）を printMonth でフィルタして集計
   useEffect(() => {
@@ -346,56 +354,7 @@ export default function Home() {
     return () => window.removeEventListener('triggerPrint', handleTriggerPrint as EventListener);
   }, []);
 
-  // PDF印刷用：健康記録をDBから取得
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    apiFetch('/api/health-records')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (Array.isArray(data?.records)) {
-          setPrintDbRecords(data.records);
-        }
-      })
-      .catch((e) => console.error('❌ PDF印刷: 健康記録取得エラー:', e));
-  }, [isAuthenticated]);
-
-  // PDF印刷用：血液検査/CPXデータも取得（APIはクッキー認証のみ使用）
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    (async () => {
-      try {
-        setPrintBloodDataStatus('loading');
-        const res = await apiFetch('/api/blood-data');
-        if (!res.ok) {
-          setPrintBloodDataList([]);
-          setPrintBloodDataStatus('error');
-          return;
-        }
-        const data = await readJsonOrThrow(res);
-        setPrintBloodDataList(Array.isArray(data) ? data : []);
-        setPrintBloodDataStatus('loaded');
-      } catch (e) {
-        console.error('❌ PDF印刷: 血液検査データ取得エラー:', e);
-        setPrintBloodDataList([]);
-        setPrintBloodDataStatus('error');
-      }
-    })();
-  }, [isAuthenticated]);
-
-  // PDF印刷用：プロフィールをAPIから取得（APIはクッキー認証のみ使用）
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    apiFetch('/api/profiles')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        // API は { profile: {...} } 形式で返す
-        const profile = data?.profile;
-        if (profile && typeof profile === 'object') {
-          setPrintProfile(profile as Record<string, unknown>);
-        }
-      })
-      .catch(() => {/* プロフィール取得失敗は無視 */});
-  }, [isAuthenticated]);
+  // PDF印刷用データはサーバー（page.tsx）から props で渡される → 初回取得の useEffect 不要
 
   // （HealthRecord の再定義は不要。上の型を使用）
 
@@ -703,7 +662,10 @@ export default function Home() {
 
   // LIFF関連の状態を追加
   const [liff, setLiff] = useState<Liff | null>(null);
-  const [user, setUser] = useState<LiffProfile | null>(null);
+  // user はサーバーから渡された userId/displayName で初期化
+  const [user, setUser] = useState<LiffProfile | null>(
+    userId ? { userId, displayName, pictureUrl: '', statusMessage: '' } : null
+  );
   const [isLiffReady, setIsLiffReady] = useState(false);
   // 心臓ちゃんの表情状態を追加
   const [heartEmotion, setHeartEmotion] = useState('normal');
@@ -1359,7 +1321,8 @@ export default function Home() {
     return hasArray(meal?.staple) || hasArray(meal?.mainDish) || hasArray(meal?.sideDish) || other;
   })();
 
-  return isAuthenticated ? (
+  // 認証はサーバー側で完結済み → 常に表示
+  return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       {/* LINEアプリ用スタイル追加 */}
       {typeof window !== 'undefined' && isLineApp && (
@@ -2845,10 +2808,6 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>
-  ) : (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 flex items-center justify-center">
-      <p className="text-gray-600">読み込み中...</p>
     </div>
   );
 }
