@@ -1242,19 +1242,8 @@ export default function Home() {
         onTitleClick={() => setShowHeartRehabInfo(true)}
         isLineApp={isLineApp}
         lineSafeAreaTop={isLineApp ? lineSafeArea.top : undefined}
+        userLabel={user?.displayName ? `${user.displayName}さん` : undefined}
       />
-
-      {/* ウェルカムメッセージ */}
-      {user?.displayName && (
-        <div className="bg-gradient-to-r from-orange-200 to-pink-200 border-l-4 border-orange-400 p-4 m-4 rounded-lg">
-          <p className="text-orange-800 font-semibold text-lg">
-            ようこそ、{user.displayName}さん！
-          </p>
-          <p className="text-orange-800 text-sm mt-1">
-            今日も健康記録を入力しましょう。
-          </p>
-        </div>
-      )}
 
       {/* メインコンテンツ */}
       <main 
@@ -1266,7 +1255,12 @@ export default function Home() {
         }}
       >
         {/* 健康記録（横幅full） */}
-        <section className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-3 mb-1 md:mb-2 w-full">
+        <section className="bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-3 mb-1 md:mb-2 w-full">
+          {/* ウェルカムメッセージ */}
+          <div className="bg-gradient-to-r from-orange-400 to-pink-400 rounded-xl px-4 py-3 mb-4">
+            <p className="text-white font-bold text-base">今日も健康記録を入力しましょう！</p>
+          </div>
+
           {formError && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {formError}
@@ -1299,30 +1293,29 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 入力フォーム - セクション分けされたカード型（モーダル起動ボタン） */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* 入力フォーム - アイコンボタングリッド */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
             {/* 血圧 */}
             <div>
               <button
                 type="button"
                 onClick={() => setActiveSection('bloodPressure')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('bloodPressure') ? 'border-red-400 ring-2 ring-red-100' : 'border-orange-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">🩸 血圧</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-4xl">🩸</div>
+                <span className="text-lg font-bold text-gray-800">血圧</span>
+                <span className="text-sm font-semibold text-gray-500">
                   {healthRecord.bloodPressure?.systolic || healthRecord.bloodPressure?.diastolic
-                    ? `${healthRecord.bloodPressure?.systolic || '-'} / ${healthRecord.bloodPressure?.diastolic || '-'}`
+                    ? `${healthRecord.bloodPressure?.systolic || '-'}/${healthRecord.bloodPressure?.diastolic || '-'}`
                     : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('bloodPressure').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('bloodPressure').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -1333,21 +1326,20 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveSection('pulse')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('pulse') ? 'border-red-400 ring-2 ring-red-100' : 'border-pink-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">💓 脈拍</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
-                  {healthRecord.pulse ? `${healthRecord.pulse} 回/分` : '未入力'}
+                <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center text-4xl">💓</div>
+                <span className="text-lg font-bold text-gray-800">脈拍</span>
+                <span className="text-sm font-semibold text-gray-500">
+                  {healthRecord.pulse ? `${healthRecord.pulse}回/分` : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('pulse').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('pulse').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -1358,21 +1350,20 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveSection('weight')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('weight') ? 'border-red-400 ring-2 ring-red-100' : 'border-yellow-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">⚖️ 体重</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
-                  {healthRecord.weight ? `${healthRecord.weight} kg` : '未入力'}
+                <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center text-4xl">⚖️</div>
+                <span className="text-lg font-bold text-gray-800">体重</span>
+                <span className="text-sm font-semibold text-gray-500">
+                  {healthRecord.weight ? `${healthRecord.weight}kg` : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('weight').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('weight').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -1383,23 +1374,22 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveSection('exercise')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('exercise') ? 'border-red-400 ring-2 ring-red-100' : 'border-green-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">🚴 運動内容</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-4xl">🚴</div>
+                <span className="text-lg font-bold text-gray-800">運動</span>
+                <span className="text-sm font-semibold text-gray-500">
                   {healthRecord.exercise?.type || healthRecord.exercise?.duration
-                    ? `${healthRecord.exercise?.type || ''} ${healthRecord.exercise?.duration || ''}分`
+                    ? `${healthRecord.exercise?.type || ''}${healthRecord.exercise?.duration ? ` ${healthRecord.exercise.duration}分` : ''}`
                     : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('exercise').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('exercise').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -1410,19 +1400,18 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveSection('meal')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('meal') ? 'border-red-400 ring-2 ring-red-100' : 'border-red-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">🍽️ 食事内容</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">{hasMealInput ? '入力済み' : '未入力'}</span>
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-4xl">🍽️</div>
+                <span className="text-lg font-bold text-gray-800">食事</span>
+                <span className="text-sm font-semibold text-gray-500">{hasMealInput ? '入力済み' : '未入力'}</span>
               </button>
               {getSectionErrorMessages('meal').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('meal').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -1433,46 +1422,46 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setActiveSection('medication')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-2 shadow-md hover:shadow-lg active:scale-95 transition flex flex-col items-center justify-center gap-2 ${
                   hasAnyErrorForSection('medication') ? 'border-red-400 ring-2 ring-red-100' : 'border-blue-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">💊 服薬確認</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-4xl">💊</div>
+                <span className="text-lg font-bold text-gray-800">服薬</span>
+                <span className="text-sm font-semibold text-gray-500">
                   {healthRecord.medicationTaken ? '飲みました' : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('medication').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('medication').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
             </div>
 
             {/* 自覚症状やその他 */}
-            <div className="md:col-span-2">
+            <div className="col-span-3">
               <button
                 type="button"
                 onClick={() => setActiveSection('dailyLife')}
-                className={`w-full bg-white border-2 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                className={`w-full bg-white border-4 rounded-2xl py-5 px-5 shadow-md hover:shadow-lg active:scale-95 transition flex items-center justify-between gap-3 ${
                   hasAnyErrorForSection('dailyLife') ? 'border-red-400 ring-2 ring-red-100' : 'border-purple-300'
                 }`}
               >
-                <span className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">💭 自覚症状やその他</span>
-                <span className="text-base md:text-xl font-semibold text-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center text-3xl flex-shrink-0">💭</div>
+                  <span className="text-lg font-bold text-gray-800">自覚症状やその他</span>
+                </div>
+                <span className="text-sm font-semibold text-gray-500 flex-shrink-0">
                   {healthRecord.dailyLife ? '入力済み' : '未入力'}
                 </span>
               </button>
               {getSectionErrorMessages('dailyLife').length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1 space-y-1">
                   {getSectionErrorMessages('dailyLife').map((m, i) => (
-                    <p key={i} className="text-sm text-red-600">
-                      {m}
-                    </p>
+                    <p key={i} className="text-xs text-red-600">{m}</p>
                   ))}
                 </div>
               )}
@@ -2315,7 +2304,7 @@ export default function Home() {
             </div>
             
             <div className="space-y-2 md:space-y-3 text-gray-700">
-              <div className="bg-orange-50 p-2 md:p-3 rounded-lg">
+              <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 p-2 md:p-3 rounded-lg">
                 <h3 className="text-base font-semibold text-orange-800 mb-1">
                   🏥 心臓リハビリテーションとは
                 </h3>

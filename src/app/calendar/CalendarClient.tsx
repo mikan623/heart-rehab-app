@@ -1534,7 +1534,7 @@ export default function CalendarPage() {
               )}
 
         {/* 選択した日付の健康記録表示セクション */}
-        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-4 border-2 border-orange-200">
+        <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 rounded-lg shadow-sm p-4 md:p-6 mb-4 border-2 border-orange-200">
           <h3 className="text-lg md:text-2xl font-bold text-gray-800 mb-4">
             📋 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月{currentMonth.getDate()}日 の記録
           </h3>
