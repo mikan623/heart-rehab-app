@@ -93,6 +93,12 @@ type Props = {
   initialLabComments: LabCommentItem[];
 };
 
+const formatDateTime = (dateStr: string) => {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 export default function MessagesClient({ userId, initialInvites, initialComments, initialLabComments }: Props) {
   const [invites, setInvites] = useState<InviteItem[]>(initialInvites);
   const [comments, setComments] = useState<CommentItem[]>(initialComments);
@@ -250,7 +256,7 @@ export default function MessagesClient({ userId, initialInvites, initialComments
                         {c.provider?.name || c.provider?.email || '医療従事者'}
                       </div>
                       <div className="text-xs text-gray-600 mt-1">
-                        対象: {c.healthRecord.date} {c.healthRecord.time} / 受信: {new Date(c.createdAt).toLocaleString('ja-JP')}
+                        対象: {c.healthRecord.date} {c.healthRecord.time} / 受信: {formatDateTime(c.createdAt)}
                       </div>
                     </div>
                     <span className="text-xs px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
@@ -325,7 +331,7 @@ export default function MessagesClient({ userId, initialInvites, initialComments
                           ? `血液検査: ${c.bloodData?.testDate || '-'}`
                           : `CPX: ${(c.cpx?.testDate || c.cpx?.parentBloodTestDate) || '-'} / #${c.cpx?.cpxRound ?? '-'}`}
                         {' / '}
-                        受信: {new Date(c.createdAt).toLocaleString('ja-JP')}
+                        受信: {formatDateTime(c.createdAt)}
                       </div>
                     </div>
                     <span className="text-xs px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700">
@@ -405,7 +411,7 @@ export default function MessagesClient({ userId, initialInvites, initialComments
                               {inv.provider?.name || inv.provider?.email || '医療従事者'}
                             </div>
                             <div className="text-xs text-gray-600 mt-1">
-                              受信: {new Date(inv.createdAt).toLocaleString('ja-JP')}
+                              受信: {formatDateTime(inv.createdAt)}
                             </div>
                           </div>
                           <span className="text-xs px-2 py-1 rounded-full bg-white border border-orange-200 text-orange-700">

@@ -95,6 +95,18 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // 日付フォーマット（サーバー/クライアントで一致する形式）
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const formatDateTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
   // ページモード: 'list' | 'new' | 'edit'
   const [pageMode, setPageMode] = useState<'list' | 'new' | 'edit'>('list');
   const [recordType, setRecordType] = useState<'blood' | 'cpx' | null>(null);
@@ -613,10 +625,10 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <h4 className="text-lg font-bold text-gray-800">
-                                {new Date(item.testDate).toLocaleDateString('ja-JP')}
+                                {formatDate(item.testDate)}
                               </h4>
                               <p className="text-xs text-gray-500">
-                                登録: {new Date(item.createdAt).toLocaleString('ja-JP')}
+                                登録: {formatDateTime(item.createdAt)}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -734,10 +746,10 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <h4 className="text-lg font-bold text-gray-800">
-                                {cpx.testDate ? new Date(cpx.testDate).toLocaleDateString('ja-JP') : '日付未設定'} / CPX #{cpx.cpxRound}
+                                {cpx.testDate ? formatDate(cpx.testDate) : '日付未設定'} / CPX #{cpx.cpxRound}
                               </h4>
                               <p className="text-xs text-gray-500">
-                                登録: {new Date(cpx.parentCreatedAt).toLocaleString('ja-JP')}
+                                登録: {formatDateTime(cpx.parentCreatedAt)}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -1254,7 +1266,7 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
                       {/* 検査日は上の「検査日」を使用（ここは表示のみ） */}
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-600">
-                          検査日: <span className="font-bold text-gray-800">{testDate ? new Date(testDate).toLocaleDateString('ja-JP') : '未入力'}</span>
+                          検査日: <span className="font-bold text-gray-800">{testDate ? formatDate(testDate) : '未入力'}</span>
                         </p>
                       </div>
 

@@ -114,6 +114,12 @@ interface CPXTest {
 
 type Props = { userId: string };
 
+const formatDateTime = (dateStr: string) => {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 export default function MedicalClient({ userId }: Props) {
   const [searchName, setSearchName] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -718,7 +724,7 @@ export default function MedicalClient({ userId }: Props) {
                                   {c.provider?.name || c.provider?.email || '医療従事者'}
                                 </div>
                                 <div className="text-[10px] text-gray-500 whitespace-nowrap">
-                                  {new Date(c.createdAt).toLocaleString('ja-JP')}
+                                  {formatDateTime(c.createdAt)}
                                 </div>
                               </div>
                               <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
@@ -749,7 +755,7 @@ export default function MedicalClient({ userId }: Props) {
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="font-semibold text-gray-800">{b.testDate}</span>
                           <span className="text-[10px] md:text-xs text-gray-500">
-                            登録: {new Date(b.createdAt).toLocaleString('ja-JP')}
+                            登録: {formatDateTime(b.createdAt)}
                           </span>
                         </div>
                         <div className="mb-2 flex justify-end">
@@ -790,7 +796,7 @@ export default function MedicalClient({ userId }: Props) {
                                       {c.provider?.name || c.provider?.email || '医療従事者'}
                                     </div>
                                     <div className="text-[10px] text-gray-500 whitespace-nowrap">
-                                      {new Date(c.createdAt).toLocaleString('ja-JP')}
+                                      {formatDateTime(c.createdAt)}
                                     </div>
                                   </div>
                                   <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
@@ -830,7 +836,7 @@ export default function MedicalClient({ userId }: Props) {
                                 {(c.testDate || parentDate)} / CPX #{c.cpxRound}
                               </span>
                               <span className="text-[10px] md:text-xs text-gray-500">
-                                登録: {new Date(c.createdAt).toLocaleString('ja-JP')}
+                                登録: {formatDateTime(c.createdAt)}
                               </span>
                             </div>
                             <div className="mb-2 flex justify-end">
@@ -878,7 +884,7 @@ export default function MedicalClient({ userId }: Props) {
                                           {cc.provider?.name || cc.provider?.email || '医療従事者'}
                                         </div>
                                         <div className="text-[10px] text-gray-500 whitespace-nowrap">
-                                          {new Date(cc.createdAt).toLocaleString('ja-JP')}
+                                          {formatDateTime(cc.createdAt)}
                                         </div>
                                       </div>
                                       <div className="mt-1 whitespace-pre-wrap text-[12px] text-gray-800">
