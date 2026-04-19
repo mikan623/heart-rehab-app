@@ -1,19 +1,12 @@
 import PageHeader from "@/components/PageHeader";
+import BackButton from "@/components/BackButton";
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
       <PageHeader
         title="プライバシーポリシー"
-        rightContent={
-          <a
-            href="/"
-            className="px-3 py-1 text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
-          >
-            <span className="hidden md:inline">ホームに戻る</span>
-            <span className="md:hidden">戻る</span>
-          </a>
-        }
+        rightContent={<BackButton />}
       />
 
       <main className="p-4">
