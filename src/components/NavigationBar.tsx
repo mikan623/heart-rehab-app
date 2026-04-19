@@ -242,7 +242,7 @@ export default function NavigationBar() {
   };
 
   // PDF出力関数
-  const exportToPDF = async () => {
+  const exportToPDF = async (targetMonth?: string) => {
     try {
       console.log('💾 PDF出力開始');
   
@@ -534,7 +534,9 @@ export default function NavigationBar() {
       
       // 記録データを追加
       const tbody = printContent.querySelector('#records-table');
-      const sortedDates = Object.keys(saved).sort();
+      const sortedDates = Object.keys(saved).sort().filter(date =>
+        !targetMonth || date.startsWith(targetMonth)
+      );
       
       sortedDates.forEach(date => {
         const dayRecords = saved[date];
@@ -868,7 +870,7 @@ export default function NavigationBar() {
                         setShowPdfOptions(false);
                         setShowSettingsMenu(false);
                         setActiveButton(null);
-                        window.dispatchEvent(new CustomEvent('triggerPrint', { detail: { month: printMonth } }));
+                        exportToPDF(printMonth);
                       }}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 active:scale-95 transition text-sm"
                     >

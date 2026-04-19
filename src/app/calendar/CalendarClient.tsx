@@ -643,44 +643,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
   return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100">
         {/* LINEアプリ用スタイル & スタンプアニメーション */}
-        {typeof window !== 'undefined' && (
-          <style
-            dangerouslySetInnerHTML={{
-            __html: `
-                ${isLineApp ? `
-              .line-app-container {
-                height: calc(100vh - 60px);
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-              }
-              .line-app-container input,
-              .line-app-container select,
-              .line-app-container textarea {
-                font-size: 16px !important;
-                transform: translateZ(0);
-              }
-              .line-app-container input[type="number"] {
-                -webkit-appearance: textfield;
-                -moz-appearance: textfield;
-              }
-              .line-app-container input:not([type="number"]),
-              .line-app-container select,
-              .line-app-container textarea {
-                -webkit-appearance: none;
-              }
-              .line-app-container button {
-                min-height: 44px;
-                padding: 12px 16px;
-              }
-              .line-app-container * {
-                -webkit-overflow-scrolling: touch;
-              }
-                ` : ''}
-                ${stampStyles}
-              `,
-            }}
-          />
-        )}
+        <style dangerouslySetInnerHTML={{ __html: stampStyles }} />
         <PageHeader
           title="カレンダー"
           isLineApp={isLineApp}
