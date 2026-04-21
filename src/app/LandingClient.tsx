@@ -82,6 +82,8 @@ export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [sliderPaused, setSliderPaused] = useState(false);
+  const [typedCount, setTypedCount] = useState(0);
+  const typingText = "日々の健康を記録に残そう。";
 
   // ログインフォームの状態
   const [email, setEmail] = useState('');
@@ -89,6 +91,13 @@ export default function LandingPage() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Typing animation
+  useEffect(() => {
+    if (typedCount >= typingText.length) return;
+    const timer = setTimeout(() => setTypedCount((c) => c + 1), 120);
+    return () => clearTimeout(timer);
+  }, [typedCount, typingText.length]);
 
   // Feature auto-advance
   useEffect(() => {
@@ -501,10 +510,15 @@ export default function LandingPage() {
             <div className="flex-1 text-center lg:text-left">
               
               <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
-                 日々の健康を<br />
+                {typingText.slice(0, Math.min(typedCount, 6))}
+                {typedCount <= 6 && <span className="typing-cursor text-gray-900">|</span>}
+                <br />
                 <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                 記録に残そう
+                  {typedCount > 6 ? typingText.slice(6, typedCount) : '\u00a0'}
                 </span>
+                {typedCount > 6 && typedCount < typingText.length && (
+                  <span className="typing-cursor text-pink-500">|</span>
+                )}
               </h1>
               <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
                 心臓疾患を持つ方が安心して健康を管理できる、専用の記録アプリです。
@@ -696,6 +710,8 @@ export default function LandingPage() {
                 radius = 118px, 8 keyframes で円を近似。
               */}
               <style>{`
+                @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+                .typing-cursor { animation: blink 0.8s step-end infinite; }
                 @keyframes badgeOrbit {
                   0%    { transform: translate(148px,   0px)   translate(-50%, -50%); }
                   12.5% { transform: translate(105px,  105px)  translate(-50%, -50%); }
