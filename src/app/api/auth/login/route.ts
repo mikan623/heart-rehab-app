@@ -106,7 +106,6 @@ export async function POST(request: NextRequest) {
           authType: user.authType,
           role: effectiveRole,
         },
-        sessionToken,
       },
       { status: 200 }
     );

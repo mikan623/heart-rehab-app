@@ -47,7 +47,6 @@ export function setSession(session: AuthSession): void {
  */
 export function clearSession(): void {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('sessionToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('userName');
   }

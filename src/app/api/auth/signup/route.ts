@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
           name: user.name,
           authType: user.authType,
         },
-        sessionToken,
       },
       { status: 201 }
     );

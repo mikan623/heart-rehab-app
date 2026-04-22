@@ -20,7 +20,7 @@ const securityHeaders = [
       "default-src 'self'",
       // Next.js のインラインスクリプト（nonce なし構成のため unsafe-inline を許容）
       // LIFF SDK は static.line-scdn.net から読み込み
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.line-scdn.net https://d.line-scdn.net",
+      "script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://d.line-scdn.net",
       "style-src 'self' 'unsafe-inline'",
       // LINE プロフィール画像は複数の LINE CDN ドメインから配信される
       "img-src 'self' data: blob: https://profile.line-scdn.net https://obs.line-scdn.net https://d.line-scdn.net https://api.qrserver.com",
@@ -37,9 +37,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   serverExternalPackages: ['@prisma/client', 'prisma'],
   async headers() {
     return [

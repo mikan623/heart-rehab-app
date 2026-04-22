@@ -176,7 +176,6 @@ export async function POST(request: NextRequest) {
         authType: user.authType,
         role: isAuthRole(user.role) ? user.role : 'patient',
       },
-      sessionToken,
     });
     setAuthCookie(response, sessionToken);
     return response;
