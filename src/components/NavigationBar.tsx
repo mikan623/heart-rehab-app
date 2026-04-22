@@ -18,6 +18,7 @@ type HealthRecordPrintable = {
   exercise: { type: string; duration: string };
   meal: { staple: string; mainDish: string; sideDish: string; other: string };
   dailyLife: string;
+  medicationTaken?: boolean;
 };
 
 type SavedRecords = Record<string, Record<string, HealthRecordPrintable>>;
@@ -315,13 +316,13 @@ export default function NavigationBar() {
                 },
                 pulse: record.pulse?.toString() || '',
                 weight: record.weight?.toString() || '',
-                exercise: record.exercise || { type: '', duration: '' },
-                meal: record.meal || {
+                exercise: (record.exercise || { type: '', duration: '' }) as { type: string; duration: string },
+                meal: (record.meal || {
                   staple: '',
                   mainDish: '',
                   sideDish: '',
                   other: ''
-                },
+                }) as { staple: string; mainDish: string; sideDish: string; other: string },
                 dailyLife: record.dailyLife || ''
               };
             });
@@ -494,7 +495,7 @@ export default function NavigationBar() {
             <div><strong>性別:</strong> ${profile.gender || '未設定'}</div>
             <div><strong>目標体重:</strong> ${profile.targetWeight || '未設定'}kg</div>
           </div>
-          ${profile.diseases?.length > 0 ? `<div><strong>基礎疾患:</strong> ${profile.diseases.join('、')}</div>` : ''}
+          ${(profile.diseases?.length ?? 0) > 0 ? `<div><strong>基礎疾患:</strong> ${profile.diseases!.join('、')}</div>` : ''}
           ${profile.medications ? `<div><strong>服用薬:</strong> ${profile.medications}</div>` : ''}
           ${profile.physicalFunction ? `<div><strong>身体機能・制限事項:</strong> ${profile.physicalFunction}</div>` : ''}
           ${profile.emergencyContact ? `<div><strong>緊急連絡先:</strong> ${profile.emergencyContact}</div>` : ''}

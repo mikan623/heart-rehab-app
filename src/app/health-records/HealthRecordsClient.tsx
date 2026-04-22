@@ -935,7 +935,7 @@ export default function Home({
     );
 
     for (const member of registeredMembers) {
-      await sendLineMessageToFamily(member.lineUserId, message);
+      await sendLineMessageToFamily(member.lineUserId!, message);
     }
   };
 
@@ -964,7 +964,7 @@ export default function Home({
       );
 
       for (const member of registeredMembers) {
-        await sendLineMessageToFamily(member.lineUserId, emergencyMessage);
+        await sendLineMessageToFamily(member.lineUserId!, emergencyMessage);
       }
     }
   };

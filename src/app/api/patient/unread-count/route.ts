@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
     };
 
     const [pendingInvites, unreadHealthComments, unreadLabComments] = await Promise.all([
-      safeCount(() => prisma.medicalInvite.count({ where: { patientId, status: 'pending' } })),
-      safeCount(() => prisma.medicalComment.count({ where: { patientId, createdAt: { gt: since } } })),
-      safeCount(() => prisma.medicalLabComment.count({ where: { patientId, createdAt: { gt: since } } })),
+      safeCount(() => prisma!.medicalInvite.count({ where: { patientId, status: 'pending' } })),
+      safeCount(() => prisma!.medicalComment.count({ where: { patientId, createdAt: { gt: since } } })),
+      safeCount(() => prisma!.medicalLabComment.count({ where: { patientId, createdAt: { gt: since } } })),
     ]);
 
     const total = pendingInvites + unreadHealthComments + unreadLabComments;

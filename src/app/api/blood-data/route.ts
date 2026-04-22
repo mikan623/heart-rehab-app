@@ -27,9 +27,10 @@ type BloodValueKey =
   | 'hemoglobin'
   | 'bnp';
 
-type BloodValuesInput = Partial<Record<BloodValueKey, unknown>>;
+type BloodValuesInput = Partial<Record<BloodValueKey, unknown>> & { [key: string]: unknown };
 
 type CpxTestInput = {
+  testDate?: unknown;
   cpxRound?: unknown;
   atOneMinBefore?: unknown;
   atDuring?: unknown;
@@ -40,6 +41,7 @@ type CpxTestInput = {
   heartRate?: unknown;
   systolicBloodPressure?: unknown;
   findings?: unknown;
+  [key: string]: unknown;
 };
 
 export async function GET(request: NextRequest) {
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
     const bodyUserId = getString(body.userId);
     const testDate = getString(body.testDate) || '';
     const bloodValues: BloodValuesInput | undefined = isRecord(body.bloodValues) ? body.bloodValues : undefined;
-    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests);
+    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests) as CpxTestInput[] | undefined;
     const userId = auth.userId;
 
     const fieldErrors: Record<string, string> = {};
@@ -206,8 +208,8 @@ export async function POST(request: NextRequest) {
         await prisma?.cardiopulmonaryExerciseTest.create({
           data: {
             bloodDataId: newBloodData.id,
-            testDate: cpx.testDate || testDate,
-            cpxRound: cpx.cpxRound,
+            testDate: (typeof cpx.testDate === 'string' ? cpx.testDate : null) || testDate,
+            cpxRound: typeof cpx.cpxRound === 'number' ? cpx.cpxRound : 1,
             atOneMinBefore: parseNum1to1000(cpx.atOneMinBefore, 'cpx.atOneMinBefore'),
             atDuring: parseNum1to1000(cpx.atDuring, 'cpx.atDuring'),
             maxLoad: parseNum1to1000(cpx.maxLoad, 'cpx.maxLoad'),
@@ -216,7 +218,7 @@ export async function POST(request: NextRequest) {
             mets: parseNum1to1000(cpx.mets, 'cpx.mets'),
             heartRate: parseNum1to1000(cpx.heartRate, 'cpx.heartRate'),
             systolicBloodPressure: parseNum1to1000(cpx.systolicBloodPressure, 'cpx.systolicBloodPressure'),
-            findings: cpx.findings || null,
+            findings: (typeof cpx.findings === 'string' ? cpx.findings : null),
           }
         });
       }
@@ -251,7 +253,7 @@ export async function PUT(request: NextRequest) {
     const id = getString(body.id) || '';
     const testDate = getString(body.testDate) || '';
     const bloodValues: BloodValuesInput | undefined = isRecord(body.bloodValues) ? body.bloodValues : undefined;
-    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests);
+    const cpxTests: CpxTestInput[] | undefined = getArray(body.cpxTests) as CpxTestInput[] | undefined;
 
     const fieldErrors: Record<string, string> = {};
     const addErr = (k: string, msg: string) => {
@@ -372,8 +374,8 @@ export async function PUT(request: NextRequest) {
           await prisma?.cardiopulmonaryExerciseTest.create({
             data: {
               bloodDataId: id,
-              testDate: cpx.testDate || testDate,
-              cpxRound: cpx.cpxRound,
+              testDate: (typeof cpx.testDate === 'string' ? cpx.testDate : null) || testDate,
+              cpxRound: typeof cpx.cpxRound === 'number' ? cpx.cpxRound : 1,
               atOneMinBefore: parseNum1to1000(cpx.atOneMinBefore, 'cpx.atOneMinBefore'),
               atDuring: parseNum1to1000(cpx.atDuring, 'cpx.atDuring'),
               maxLoad: parseNum1to1000(cpx.maxLoad, 'cpx.maxLoad'),
@@ -382,7 +384,7 @@ export async function PUT(request: NextRequest) {
               mets: parseNum1to1000(cpx.mets, 'cpx.mets'),
               heartRate: parseNum1to1000(cpx.heartRate, 'cpx.heartRate'),
               systolicBloodPressure: parseNum1to1000(cpx.systolicBloodPressure, 'cpx.systolicBloodPressure'),
-              findings: cpx.findings || null,
+              findings: (typeof cpx.findings === 'string' ? cpx.findings : null),
             }
           });
         }

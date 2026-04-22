@@ -272,7 +272,7 @@ export default function MedicalClient({ userId }: Props) {
           if (invRes.ok) {
             const map: Record<string, 'pending' | 'accepted' | 'declined'> = {};
             (getInvites(invData) || []).forEach((inv) => {
-              if (inv?.patientId) map[inv.patientId] = inv.status;
+              if (inv?.patientId && inv.status) map[inv.patientId] = inv.status as 'pending' | 'accepted' | 'declined';
             });
             setInviteStatusByPatientId(map);
           } else {

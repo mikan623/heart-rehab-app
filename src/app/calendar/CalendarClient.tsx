@@ -292,8 +292,8 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
             },
             pulse: record.pulse === null || record.pulse === undefined ? '' : String(record.pulse),
             weight: record.weight === null || record.weight === undefined ? '' : String(record.weight),
-            exercise: record.exercise || { type: '', duration: '' },
-            meal: record.meal || { staple: [], mainDish: [], sideDish: [], other: '' },
+            exercise: (record.exercise || { type: '', duration: '' }) as { type: string; duration: string },
+            meal: (record.meal || { staple: [], mainDish: [], sideDish: [], other: '' }) as { staple: string[]; mainDish: string[]; sideDish: string[]; other: string },
             dailyLife: record.dailyLife || '',
             medicationTaken: record.medicationTaken || false
           };

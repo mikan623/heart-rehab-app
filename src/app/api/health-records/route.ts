@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // 型定義を追加
 interface HealthRecordResponse {
   id: string;
-  date: Date;
+  date: string;
   time: string;
   bloodPressure: {
     systolic: number;
@@ -433,9 +433,9 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to save health record',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? message : undefined
     }, { status: 500 });
   }
 }
@@ -528,17 +528,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    if (error.code === 'P2025') {
+    const errCode = isRecord(error) && typeof error.code === 'string' ? error.code : undefined;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errCode === 'P2025') {
       return NextResponse.json(
         { error: '記録が見つかりません。' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'サーバーエラーが発生しました。',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? errMsg : undefined
       },
       { status: 500 }
     );

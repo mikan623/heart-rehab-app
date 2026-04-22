@@ -14,7 +14,7 @@ import {
   Legend,
   Filler, 
 } from 'chart.js';
-import type { Chart, ChartData, ChartOptions, Plugin, TooltipItem } from 'chart.js';
+import type { ChartData, ChartOptions, Plugin, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
 const ChartJS = Chart;
@@ -714,7 +714,7 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
             <div className="h-64">
               <Line
                 key={`chart-${activeMetric}`}
-                data={lineChartData || emptyLineData}
+                data={(lineChartData ?? emptyLineData)!}
                 options={chartOptions}
                 plugins={[normalRangePlugin]}
                 />

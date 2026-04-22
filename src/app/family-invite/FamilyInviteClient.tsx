@@ -42,7 +42,7 @@ export default function FamilyInviteClient() {
         // LIFF 初期化 & 家族側ユーザー情報取得
         if (typeof window !== "undefined" && window.liff) {
           await window.liff.init({
-            liffId: process.env.NEXT_PUBLIC_LIFF_ID,
+            liffId: process.env.NEXT_PUBLIC_LIFF_ID || '',
           });
 
           if (!window.liff.isLoggedIn()) {

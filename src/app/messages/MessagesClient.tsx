@@ -48,8 +48,8 @@ interface LabCommentItem {
   createdAt: string;
   provider?: { id?: string; name?: string | null; email?: string };
   kind: 'blood' | 'cpx';
-  bloodData?: { testDate?: string | null } | null;
-  cpx?: { testDate?: string | null; parentBloodTestDate?: string | null; cpxRound?: number | null } | null;
+  bloodData?: { testDate?: string | null; values?: Record<string, unknown> } | null;
+  cpx?: { testDate?: string | null; parentBloodTestDate?: string | null; cpxRound?: number | null; values?: Record<string, unknown> } | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
