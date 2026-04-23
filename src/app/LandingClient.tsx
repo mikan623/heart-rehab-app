@@ -70,6 +70,13 @@ const faqs = [
   },
 ];
 
+/** URL の ?returnTo= を読んで安全な相対パスのみ返す（オープンリダイレクト対策） */
+function getReturnTo(fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const r = new URLSearchParams(window.location.search).get('returnTo') ?? '';
+  return r.startsWith('/') && !r.startsWith('//') ? r : fallback;
+}
+
 export default function LandingPage() {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
@@ -162,30 +169,22 @@ export default function LandingPage() {
           return;
         }
 
-        // localStorage が残っていても、まずサーバー側の認証を確認する
+        // localStorage が残っている場合、サーバー側の認証が無効なら localStorage をクリア
+        // ※ ブラウザを閉じて再開した場合は自動リダイレクトしない（トップページを表示）
         const userId = localStorage.getItem('userId');
         if (userId) {
           try {
             const res = await apiFetch('/api/auth/role', { cache: 'no-store' });
-
-            if (res.ok) {
-              const data = await res.json().catch(() => ({}));
-              const role =
-                data?.role === 'medical' || localStorage.getItem('loginRole') === 'medical'
-                  ? 'medical'
-                  : 'patient';
-
-              localStorage.setItem('loginRole', role);
-              router.push(role === 'medical' ? '/medical' : '/health-records');
-              return;
+            if (!res.ok) {
+              clearSession();
+              clearLineLogin();
+              localStorage.removeItem('loginRole');
             }
-          } catch (error) {
-            console.warn('認証確認に失敗。ログイン画面を表示します:', error);
+          } catch {
+            clearSession();
+            clearLineLogin();
+            localStorage.removeItem('loginRole');
           }
-
-          clearSession();
-          clearLineLogin();
-          localStorage.removeItem('loginRole');
         }
 
         const liffSdk = await waitForLiff();
@@ -348,13 +347,7 @@ export default function LandingPage() {
                 ? 'medical'
                 : 'patient';
 
-            if (role === 'medical') {
-              router.push('/medical');
-            } else if (isNewProfile) {
-              router.push('/profile');
-            } else {
-              router.push('/health-records');
-            }
+            router.push(getReturnTo(role === 'medical' ? '/medical' : isNewProfile ? '/profile' : '/health-records'));
             return;
 
           } catch (profileError) {
@@ -419,8 +412,8 @@ export default function LandingPage() {
       setSession({ userId: data.user.id, userName: data.user.name || '' });
       localStorage.setItem('loginRole', loginRole);
 
-      // ロールに応じて遷移
-      router.push(loginRole === 'medical' ? '/medical' : '/health-records');
+      // returnTo があればそこへ、なければロール既定ページへ
+      router.push(getReturnTo(loginRole === 'medical' ? '/medical' : '/health-records'));
     } catch (err) {
       setError('通信エラーが発生しました');
       console.error(err);
@@ -454,8 +447,8 @@ export default function LandingPage() {
       setSession({ userId: data.user.id, userName: data.user.name || '' });
       localStorage.setItem('loginRole', loginRole);
 
-      // 🆕 新規登録後の遷移（患者:プロフィール、医療従事者:medical）
-      router.push(loginRole === 'medical' ? '/medical' : '/profile');
+      // returnTo があればそこへ、なければロール既定ページへ
+      router.push(getReturnTo(loginRole === 'medical' ? '/medical' : '/profile'));
     } catch (err) {
       setError('通信エラーが発生しました');
       console.error(err);

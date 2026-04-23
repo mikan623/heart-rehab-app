@@ -273,7 +273,7 @@ export default function LearnClient() {
         </div>
 
         {/* AIアドバイスセクション */}
-        <div className="mb-12">
+        <div id="tour-learn-ai" className="mb-12">
           <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-md overflow-hidden">
 
             {/* ヘッダーバー */}
@@ -346,7 +346,7 @@ export default function LearnClient() {
         </div>
 
         {/* メインコンテンツ */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <div id="tour-learn-content" className="grid md:grid-cols-2 gap-8">
           {/* 左側：学習内容一覧 */}
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-6">学習テーマ</h2>

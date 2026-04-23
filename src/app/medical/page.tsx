@@ -6,10 +6,10 @@ import MedicalClient from './MedicalClient';
 export default async function MedicalPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
-  if (!token) redirect('/');
+  if (!token) redirect('/?returnTo=/medical');
 
   const auth = verifyAuthToken(token);
-  if (!auth) redirect('/');
+  if (!auth) redirect('/?returnTo=/medical');
 
   return <MedicalClient userId={auth.userId} />;
 }

@@ -8,10 +8,10 @@ export default async function FamilyPage() {
   // ── 認証（サーバー側） ──────────────────────────────────
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
-  if (!token) redirect('/');
+  if (!token) redirect('/?returnTo=/family');
 
   const auth = verifyAuthToken(token);
-  if (!auth) redirect('/');
+  if (!auth) redirect('/?returnTo=/family');
 
   const { userId } = auth;
 

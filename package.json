@@ -19,6 +19,7 @@
     "@prisma/client": "^6.17.1",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.0",
+    "driver.js": "^1.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
     "next": "16.0.10",

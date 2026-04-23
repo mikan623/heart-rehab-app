@@ -583,7 +583,7 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
         {/* リスト表示 */}
         {pageMode === 'list' && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+            <div id="tour-blood-add" className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               <button
                 onClick={() => {
                   resetForm();
@@ -606,7 +606,7 @@ export default function BloodDataClient({ userId, initialBloodDataList }: Props)
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div id="tour-blood-tabs" className="space-y-4">
               {/* 血液検査データ */}
               <div className="bg-white/60 rounded-lg p-4 border border-orange-100">
                 <h3 className="text-lg font-bold text-gray-800 mb-3">🩸 血液検査データ</h3>

@@ -617,7 +617,7 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
       <PageHeader title="グラフ" />
 
       {/* 指標タブ - 大きくした */}
-      <div className="bg-white shadow-sm px-4 py-3">
+      <div id="tour-graph-tabs" className="bg-white shadow-sm px-4 py-3">
         <div className="max-w-6xl mx-auto grid grid-cols-4 gap-2 mb-4 md:flex md:gap-3 md:overflow-x-auto md:pb-2">
           {([
             { key: 'bloodPressure', label: '血圧', icon: '🩸' },
@@ -710,7 +710,7 @@ const isHealthRecordApi = (value: unknown): value is HealthRecordApi =>
 
         {/* グラフ */}
         {(lineChartData || emptyLineData) && (
-          <div className="bg-white rounded-lg p-4 mb-4 shadow-md">
+          <div id="tour-graph-chart" className="bg-white rounded-lg p-4 mb-4 shadow-md">
             <div className="h-64">
               <Line
                 key={`chart-${activeMetric}`}

@@ -153,3 +153,118 @@ button:active:not(:disabled) {
   content: '✓';
   margin-left: 0.5rem;
 }
+
+/* ========== driver.js オンボーディングツアー カスタムスタイル ========== */
+
+/* ポップオーバー：説明欄のフォントサイズ */
+.driver-popover.tour-popover {
+  max-width: 92vw !important;
+  padding: 20px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22) !important;
+  /* 画面下部の固定ボタンバーに隠れないよう上寄りに表示 */
+  margin-bottom: 100px !important;
+}
+
+.driver-popover.tour-popover .driver-popover-title {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  color: #7c2d12 !important;
+  margin-bottom: 10px !important;
+}
+
+.driver-popover.tour-popover .driver-popover-description {
+  font-size: 17px !important;
+  line-height: 1.7 !important;
+  color: #374151 !important;
+}
+
+/* driver.js 内蔵フッター（ボタン類）は非表示 */
+.driver-popover.tour-popover .driver-popover-footer {
+  display: none !important;
+}
+
+/* ========== 画面最下部の独立ナビゲーションバー ========== */
+
+.tour-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* driver.js のポップオーバーより上に表示（driver.js は z-index: 1000000000） */
+  z-index: 2000000000;
+  background: #ffffff;
+  border-top: 2px solid #fed7aa;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  padding: 10px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.tour-nav-progress {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.tour-nav-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* driver.js が body に .driver-active を付与して全子孫の pointer-events を none にするため
+   ナビバーとボタンは明示的に auto に戻す */
+.driver-active .tour-nav-bar,
+.driver-active .tour-nav-bar * {
+  pointer-events: auto !important;
+}
+
+/* ボタン共通 */
+.tour-btn {
+  min-height: 62px;
+  font-size: 19px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.tour-btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* 「← 前へ」 */
+.tour-btn-prev {
+  flex: 1;
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #d1d5db;
+}
+
+.tour-btn-prev:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 「✕ 閉じる」 */
+.tour-btn-close {
+  min-width: 80px;
+  background: #fff;
+  color: #ef4444;
+  border: 2px solid #fca5a5;
+  font-size: 16px;
+}
+
+/* 「次へ →」「完了 ✓」 */
+.tour-btn-next {
+  flex: 1.4;
+  background: linear-gradient(135deg, #f97316, #ec4899);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+}

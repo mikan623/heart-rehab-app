@@ -8,10 +8,10 @@ export default async function HealthRecordsPage() {
   // ── 認証（サーバー側） ──────────────────────────────────
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
-  if (!token) redirect('/');
+  if (!token) redirect('/?returnTo=/health-records');
 
   const auth = verifyAuthToken(token);
-  if (!auth) redirect('/');
+  if (!auth) redirect('/?returnTo=/health-records');
 
   const { userId } = auth;
 

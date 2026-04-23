@@ -248,7 +248,7 @@ export default function FamilyPage({ userId, initialFamilyMembers, initialRemind
         }}
       >
         {/* 家族メンバー管理セクション */}
-        <div className="bg-orange-50 rounded-lg border-2 border-orange-300 p-4 md:p-6">
+        <div id="tour-family-members" className="bg-orange-50 rounded-lg border-2 border-orange-300 p-4 md:p-6">
           <div className="mb-4">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
               👨‍👩‍👧‍👦 家族メンバー
@@ -256,7 +256,7 @@ export default function FamilyPage({ userId, initialFamilyMembers, initialRemind
           </div>
 
           {/* 共通QRコード表示エリア：左 = 家族用招待QR / 右 = 公式アカウントQR */}
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div id="tour-family-invite" className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div className="flex flex-col items-center gap-3">
               <p className="text-sm font-semibold text-gray-800">家族用招待QRコード</p>
               {inviteQrUrl && (
@@ -340,7 +340,7 @@ export default function FamilyPage({ userId, initialFamilyMembers, initialRemind
             </div>
 
             {/* リマインダー機能（オン・オフ＋時刻設定） */}
-            <label className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
+            <label id="tour-family-reminder" className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-white rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-50">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"

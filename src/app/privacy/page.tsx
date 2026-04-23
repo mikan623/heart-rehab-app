@@ -7,6 +7,7 @@ export default function PrivacyPage() {
       <PageHeader
         title="プライバシーポリシー"
         rightContent={<BackButton />}
+        showTourButton={false}
       />
 
       <main className="p-4">

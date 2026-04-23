@@ -663,7 +663,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
       >
         <div className="bg-orange-50 rounded-none md:rounded-lg shadow-none md:shadow-sm px-0 py-4 md:p-6 mb-0 md:mb-4 w-full border-b-4 md:border-2 border-orange-300">
           {/* 月移動ボタン */}
-          <div className="flex justify-between items-center mb-6 px-4 md:px-0">
+          <div id="tour-calendar-nav" className="flex justify-between items-center mb-6 px-4 md:px-0">
             <button
               onClick={goToPreviousMonth}
               className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-3 md:px-6 rounded-lg font-bold text-base md:text-lg hover:from-orange-600 hover:to-orange-700"
@@ -725,7 +725,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
                 <div className="text-gray-500">データを読み込み中...</div>
               </div>
               ) : (
-                <div className="grid grid-cols-7">
+                <div id="tour-calendar-grid" className="grid grid-cols-7">
                   {generateCalendarDays(currentMonth).map((day, index) => {
                     const dateKey = `${day.fullDate.getFullYear()}-${String(day.fullDate.getMonth() + 1).padStart(2, '0')}-${String(day.fullDate.getDate()).padStart(2, '0')}`;
                     const dayRecords = savedRecords[dateKey];  

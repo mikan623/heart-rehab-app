@@ -845,7 +845,7 @@ export default function NavigationBar() {
                 className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all ${activeButton === 'contact' ? 'click-animate' : ''}`}>
                 ✉️ お問い合わせ
               </button>
-              <div className="relative">
+              <div id="tour-health-pdf" className="relative">
                 <button
                   onClick={() => {
                     setActiveButton('pdf');

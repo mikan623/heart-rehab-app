@@ -1374,7 +1374,7 @@ export default function Home({
             </h2>
             
             {/* 日付と時間を統合 */}
-            <div className="w-full md:w-auto hidden md:block">
+            <div id="tour-health-date" className="w-full md:w-auto hidden md:block">
               <label className="block text-sm md:text-base font-medium text-gray-700 mb-3">
                 記録日時 <span className="text-xs md:text-sm text-gray-500">（現在の日時が自動入力されています）</span>
               </label>
@@ -1397,7 +1397,7 @@ export default function Home({
           {/* 入力フォーム - アイコンボタングリッド */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             {/* 血圧 */}
-            <div>
+            <div id="tour-health-bp">
               <button
                 type="button"
                 onClick={() => setActiveSection('bloodPressure')}
@@ -1425,7 +1425,7 @@ export default function Home({
             </div>
 
             {/* 脈拍 */}
-            <div>
+            <div id="tour-health-pulse">
               <button
                 type="button"
                 onClick={() => setActiveSection('pulse')}
@@ -1451,7 +1451,7 @@ export default function Home({
             </div>
 
             {/* 体重 */}
-            <div>
+            <div id="tour-health-weight">
               <button
                 type="button"
                 onClick={() => setActiveSection('weight')}
@@ -1477,7 +1477,7 @@ export default function Home({
             </div>
 
             {/* 運動内容 */}
-            <div>
+            <div id="tour-health-exercise">
               <button
                 type="button"
                 onClick={() => setActiveSection('exercise')}
@@ -1505,7 +1505,7 @@ export default function Home({
             </div>
 
             {/* 食事内容 */}
-            <div>
+            <div id="tour-health-meal">
               <button
                 type="button"
                 onClick={() => setActiveSection('meal')}
@@ -1529,7 +1529,7 @@ export default function Home({
             </div>
 
             {/* 服薬確認 */}
-            <div>
+            <div id="tour-health-medication">
               <button
                 type="button"
                 onClick={() => setActiveSection('medication')}
@@ -2353,7 +2353,7 @@ export default function Home({
             })()}
               
             {/* 保存ボタン */}
-          <div className="mt-8 mb-6 flex justify-center">
+          <div id="tour-health-save" className="mt-8 mb-6 flex justify-center">
             <button 
               onClick={handleSaveHealthRecord}
               disabled={!healthRecord?.bloodPressure?.systolic || !healthRecord?.bloodPressure?.diastolic || !healthRecord?.pulse || saveStatus === 'saving'}

@@ -7,6 +7,7 @@ export default function TermsPage() {
       <PageHeader
         title="利用規約"
         rightContent={<BackButton />}
+        showTourButton={false}
       />
 
       <main className="p-4">

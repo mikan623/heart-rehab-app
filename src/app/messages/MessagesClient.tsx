@@ -224,7 +224,7 @@ export default function MessagesClient({ userId, initialInvites, initialComments
 
       <main className="max-w-3xl mx-auto p-4 pb-28">
         {/* コメント通知 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-orange-200 p-4 mb-4">
+        <div id="tour-messages-list" className="bg-white rounded-2xl shadow-sm border border-orange-200 p-4 mb-4">
           <h2 className="text-lg font-bold text-gray-800 mb-1">医療従事者からのコメント</h2>
           <p className="text-sm text-gray-600 mb-4">
             健康記録に対して医療従事者が記載したコメントが届きます。

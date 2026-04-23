@@ -167,7 +167,7 @@ export default function ProfilePage({ userId, initialProfile }: Props) {
       <main className="px-0 md:p-4">
 
         {/* 基本情報セクション */}
-        <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
+        <div id="tour-profile-basic" className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-orange-300">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">👤 基本情報</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -237,7 +237,7 @@ export default function ProfilePage({ userId, initialProfile }: Props) {
         </div>
 
         {/* 医療情報セクション */}
-        <div className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-pink-300">
+        <div id="tour-profile-disease" className="bg-white rounded-none md:rounded-lg shadow-none md:shadow-sm p-4 md:p-6 mb-2 md:mb-4 w-full border-2 border-pink-300">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">🏥 医療情報</h2>
           
           <div className="space-y-4 md:space-y-6">

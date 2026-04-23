@@ -59,6 +59,7 @@ export default function ContactClient() {
       <PageHeader
         title="お問い合わせ"
         rightContent={<BackButton />}
+        showTourButton={false}
       />
 
       {/* メインコンテンツ */}
