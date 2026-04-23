@@ -2,13 +2,13 @@
 
 import { useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
-import { driver } from "driver.js";
+import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 import { usePathname } from "next/navigation";
 
 type DriverInstance = ReturnType<typeof driver>;
 
-const tourSteps: Record<string, Parameters<typeof driver>[0]["steps"]> = {
+const tourSteps: Record<string, DriveStep[]> = {
   "/health-records": [
     {
       element: "#tour-health-date",
@@ -241,7 +241,7 @@ const TourGuide = forwardRef<TourGuideHandle>(function TourGuide(_, ref) {
       driverRef.current?.destroy();
 
       const driverObj = driver({
-        showButtons: false,
+        showButtons: [],
         showProgress: false,
         // ポータルボタンへのクリックを「外側クリック」と誤認して
         // ツアーを閉じないよう無効化
