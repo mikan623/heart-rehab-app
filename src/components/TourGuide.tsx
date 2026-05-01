@@ -101,6 +101,20 @@ const tourSteps: Record<string, DriveStep[]> = {
         side: "bottom",
       },
     },
+    {
+      element: "#tour-calendar-grid",
+      popover: {
+        title: "🏅 スタンプを押すと詳細が見れます",
+        description: '<div style="text-align:center;margin-bottom:10px;"><img src="/Noon%20Stamp.png" style="width:72px;height:72px;object-fit:contain;" /></div>朝・昼・夜の記録があるとスタンプが表示されます。スタンプのある日をタップすると、その日の記録詳細を確認できます。',
+        side: "bottom",
+      },
+    },
+    {
+      popover: {
+        title: "📋 記録内容の確認",
+        description: '<img src="/calendar-detail-example.png" style="width:100%;border-radius:8px;margin-bottom:8px;" /><br/>日付をクリックするとカレンダー下部に記録内容が表示されます。血圧・脈拍・体重・服薬など、その日の記録をまとめて確認できます。',
+      },
+    },
   ],
 
   "/graph": [
