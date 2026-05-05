@@ -248,3 +248,13 @@ model MedicalLabComment {
   @@map("medical_lab_comments")
 }
 
+model MedicalInviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@map("medical_invite_codes")
+}
+

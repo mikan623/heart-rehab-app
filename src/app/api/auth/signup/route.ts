@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     // パスワードをハッシュ化
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ユーザーを作成
-    const roleValue: AuthRole = isAuthRole(role) ? role : 'patient';
+    // ユーザーを作成（サインアップは常に patient。medical昇格は招待コード経由のみ）
+    const roleValue: AuthRole = 'patient';
     const user = await prisma.user.create({
       data: {
         id: email, // メールアドレスを ID として使用

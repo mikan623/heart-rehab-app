@@ -42,3 +42,5 @@ next-env.d.ts
 
 /src/generated/prisma
 *.dump
+rds_data_only.sql
+rds_export.sql
