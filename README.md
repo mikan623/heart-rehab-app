@@ -74,6 +74,11 @@
 
 # クラウドアーキテクチャ
 
+![クラウドアーキテクチャ図](./public/cloud-architecture.svg)
+
+<details>
+<summary>Mermaid版（編集用）</summary>
+
 ```mermaid
 flowchart TD
     subgraph DEV["👨‍💻 開発者"]
@@ -125,6 +130,8 @@ flowchart TD
     APP --> LINE
     APP --> OPENAI
 ```
+
+</details>
 
 
 
