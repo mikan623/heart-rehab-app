@@ -13,7 +13,7 @@
 
 # 開発背景
 
-病院勤務では心臓リハビリテーションに携わり、患者様の継続的な健康管理を支援してきました。しかし、病院側では紙媒体の手帳による管理が中心である一方、40代〜50代の患者様の多くはスマートフォンのカレンダーアプリを活用してバイタル管理を行っており、管理方法にギャップがあることに気づきました。そこで、バイタル管理を専用アプリとして提供することで、より利便性の高い管理が実現できるのではないかと考えました。
+病院勤務では心臓リハビリテーションに携わり、患者様の継続的な健康管理を支援してきました。しかし、病院側では紙媒体の手帳による管理が中心である一方、40代〜70代の患者様の多くはスマートフォンのカレンダーアプリを活用してバイタル管理を行っており、管理方法にギャップがあることに気づきました。そこで、バイタル管理を専用アプリとして提供することで、より利便性の高い管理が実現できるのではないかと考えました。
 
 上記から、より継続しやすく利便性の高い管理方法の必要性を感じ、現在は心臓リハビリ手帳を開発し運用しております。
 
@@ -75,63 +75,6 @@
 # クラウドアーキテクチャ
 
 ![クラウドアーキテクチャ図](./public/cloud-architecture.svg)
-
-<details>
-<summary>Mermaid版（編集用）</summary>
-
-```mermaid
-flowchart TD
-    subgraph DEV["👨‍💻 開発者"]
-        GIT["git push"]
-    end
-
-    subgraph CICD["CI/CD"]
-        GH["GitHub"]
-        GA["GitHub Actions\n(build & deploy)"]
-        ECR["Amazon ECR\n(Dockerイメージ管理)"]
-    end
-
-    subgraph AWS["☁️ AWS"]
-        subgraph NET["ネットワーク"]
-            R53["Route 53\n(DNSルーティング)"]
-            ACM["AWS ACM\n(SSL証明書)"]
-            ALB["ALB\n(ロードバランサー)"]
-        end
-
-        subgraph COMPUTE["コンピューティング"]
-            ECS["ECS Fargate\n(サーバーレスコンテナ)"]
-            APP["Next.js App\n(Frontend + API Routes)"]
-        end
-
-        subgraph DATA["データ・セキュリティ"]
-            RDS["Amazon RDS\n(PostgreSQL)"]
-            SM["AWS Secrets Manager\n(APIキー・DB接続情報)"]
-            SES["AWS SES\n(メール送信)"]
-        end
-    end
-
-    subgraph EXT["外部サービス"]
-        LINE["LINE API\n(LIFF / Messaging)"]
-        OPENAI["OpenAI API\n(gpt-4o-mini)"]
-    end
-
-    subgraph USER["👤 ユーザー"]
-        BROWSER["ブラウザ / スマートフォン"]
-    end
-
-    GIT --> GH --> GA --> ECR --> ECS
-    BROWSER -->|HTTPS| R53 --> ALB
-    ACM -.->|SSL| ALB
-    ALB --> ECS
-    ECS --> APP
-    APP --> RDS
-    APP --> SM
-    APP --> SES
-    APP --> LINE
-    APP --> OPENAI
-```
-
-</details>
 
 
 
