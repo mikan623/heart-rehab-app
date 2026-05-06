@@ -142,7 +142,6 @@ export default function ProfilePage({ userId, initialProfile }: Props) {
         // 3秒後にアイドル状態に戻す
         setTimeout(() => {
           setSaveStatus('idle');
-          router.push('/');
         }, 3000);
       } else {
         const error = await response.json();
