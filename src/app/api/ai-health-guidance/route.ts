@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic';
@@ -164,8 +164,7 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 

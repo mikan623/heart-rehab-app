@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma, { ensurePrismaConnection } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getAuthContext } from "@/lib/server-auth";
 
 // 招待リンク作成（患者側）
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const patientId = auth.userId;
 
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { searchParams } = new URL(request.url);
     const inviteId = searchParams.get("familyInviteId");
@@ -126,7 +126,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { inviteId } = await request.json();
 

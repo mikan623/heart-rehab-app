@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 /**
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const userId = auth.userId;
     
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const { userId: bodyUserId, lineConnected, lineUserId } = await request.json();
     const userId = auth.userId;

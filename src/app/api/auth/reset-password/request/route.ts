@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/mailer';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -40,8 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 

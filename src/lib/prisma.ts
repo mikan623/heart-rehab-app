@@ -15,20 +15,3 @@ if (process.env.DATABASE_URL) {
 }
 
 export default prisma;
-
-// データベース接続を確認する関数
-export async function ensurePrismaConnection() {
-  if (!prisma) {
-    console.warn('⚠️ Prisma is disabled (no DATABASE_URL)');
-    return false;
-  }
-  
-  try {
-    await prisma.$connect();
-    console.log('✅ Prisma connected successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Prisma connection failed:', error);
-    return false;
-  }
-}

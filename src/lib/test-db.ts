@@ -1,9 +1,8 @@
-import prisma, { ensurePrismaConnection } from './prisma';
+import prisma from './prisma';
 
 export async function testDatabaseConnection() {
   try {
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.error('❌ Database not available (no DATABASE_URL or connection failed)');
       return false;
     }

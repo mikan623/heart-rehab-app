@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,8 +50,7 @@ export async function POST(request: NextRequest) {
           const normalized = text.replace(/\s+/g, '').toUpperCase();
 
           try {
-            const connected = await ensurePrismaConnection();
-            if (connected && prisma) {
+            if (prisma) {
               // 1-1) 家族用招待コードとして一致するかチェック
               const member = await prisma.familyMember.findFirst({
                 where: { linkCode: normalized },

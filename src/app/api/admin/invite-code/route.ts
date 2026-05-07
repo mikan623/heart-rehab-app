@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const { secret, expiresInDays = 7 } = await request.json();
@@ -9,8 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 });
   }
 
-  const connected = await ensurePrismaConnection();
-  if (!connected || !prisma) {
+  if (!prisma) {
     return NextResponse.json({ error: 'Database not available' }, { status: 503 });
   }
 

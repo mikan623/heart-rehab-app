@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 // 医療従事者専用：承認済み患者のデータを取得
@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 

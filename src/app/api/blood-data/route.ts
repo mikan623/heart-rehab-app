@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -51,11 +51,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-    
-    if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const userId = auth.userId;
     
@@ -87,11 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-    
-    if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const data = await request.json();
     const body = isRecord(data) ? data : {};
@@ -241,11 +233,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-
-    if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const data = await request.json();
     const body = isRecord(data) ? data : {};
@@ -411,11 +399,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-
-    if (!connected || !prisma) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

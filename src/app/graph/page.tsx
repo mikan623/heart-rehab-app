@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAuthToken } from '@/lib/server-auth';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import GraphClient from './GraphClient';
 
 type HealthRecord = {
@@ -24,12 +24,12 @@ export default async function GraphPage() {
   const { userId } = auth;
 
   // ── DB から初期データ取得 ──────────────────────────────
-  const connected = await ensurePrismaConnection();
+  if (!prisma) return null;
   let initialSavedRecords: { [date: string]: { [time: string]: HealthRecord } } = {};
   let initialTargetWeight: number | null = null;
   let initialHeightCm: number | null = null;
 
-  if (connected && prisma) {
+  if (prisma) {
     const [records, profile] = await Promise.all([
       prisma.healthRecord.findMany({
         where: { userId },

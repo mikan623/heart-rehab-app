@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAuthToken } from '@/lib/server-auth';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import ProfileClient from './ProfileClient';
 
 export default async function ProfilePage() {
@@ -16,10 +16,10 @@ export default async function ProfilePage() {
   const { userId } = auth;
 
   // ── DB から初期データ取得 ──────────────────────────────
-  const connected = await ensurePrismaConnection();
+  if (!prisma) return null;
   let initialProfile = null;
 
-  if (connected && prisma) {
+  if (prisma) {
     initialProfile = await prisma.profile.findFirst({
       where: { userId },
       orderBy: { updatedAt: 'desc' },

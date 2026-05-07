@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -25,8 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 

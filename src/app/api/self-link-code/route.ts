@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 // 本人用招待コードを生成するヘルパー
@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
     }
     const userId = auth.userId;
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.warn('⚠️ Database not available for self-link code');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }

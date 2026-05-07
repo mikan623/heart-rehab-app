@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 // ⏰ 記録忘れリマインダー実行用エンドポイント
 // - Vercel のスケジュール機能などから 1日1回たたく想定
@@ -22,8 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.warn('⚠️ Database not available for reminder runner');
       return NextResponse.json(
         { error: 'Database not available' },

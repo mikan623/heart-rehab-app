@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma, { ensurePrismaConnection } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { name, email, category, message } = await request.json();
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
     }
     const userId = auth.userId;
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.warn('⚠️ Database not available for reminder settings');
       // DBがない場合でも画面が動くようにデフォルト値を返す
       return NextResponse.json({
@@ -70,8 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.warn('⚠️ Database not available for reminder settings save');
       return NextResponse.json(
         { error: 'Database not available', success: false },

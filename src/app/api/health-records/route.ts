@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 import type { HealthRecord, Prisma } from '@prisma/client';
 
@@ -34,17 +34,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Prisma接続確認
-    const connected = await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     // データベースがない場合は空の配列を返す
-    if (!connected || !prisma) {
-      console.log('⚠️ Database not available, returning empty array');
-      return NextResponse.json(
-        { records: [], error: 'Database not available' },
-        { status: 503, headers: { 'Cache-Control': 'no-store' } }
-      );
-    }
-    
     const userId = auth.userId;
     
     console.log('🔍 Fetching records for userId:', userId);
@@ -231,7 +223,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { userId: bodyUserId, healthRecord } = await request.json();
     const userId = auth.userId;
@@ -314,14 +306,6 @@ export async function POST(request: NextRequest) {
     }
     
     // ⚠️ データベースが接続できない場合はローカルストレージを使用
-    if (!connected || !prisma) {
-      console.log('⚠️ Database not available, returning 503 to use localStorage');
-      return NextResponse.json({ 
-        error: 'Database not available',
-        success: false
-      }, { status: 503 });
-    }
-    
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -448,17 +432,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     // ⚠️ データベースが接続できない場合は503を返す
-    if (!connected || !prisma) {
-      console.log('⚠️ Database not available for delete');
-      return NextResponse.json({ 
-        error: 'Database not available',
-        success: false
-      }, { status: 503 });
-    }
-    
     const { searchParams } = new URL(request.url);
     const recordId = searchParams.get('recordId');
     const userId = auth.userId;

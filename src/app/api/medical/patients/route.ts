@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
@@ -13,15 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Prisma 接続確認
-    const connected = await ensurePrismaConnection();
-
-    if (!connected || !prisma) {
-      console.log('⚠️ Database not available for medical patients search');
-      return NextResponse.json(
-        { error: 'Database not available', patients: [] },
-        { status: 503 }
-      );
-    }
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
 
     const { searchParams } = new URL(request.url);
     const name = (searchParams.get('name') || '').trim();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const userId = auth.userId;
     
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const { userId: bodyUserId, familyMember } = await request.json();
     const userId = auth.userId;
@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
       }, { status: 503 });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const { memberId, ...updates } = await request.json();
     
@@ -238,7 +238,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 503 });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');

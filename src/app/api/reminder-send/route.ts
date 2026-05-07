@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 // ⏰ Vercel Cron から叩かれる想定のエンドポイント
 // 例: 毎分 / 毎5分 で実行し、現在時刻(Asia/Tokyo)と一致するユーザーにだけ送信
@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, reason: 'Unauthorized' }, { status: 401 });
     }
 
-    const connected = await ensurePrismaConnection();
-    if (!connected || !prisma) {
+    if (!prisma) {
       console.warn('⚠️ Database not available for reminder-send');
       return NextResponse.json({ success: false, reason: 'Database not available' }, { status: 503 });
     }

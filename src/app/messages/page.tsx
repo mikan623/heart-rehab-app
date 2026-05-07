@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAuthToken } from '@/lib/server-auth';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import MessagesClient from './MessagesClient';
 
 export default async function MessagesPage() {
@@ -16,7 +16,7 @@ export default async function MessagesPage() {
   const { userId } = auth;
 
   // ── DB から初期データ取得 ──────────────────────────────
-  const connected = await ensurePrismaConnection();
+  if (!prisma) return null;
 
   let initialInvites: {
     id: string;
@@ -53,7 +53,7 @@ export default async function MessagesPage() {
     cpx: { testDate: string | null; parentBloodTestDate: string | null; cpxRound: number | null } | null;
   }[] = [];
 
-  if (connected && prisma) {
+  if (prisma) {
     const [invitesResult, commentsResult, labCommentsResult] = await Promise.all([
       prisma.medicalInvite.findMany({
         where: { patientId: userId },

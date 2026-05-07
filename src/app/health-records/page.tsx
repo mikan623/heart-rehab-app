@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAuthToken } from '@/lib/server-auth';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import HealthRecordsClient from './HealthRecordsClient';
 
 export default async function HealthRecordsPage() {
@@ -16,7 +16,7 @@ export default async function HealthRecordsPage() {
   const { userId } = auth;
 
   // ── DB から初期データを並行取得 ──────────────────────────
-  const connected = await ensurePrismaConnection();
+  if (!prisma) return null;
 
   let profile = null;
   let healthRecords: {
@@ -42,7 +42,7 @@ export default async function HealthRecordsPage() {
     }[];
   }[] = [];
 
-  if (connected && prisma) {
+  if (prisma) {
     const [profileResult, recordsResult, bloodResult] = await Promise.all([
       prisma.profile.findFirst({
         where: { userId },

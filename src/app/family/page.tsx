@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAuthToken } from '@/lib/server-auth';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import FamilyClient from './FamilyClient';
 
 export default async function FamilyPage() {
@@ -16,7 +16,7 @@ export default async function FamilyPage() {
   const { userId } = auth;
 
   // ── DB から初期データ取得 ──────────────────────────────
-  const connected = await ensurePrismaConnection();
+  if (!prisma) return null;
 
   let initialFamilyMembers: {
     id: string;
@@ -30,7 +30,7 @@ export default async function FamilyPage() {
   let initialReminderTime = '21:00';
   let initialSelfLinkCode: string | null = null;
 
-  if (connected && prisma) {
+  if (prisma) {
     const [familyMembersResult, userResult] = await Promise.all([
       prisma.familyMember.findMany({ where: { userId } }),
       prisma.user.findUnique({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma, { ensurePrismaConnection } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    await ensurePrismaConnection();
+    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     
     const body = await request.json();
     const data = isRecord(body) ? body : {};
