@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
-import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
+import { AuthRole, createAuthToken, setAuthCookie } from '@/lib/server-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { signupSchema, parseBody } from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,32 +30,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
-    const { email, name, password, role } = await request.json();
-
-    // バリデーション
-    if (!email || !name || !password) {
-      return NextResponse.json(
-        { error: 'メールアドレス、名前、パスワードが必要です' },
-        { status: 400 }
-      );
-    }
-
-    // パスワードの長さチェック
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'パスワードは6文字以上である必要があります' },
-        { status: 400 }
-      );
-    }
-
-    // メールアドレス形式チェック
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: '有効なメールアドレスを入力してください' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, signupSchema);
+    if (parsed.error) return parsed.error;
+    const { email, name, password } = parsed.data;
 
     // 既存ユーザーチェック
     const existingUser = await prisma.user.findUnique({

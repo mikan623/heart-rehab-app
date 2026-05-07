@@ -5,8 +5,6 @@ import PageHeader from "@/components/PageHeader";
 import { getCurrentUserId, getSession, isLineLoggedIn, setLineLogin, setLineLoggedInDB } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { readJsonOrThrow } from "@/lib/readJson";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import type { Liff, LiffProfile } from "@/types/liff";
 
 // 健康記録の型定義

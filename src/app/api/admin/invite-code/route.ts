@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
+import { adminInviteCodeSchema, parseBody } from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
-  const { secret, expiresInDays = 7 } = await request.json();
+  const parsed = await parseBody(request, adminInviteCodeSchema);
+  if (parsed.error) return parsed.error;
+  const { secret, expiresInDays } = parsed.data;
 
   if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 });

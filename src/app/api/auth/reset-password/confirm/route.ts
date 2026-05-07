@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
+import { resetPasswordConfirmSchema, parseBody } from '@/lib/schemas';
 
 function hashToken(token: string): string {
   const pepper = process.env.PASSWORD_RESET_TOKEN_PEPPER;
@@ -17,24 +18,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
-    const { token, newPassword } = (await request.json()) as {
-      token?: unknown;
-      newPassword?: unknown;
-    };
-
-    const tokenStr = typeof token === 'string' ? token.trim() : '';
-    const newPasswordStr = typeof newPassword === 'string' ? newPassword : '';
-
-    if (!tokenStr || !newPasswordStr) {
-      return NextResponse.json({ error: 'Token and password are required' }, { status: 400 });
-    }
-
-    if (newPasswordStr.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, resetPasswordConfirmSchema);
+    if (parsed.error) return parsed.error;
+    const { token: tokenStr, newPassword: newPasswordStr } = parsed.data;
 
     const tokenHash = hashToken(tokenStr);
     const record = await prisma.passwordResetToken.findFirst({

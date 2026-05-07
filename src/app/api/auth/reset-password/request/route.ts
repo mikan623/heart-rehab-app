@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/mailer';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { resetPasswordRequestSchema, parseBody } from '@/lib/schemas';
 
 const TOKEN_TTL_SECONDS = 60 * 15; // 15 minutes
 
@@ -44,11 +45,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
-    const { email } = (await request.json()) as { email?: unknown };
-    const emailStr = typeof email === 'string' ? email.trim() : '';
-    if (!emailStr) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
-    }
+    const parsed = await parseBody(request, resetPasswordRequestSchema);
+    if (parsed.error) return parsed.error;
+    const { email: emailStr } = parsed.data;
 
     // ユーザーの存在はレスポンスから推測できないようにする（email enumeration 対策）
     const genericOk = NextResponse.json(

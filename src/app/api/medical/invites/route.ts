@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+import { medicalInvitePostSchema, parseBody } from '@/lib/schemas';
 
 // 医療従事者が患者へ招待を作成 / 一覧取得
 // GET: ?providerId=... [&patientId=...]
@@ -91,14 +89,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const data = isRecord(body) ? body : {};
-    const providerId = typeof data.providerId === 'string' ? data.providerId : undefined;
-    const patientId = typeof data.patientId === 'string' ? data.patientId : undefined;
+    const parsed = await parseBody(request, medicalInvitePostSchema);
+    if (parsed.error) return parsed.error;
+    const { providerId, patientId } = parsed.data;
 
-    if (!providerId || !patientId) {
-      return NextResponse.json({ error: 'providerId and patientId are required' }, { status: 400 });
-    }
     if (providerId !== auth.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

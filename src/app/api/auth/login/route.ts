@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { AuthRole, createAuthToken, isAuthRole, setAuthCookie } from '@/lib/server-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { loginSchema, parseBody } from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,15 +30,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
-    const { email, password, role } = await request.json();
-
-    // バリデーション
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'メールアドレスとパスワードが必要です' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, loginSchema);
+    if (parsed.error) return parsed.error;
+    const { email, password, role } = parsed.data;
 
     // ユーザーを検索
     const user = await prisma.user.findUnique({

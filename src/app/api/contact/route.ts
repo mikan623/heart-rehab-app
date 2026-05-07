@@ -1,33 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { contactSchema, parseBody } from "@/lib/schemas";
 
 export async function POST(request: NextRequest) {
   try {
     if (!prisma) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
     }
 
-    if (!prisma) return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-
-    const { name, email, category, message } = await request.json();
-
-    if (!name || !email || !message) {
-      return NextResponse.json(
-        { error: "必須項目が不足しています。" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, contactSchema);
+    if (parsed.error) return parsed.error;
+    const { name, email, category, message } = parsed.data;
 
     const saved = await prisma.contactMessage.create({
-      data: {
-        name,
-        email,
-        category: category || "general",
-        message,
-      },
+      data: { name, email, category, message },
     });
 
     console.log("📩 お問い合わせ受信:", saved.id);
@@ -41,4 +27,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
