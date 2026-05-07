@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer';
+import { renderToBuffer, Font, type DocumentProps } from '@react-pdf/renderer';
 import React from 'react';
+import path from 'path';
 import prisma from '@/lib/prisma';
 import { getAuthContext } from '@/lib/server-auth';
 import {
@@ -10,6 +11,17 @@ import {
 } from '@/components/pdf/HealthRecordPdfDocument';
 
 export const dynamic = 'force-dynamic';
+
+// フォントはモジュールロード時に一度だけ登録する
+let fontRegistered = false;
+function registerFont() {
+  if (fontRegistered) return;
+  Font.register({
+    family: 'NotoSansJP',
+    src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansJP-Regular.ttf'),
+  });
+  fontRegistered = true;
+}
 
 function buildMealSummary(meal: unknown): string | null {
   if (!meal || typeof meal !== 'object') return null;
@@ -57,6 +69,8 @@ function calcSummary(records: PdfHealthRecord[], month: string): PdfMonthSummary
 
 export async function GET(request: NextRequest) {
   try {
+    registerFont();
+
     const auth = getAuthContext(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -171,7 +185,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('❌ PDF generation error:', error);
-    return NextResponse.json({ error: 'PDF生成に失敗しました' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('❌ PDF generation error:', msg);
+    return NextResponse.json({ error: `PDF生成エラー: ${msg}` }, { status: 500 });
   }
 }

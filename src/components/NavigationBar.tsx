@@ -245,7 +245,12 @@ export default function NavigationBar() {
     try {
       const month = targetMonth ?? printMonth;
       const res = await apiFetch(`/api/pdf/health-records?month=${month}`);
-      if (!res.ok) throw new Error('PDF生成に失敗しました');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body as { error?: string }).error ?? 'PDF生成に失敗しました';
+        console.error(`PDF API error ${res.status}:`, body);
+        throw new Error(`[${res.status}] ${msg}`);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -257,7 +262,7 @@ export default function NavigationBar() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF出力エラー:', error);
-      alert('PDF出力に失敗しました。');
+      alert(`PDF出力に失敗しました。\n${error instanceof Error ? error.message : ''}`);
     }
   };
 

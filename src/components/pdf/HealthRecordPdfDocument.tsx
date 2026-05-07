@@ -1,10 +1,7 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-Font.register({
-  family: 'NotoSansJP',
-  src: 'https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansJP/hinted/ttf/NotoSansJP-Regular.ttf',
-});
+// Font.register はサーバーサイドの API ルート側で行う（public/fonts/ のローカルパスを使用）
 
 const S = StyleSheet.create({
   page:         { fontFamily: 'NotoSansJP', fontSize: 9, padding: 28, color: '#333' },
