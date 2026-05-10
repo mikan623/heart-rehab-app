@@ -22,25 +22,14 @@ export async function GET(request: NextRequest) {
     
     const userId = auth.userId;
     
-    console.log('🔍 Fetching profile for userId:', userId);
     
-    // プロフィールを取得（最新のものを1件）
     const profile = await prisma.profile.findFirst({
       where: { userId },
-      orderBy: { updatedAt: 'desc' },
     });
-    
+
     if (!profile) {
-      console.log('❌ Profile not found for userId:', userId);
-      // デバッグ用：この userId に関連するすべてのプロフィールを取得
-      const allProfiles = await prisma.profile.findMany({
-        where: { userId },
-      });
-      console.log('📋 All profiles for this userId:', allProfiles.length, allProfiles);
       return NextResponse.json({ profile: null, message: 'Profile not found' });
     }
-    
-    console.log('📊 Profile found:', profile.id, profile);
     
     return NextResponse.json({ profile });
     
@@ -79,8 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    console.log('💾 Saving profile for userId:', userId);
-    console.log('📝 Profile data:', profile);
     
     // バリデーション
     const user = await prisma.user.findUnique({
@@ -101,52 +88,24 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // 既存のプロフィールを確認
-    const existingProfile = await prisma.profile.findFirst({
-      where: { userId }
-    });
-    
-    let savedProfile;
-    
-    if (existingProfile) {
-      // 更新
-      console.log('🔄 Updating existing profile:', existingProfile.id);
-      savedProfile = await prisma.profile.update({
-        where: { id: existingProfile.id },
-        data: {
-          displayName: profile.displayName || null,
-          age: profile.age ? parseInt(profile.age) : null,
-          gender: profile.gender || null,
-          height: profile.height ? parseFloat(profile.height) : null,
-          targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : null,
-          diseases: profile.diseases || [],
-          riskFactors: profile.riskFactors || [],
-          medications: profile.medications || null,
-          physicalFunction: profile.physicalFunction || null,
-          emergencyContact: profile.emergencyContact || null,
-        }
-      });
-    } else {
-      // 新規作成
-      console.log('✨ Creating new profile');
-      savedProfile = await prisma.profile.create({
-        data: {
-          userId,
-          displayName: profile.displayName || null,
-          age: profile.age ? parseInt(profile.age) : null,
-          gender: profile.gender || null,
-          height: profile.height ? parseFloat(profile.height) : null,
-          targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : null,
-          diseases: profile.diseases || [],
-          riskFactors: profile.riskFactors || [],
-          medications: profile.medications || null,
-          physicalFunction: profile.physicalFunction || null,
-          emergencyContact: profile.emergencyContact || null,
-        }
-      });
-    }
-    
-    console.log('✅ Profile saved successfully:', savedProfile.id);
+    const profileData = {
+      displayName: profile.displayName || null,
+      age: profile.age ? parseInt(profile.age) : null,
+      gender: profile.gender || null,
+      height: profile.height ? parseFloat(profile.height) : null,
+      targetWeight: profile.targetWeight ? parseFloat(profile.targetWeight) : null,
+      diseases: profile.diseases || [],
+      riskFactors: profile.riskFactors || [],
+      medications: profile.medications || null,
+      physicalFunction: profile.physicalFunction || null,
+      emergencyContact: profile.emergencyContact || null,
+    };
+
+    const existingProfile = await prisma.profile.findFirst({ where: { userId } });
+
+    const savedProfile = existingProfile
+      ? await prisma.profile.update({ where: { id: existingProfile.id }, data: profileData })
+      : await prisma.profile.create({ data: { userId, ...profileData } });
     
     return NextResponse.json({ 
       success: true,

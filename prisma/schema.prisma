@@ -9,8 +9,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -29,7 +30,7 @@ model User {
   updatedAt      DateTime @updatedAt
   
   // リレーション
-  profiles      Profile[]
+  profile       Profile?
   passwordResetTokens PasswordResetToken[]
   healthRecords HealthRecord[]
   familyMembers FamilyMember[]
@@ -65,7 +66,7 @@ model MedicalInvite {
 
 model Profile {
   id                     String   @id @default(cuid())
-  userId                 String
+  userId                 String   @unique
   displayName            String?
   age                    Int?
   gender                 String?
