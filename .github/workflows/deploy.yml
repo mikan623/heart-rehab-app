@@ -20,6 +20,7 @@ jobs:
       ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }}
       CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
     steps:
       - uses: actions/checkout@v4
