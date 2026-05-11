@@ -15,6 +15,8 @@ const PUBLIC_PATHS = new Set([
   // 招待リンク・問い合わせ（ログイン前に利用）
   '/api/family-invites',
   '/api/contact',
+  // ヘルスチェック（ALB用）
+  '/api/test',
   // Cron実行（トークン必須）
   '/api/reminder-runner',
   '/api/reminder-send',
