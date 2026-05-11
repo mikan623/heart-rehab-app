@@ -148,7 +148,7 @@ export default function LearnClient() {
       const parts = raw.split(/\*\*(.+?)\*\*/g);
       return parts.map((part, idx) =>
         idx % 2 === 1
-          ? <strong key={idx} className="font-bold text-gray-900">{part}</strong>
+          ? <strong key={idx} className="font-bold text-orange-700">{part}</strong>
           : <span key={idx}>{part}</span>
       );
     };
@@ -161,41 +161,55 @@ export default function LearnClient() {
       const trimmed = line.trim();
 
       if (trimmed === '') {
-        elements.push(<div key={i} className="h-3" />);
+        elements.push(<div key={i} className="h-4" />);
+      } else if (/^■/.test(trimmed)) {
+        // ■ 見出し
+        const headingText = trimmed.replace(/^■\s*/, '');
+        elements.push(
+          <div key={i} className="flex items-center gap-2 mt-6 mb-3 pb-2 border-b-2 border-orange-200">
+            <span className="text-orange-500 text-xl font-bold">■</span>
+            <h3 className="text-xl font-bold text-orange-700">{headingText}</h3>
+          </div>
+        );
       } else if (/^#{1,3}\s/.test(trimmed)) {
-        // 見出し行（## や # で始まる）
         const headingText = trimmed.replace(/^#{1,3}\s+/, '');
         elements.push(
-          <div key={i} className="flex items-center gap-2 mt-4 mb-2">
-            <div className="w-1 h-6 bg-orange-500 rounded-full flex-shrink-0" />
-            <h3 className="text-lg font-bold text-orange-700">{headingText}</h3>
+          <div key={i} className="flex items-center gap-2 mt-6 mb-3 pb-2 border-b-2 border-orange-200">
+            <h3 className="text-xl font-bold text-orange-700">{headingText}</h3>
+          </div>
+        );
+      } else if (/^[・•]\s*/.test(trimmed)) {
+        // ・箇条書き
+        const itemText = trimmed.replace(/^[・•]\s*/, '');
+        elements.push(
+          <div key={i} className="flex items-start gap-3 py-2">
+            <span className="mt-2 w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0" />
+            <p className="text-lg text-gray-800 leading-loose">{inlineBold(itemText)}</p>
           </div>
         );
       } else if (/^[-•]\s/.test(trimmed)) {
-        // 箇条書き
         const itemText = trimmed.replace(/^[-•]\s+/, '');
         elements.push(
-          <div key={i} className="flex items-start gap-3 py-1">
-            <span className="mt-1.5 w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
-            <p className="text-base text-gray-700 leading-relaxed">{inlineBold(itemText)}</p>
+          <div key={i} className="flex items-start gap-3 py-2">
+            <span className="mt-2 w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0" />
+            <p className="text-lg text-gray-800 leading-loose">{inlineBold(itemText)}</p>
           </div>
         );
       } else if (/^\d+[.．]\s/.test(trimmed)) {
-        // 番号付きリスト
         const match = trimmed.match(/^(\d+)[.．]\s+(.*)/);
         if (match) {
           elements.push(
-            <div key={i} className="flex items-start gap-3 py-1">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-sm flex items-center justify-center leading-none">
+            <div key={i} className="flex items-start gap-3 py-2">
+              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-base flex items-center justify-center leading-none">
                 {match[1]}
               </span>
-              <p className="text-base text-gray-700 leading-relaxed">{inlineBold(match[2])}</p>
+              <p className="text-lg text-gray-800 leading-loose">{inlineBold(match[2])}</p>
             </div>
           );
         }
       } else {
         elements.push(
-          <p key={i} className="text-base text-gray-700 leading-relaxed">{inlineBold(trimmed)}</p>
+          <p key={i} className="text-lg text-gray-800 leading-loose">{inlineBold(trimmed)}</p>
         );
       }
       i++;
@@ -329,14 +343,14 @@ export default function LearnClient() {
               {/* アドバイス本文 */}
               {advice && (
                 <div>
-                  <div className="bg-gray-50 rounded-xl p-5 md:p-6 space-y-1 border border-gray-100">
+                  <div className="bg-white rounded-xl p-6 md:p-8 space-y-1 border-2 border-orange-100 shadow-sm">
                     {renderAdvice(advice)}
                   </div>
                   <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-200 flex items-start gap-3">
-                    <span className="text-xl flex-shrink-0">⚠️</span>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <span className="text-2xl flex-shrink-0">⚠️</span>
+                    <p className="text-base text-gray-700 leading-relaxed">
                       このアドバイスはAIによる参考情報です。<br />
-                      医療上の判断は必ず担当医にご相談ください。
+                      医療上の判断は必ず<strong className="text-orange-700">担当医にご相談ください</strong>。
                     </p>
                   </div>
                 </div>
