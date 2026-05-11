@@ -10,6 +10,7 @@ export default async function MedicalPage() {
 
   const auth = verifyAuthToken(token);
   if (!auth) redirect('/?returnTo=/medical');
+  if (auth.role !== 'medical') redirect('/health-records');
 
   return <MedicalClient userId={auth.userId} />;
 }
