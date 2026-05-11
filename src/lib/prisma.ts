@@ -5,13 +5,22 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// データベースURLがない場合はPrismaを無効化
+// DIRECT_URL が未設定の場合は DATABASE_URL にフォールバック
+// schema.prisma に directUrl を定義しているが、実行時は url のみ使用するため
+// ECS 等 DIRECT_URL を持たない環境でも PrismaClient が初期化できるようにする
+if (process.env.DATABASE_URL && !process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
+
 let prisma: PrismaClient | undefined;
 
 if (process.env.DATABASE_URL) {
-  prisma = globalThis.prisma ?? new PrismaClient();
-  // serverless環境では production でも使い回さないと接続が増えすぎるため、常に global に保持する
-  globalThis.prisma = prisma;
+  try {
+    prisma = globalThis.prisma ?? new PrismaClient();
+    globalThis.prisma = prisma;
+  } catch (e) {
+    console.error('Prisma initialization failed:', e);
+  }
 }
 
 export default prisma;
