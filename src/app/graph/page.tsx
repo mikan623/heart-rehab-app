@@ -30,6 +30,7 @@ export default async function GraphPage() {
   let initialHeightCm: number | null = null;
 
   if (prisma) {
+    try {
     const [records, profile] = await Promise.all([
       prisma.healthRecord.findMany({
         where: { userId },
@@ -61,6 +62,9 @@ export default async function GraphPage() {
     if (profile) {
       initialTargetWeight = profile.targetWeight ?? null;
       initialHeightCm = profile.height ?? null;
+    }
+    } catch (e) {
+      console.error('graph DB fetch failed:', e);
     }
   }
 

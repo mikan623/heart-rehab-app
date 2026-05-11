@@ -31,27 +31,31 @@ export default async function FamilyPage() {
   let initialSelfLinkCode: string | null = null;
 
   if (prisma) {
-    const [familyMembersResult, userResult] = await Promise.all([
-      prisma.familyMember.findMany({ where: { userId } }),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { reminderEnabled: true, reminderTime: true, selfLinkCode: true },
-      }),
-    ]);
+    try {
+      const [familyMembersResult, userResult] = await Promise.all([
+        prisma.familyMember.findMany({ where: { userId } }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { reminderEnabled: true, reminderTime: true, selfLinkCode: true },
+        }),
+      ]);
 
-    initialFamilyMembers = familyMembersResult.map((m) => ({
-      id: m.id,
-      name: m.name,
-      email: m.email,
-      relationship: m.relationship,
-      lineUserId: m.lineUserId ?? undefined,
-      isRegistered: m.isRegistered,
-    }));
+      initialFamilyMembers = familyMembersResult.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        relationship: m.relationship,
+        lineUserId: m.lineUserId ?? undefined,
+        isRegistered: m.isRegistered,
+      }));
 
-    if (userResult) {
-      initialReminderEnabled = userResult.reminderEnabled ?? false;
-      initialReminderTime = userResult.reminderTime ?? '21:00';
-      initialSelfLinkCode = userResult.selfLinkCode ?? null;
+      if (userResult) {
+        initialReminderEnabled = userResult.reminderEnabled ?? false;
+        initialReminderTime = userResult.reminderTime ?? '21:00';
+        initialSelfLinkCode = userResult.selfLinkCode ?? null;
+      }
+    } catch (e) {
+      console.error('family DB fetch failed:', e);
     }
   }
 

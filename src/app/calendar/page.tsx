@@ -33,6 +33,7 @@ export default async function CalendarPage() {
   let initialHeightCm: number | null = null;
 
   if (prisma) {
+    try {
     const [records, profile] = await Promise.all([
       prisma.healthRecord.findMany({
         where: { userId },
@@ -73,6 +74,9 @@ export default async function CalendarPage() {
 
     if (profile) {
       initialHeightCm = profile.height ?? null;
+    }
+    } catch (e) {
+      console.error('calendar DB fetch failed:', e);
     }
   }
 

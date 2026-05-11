@@ -49,6 +49,7 @@ export default async function BloodDataPage() {
   }[] = [];
 
   if (prisma) {
+    try {
     const result = await prisma.bloodData.findMany({
       where: { userId },
       include: { cpxTests: { orderBy: { createdAt: 'desc' } } },
@@ -85,6 +86,9 @@ export default async function BloodDataPage() {
         findings: c.findings,
       })),
     }));
+    } catch (e) {
+      console.error('blood-data DB fetch failed:', e);
+    }
   }
 
   return (

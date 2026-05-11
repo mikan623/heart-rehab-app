@@ -54,6 +54,7 @@ export default async function MessagesPage() {
   }[] = [];
 
   if (prisma) {
+    try {
     const [invitesResult, commentsResult, labCommentsResult] = await Promise.all([
       prisma.medicalInvite.findMany({
         where: { patientId: userId },
@@ -138,6 +139,9 @@ export default async function MessagesPage() {
           }
         : null,
     }));
+    } catch (e) {
+      console.error('messages DB fetch failed:', e);
+    }
   }
 
   return (

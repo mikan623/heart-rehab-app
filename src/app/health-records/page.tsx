@@ -43,6 +43,7 @@ export default async function HealthRecordsPage() {
   }[] = [];
 
   if (prisma) {
+    try {
     const [profileResult, recordsResult, bloodResult] = await Promise.all([
       prisma.profile.findFirst({
         where: { userId },
@@ -103,6 +104,9 @@ export default async function HealthRecordsPage() {
         findings: c.findings,
       })),
     }));
+    } catch (e) {
+      console.error('health-records DB fetch failed:', e);
+    }
   }
 
   return (

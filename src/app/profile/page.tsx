@@ -20,10 +20,14 @@ export default async function ProfilePage() {
   let initialProfile = null;
 
   if (prisma) {
-    initialProfile = await prisma.profile.findFirst({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-    });
+    try {
+      initialProfile = await prisma.profile.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+      });
+    } catch (e) {
+      console.error('profile DB fetch failed:', e);
+    }
   }
 
   return (
