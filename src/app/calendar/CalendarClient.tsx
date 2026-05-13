@@ -679,22 +679,24 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
               </div>
               {/* デスクトップ版：日時変更（右寄せ＝次月ボタン側に寄せる） */}
               <div className="hidden md:block ml-2 mr-10">
-                <input
-                  type="datetime-local"
-                  value={(() => {
-                    // currentMonthの日付に合わせて、入力値の日付部分だけ同期
-                    try {
-                      const v = desktopDateTime || formatDateTimeLocal(new Date());
-                      const [_, t] = v.split('T');
-                      const d = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(currentMonth.getDate()).padStart(2, '0')}`;
-                      return `${d}T${t || '00:00'}`;
-                    } catch {
-                      return formatDateTimeLocal(new Date());
-                    }
-                  })()}
-                  onChange={(e) => applyDesktopDateTime(e.target.value)}
-                  className="w-[320px] px-6 py-3 text-xl font-bold border-2 border-gray-300 rounded-xl bg-white cursor-pointer"
-                />
+                {isMounted && (
+                  <input
+                    type="datetime-local"
+                    value={(() => {
+                      // currentMonthの日付に合わせて、入力値の日付部分だけ同期
+                      try {
+                        const v = desktopDateTime || formatDateTimeLocal(new Date());
+                        const [_, t] = v.split('T');
+                        const d = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(currentMonth.getDate()).padStart(2, '0')}`;
+                        return `${d}T${t || '00:00'}`;
+                      } catch {
+                        return formatDateTimeLocal(new Date());
+                      }
+                    })()}
+                    onChange={(e) => applyDesktopDateTime(e.target.value)}
+                    className="w-[320px] px-6 py-3 text-xl font-bold border-2 border-gray-300 rounded-xl bg-white cursor-pointer"
+                  />
+                )}
               </div>
             </div>
             <button
