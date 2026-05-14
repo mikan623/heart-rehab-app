@@ -1355,7 +1355,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
         {/* 選択した日付の健康記録表示セクション */}
         <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-orange-100 rounded-lg shadow-sm p-4 md:p-6 mb-4 border-2 border-orange-200">
           <h3 className="text-lg md:text-2xl font-bold text-gray-800 mb-4">
-            📋 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月{currentMonth.getDate()}日 の記録
+            📋 {isMounted ? `${currentMonth.getFullYear()}年${currentMonth.getMonth() + 1}月${currentMonth.getDate()}日` : ''} の記録
           </h3>
           
           {(() => {
@@ -1413,6 +1413,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
         </div>
 
         {/* スマホ版フッター：日付選択フォーム */}
+        {isMounted && (
         <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-orange-300 shadow-lg z-40">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center gap-2 mb-3">
@@ -1423,8 +1424,8 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
                 type="date"
                 value={
                   currentMonth && !isNaN(currentMonth.getTime())
-                    ? currentMonth.toISOString().split('T')[0]
-                    : new Date().toISOString().split('T')[0]
+                    ? `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(currentMonth.getDate()).padStart(2, '0')}`
+                    : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
                 }
                 onChange={(e) => {
                   // 値が空の場合（削除ボタン押下時）は何もしない
@@ -1432,7 +1433,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
                     console.log('削除ボタンが押されましたが、無視します');
                     return;
                   }
-                  
+
                   // 日付文字列をパース（タイムゾーン対応）
                   const [year, month, day] = e.target.value.split('-').map(Number);
                   const newDate = new Date(year, month - 1, day);
@@ -1446,6 +1447,7 @@ export default function CalendarPage({ userId, initialSavedRecords, initialHeigh
             </div>
           </div>
         </div>
+        )}
 
         {/* メインコンテンツの下部パディング（フッター対応） */}
         <div className="md:hidden h-20"></div>
