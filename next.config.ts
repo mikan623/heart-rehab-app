@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from '@sentry/nextjs';
 
 const securityHeaders = [
   // クリックジャッキング対策
@@ -26,7 +27,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://profile.line-scdn.net https://obs.line-scdn.net https://d.line-scdn.net https://api.qrserver.com",
       "font-src 'self'",
       // LIFF SDK 初期化時に複数の LINE ドメインへ API リクエストが発生する（必須）
-      "connect-src 'self' https://liff.line.me https://liffsdk.line-scdn.net https://api.line.me https://access.line.me",
+      "connect-src 'self' https://liff.line.me https://liffsdk.line-scdn.net https://api.line.me https://access.line.me https://*.ingest.sentry.io",
       // LIFF OAuth フローで access.line.me の iframe が生成されることがある
       "frame-src 'self' https://liff.line.me https://access.line.me",
       "object-src 'none'",
@@ -59,4 +60,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+});

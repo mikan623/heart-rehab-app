@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 # Build-time env for Next.js public variables
 ARG NEXT_PUBLIC_LIFF_ID
 ENV NEXT_PUBLIC_LIFF_ID=$NEXT_PUBLIC_LIFF_ID
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
