@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
+    if (role === "medical") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: { role },
@@ -65,5 +69,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
-
