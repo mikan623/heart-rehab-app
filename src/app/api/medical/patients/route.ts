@@ -23,10 +23,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ patients: [] });
     }
 
+    const providerId = auth.userId;
+
+    const acceptedInvites = await prisma.medicalInvite.findMany({
+      where: { providerId, status: 'accepted' },
+      select: { patientId: true },
+    });
+
+    const acceptedPatientIds = acceptedInvites.map((i) => i.patientId);
+
+    if (!acceptedPatientIds.length) {
+      return NextResponse.json({ patients: [] });
+    }
+
     console.log('🔍 Searching patients by name (Profile.displayName / User.name):', name);
 
     const profiles = await prisma.profile.findMany({
       where: {
+        userId: { in: acceptedPatientIds }, // 承認済み患者のみを対象にする
         OR: [
           {
             displayName: {
@@ -56,7 +70,7 @@ export async function GET(request: NextRequest) {
         user: {
           select: {
             name: true,
-            email: true,
+            // email: true,
           },
         },
       },
@@ -67,7 +81,7 @@ export async function GET(request: NextRequest) {
       displayName: p.displayName || p.user?.name || null,
       age: p.age,
       gender: p.gender,
-      email: p.user?.email || null,
+      // email: p.user?.email || null,
     }));
 
     console.log('📋 Patients found:', patients.length);
