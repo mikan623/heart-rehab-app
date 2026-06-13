@@ -1,8 +1,10 @@
 name: Deploy to ECS (prod)
 
+# Vercel 移行完了のため無効化（手動実行のみ）
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch:
+  # push:
+  #   branches: ["main"]
 
 permissions:
   id-token: write
